@@ -1,4 +1,50 @@
 {
   "_note": "Add paper objects to papers. See README for full schema. zh/en can include takeaway for one-sentence review notes.",
-  "papers": []
+  "papers": [
+    {
+      "id": "sitt-student-informed-teacher-training",
+      "categories": ["imitation-teleop", "manipulation"],
+      "pdf": "https://arxiv.org/pdf/2412.09149v2",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2412.09149",
+      "year": "2025",
+      "venue": "ICLR 2025 / arXiv:2412.09149",
+      "zh": {
+        "title": "Student-Informed Teacher Training",
+        "authors": "Nico Messikommer, Jiaxu Xing, Elie Aljalbout, Davide Scaramuzza",
+        "status": "摘要已整理",
+        "tags": ["Teacher-Student", "Imitation Learning", "Privileged Teacher", "PPO", "Vision-Based Control"],
+        "mainContent": "SITT 解决 privileged teacher imitation learning 中 teacher 过强、student 因部分可观测而难以模仿的问题。方法在 teacher 训练时显式考虑 student 是否能学会，把 teacher-student action 差异作为 teacher reward penalty，并加入监督式对齐步骤，使 teacher 学到更容易被视觉 student 蒸馏的行为。",
+        "innovations": [
+          "把 student learnability 纳入 teacher 训练目标，缓解 teacher-student 信息不对称。",
+          "用近似 teacher-student action difference 惩罚 teacher reward，避免 teacher 走向 student 难以模仿的策略。",
+          "结合监督式 teacher-student alignment，在 maze navigation、vision-based quadrotor flight 和 manipulation 任务上验证。"
+        ],
+        "implementation": [
+          "先训练具有 privileged information 的 teacher，同时维护一个动态更新的 student 模型。",
+          "在 PPO teacher objective 中加入 student action mismatch penalty。",
+          "周期性执行 teacher-student supervised alignment，让 teacher 和 student 在训练中互相约束。",
+          "最终部署使用观测受限的 student policy。"
+        ]
+      },
+      "en": {
+        "title": "Student-Informed Teacher Training",
+        "authors": "Nico Messikommer, Jiaxu Xing, Elie Aljalbout, Davide Scaramuzza",
+        "status": "Abstract summarized",
+        "tags": ["Teacher-Student", "Imitation Learning", "Privileged Teacher", "PPO", "Vision-Based Control"],
+        "mainContent": "SITT addresses a failure mode in privileged-teacher imitation learning: a powerful teacher may learn behaviors that a partially observable student cannot imitate. The method makes teacher training student-aware by penalizing teacher-student action mismatch and adding a supervised alignment step, producing teachers whose behaviors can be distilled into vision-based student policies.",
+        "innovations": [
+          "It includes student learnability directly in teacher training, reducing teacher-student asymmetry.",
+          "It penalizes approximate teacher-student action differences in the teacher reward.",
+          "It combines the penalty with supervised teacher-student alignment and evaluates on maze navigation, vision-based quadrotor flight, and manipulation tasks."
+        ],
+        "implementation": [
+          "Train a privileged-information teacher while maintaining a dynamically updated student model.",
+          "Add a student action-mismatch penalty to the PPO teacher objective.",
+          "Periodically run supervised teacher-student alignment during training.",
+          "Deploy the observation-limited student policy after distillation."
+        ]
+      }
+    }
+  ]
 }
