@@ -66,7 +66,7 @@ system identification, domain randomization, real-world finetuning
 
 ## 添加一篇论文
 
-推荐优先用网页右上角的“新增论文”按钮导入 JSON。导入后的论文会保存在当前浏览器的 `localStorage`，刷新后仍然可见；如果要发布到 GitHub Pages 给其他设备或其他人看，把同样的 JSON 写入 `papers_extra.json` 并提交。
+推荐优先维护 `papers_extra.json`，网站启动时会自动读取其中的 `papers` 数组。网页本身只负责展示，不在浏览器里编辑或保存新增论文。
 
 长期维护有两种方式：
 
@@ -76,10 +76,11 @@ system identification, domain randomization, real-world finetuning
 字段约定：
 
 1. `id` 必须稳定，建议用英文 slug；同 id 会覆盖已有论文。
-2. `arxiv` 和 `project` 优先写外部链接。
-3. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
-4. `categories` 使用上面的固定分类 id。
-5. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
+2. JSON 对象字段和 `app.js` 里的 `papers` 对象保持一致。
+3. `arxiv` 和 `project` 优先写外部链接。
+4. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
+5. `categories` 使用上面的固定分类 id。
+6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
 
 ```json
 {

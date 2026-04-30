@@ -605,10 +605,6 @@ body.is-detail-collapsed .paper-detail {
   box-shadow: var(--shadow);
 }
 
-.paper-import-dialog {
-  width: min(760px, 100%);
-}
-
 .prompt-dialog-header {
   display: flex;
   align-items: start;
@@ -655,36 +651,6 @@ body.is-detail-collapsed .paper-detail {
     0.82rem/1.62 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
   white-space: pre-wrap;
-}
-
-.file-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-strong);
-  color: var(--muted);
-}
-
-.json-input {
-  width: 100%;
-  min-height: min(42vh, 360px);
-  padding: 14px;
-  resize: vertical;
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-strong);
-  color: #34383b;
-  outline: none;
-  font:
-    0.82rem/1.62 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
-}
-
-.json-input:focus {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(36, 124, 117, 0.14);
 }
 
 .prompt-dialog-actions {

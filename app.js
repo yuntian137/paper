@@ -22,21 +22,12 @@ const uiText = {
     paperLink: "论文链接",
     project: "项目主页",
     arxiv: "arXiv",
-    addPaperButton: "新增论文",
     promptButton: "精读 Prompt",
     promptModalTitle: "论文精读 Prompt",
     promptModalDescription: "选择要复制的版本，直接粘贴给读论文的 agent。",
     copyZhPrompt: "复制中文 Prompt",
     copyEnPrompt: "Copy English Prompt",
     promptCopied: "已复制",
-    importModalTitle: "新增论文解读",
-    importModalDescription: "粘贴和网站 papers 对象同构的 JSON，或选择本地 JSON 文件。导入后会保存在当前浏览器；长期发布可以把同样内容放进 papers_extra.json。",
-    importJson: "导入 JSON",
-    fillTemplate: "填入模板",
-    clearLocalPapers: "清空本地新增",
-    importSuccess: "已导入",
-    importCleared: "已清空本地新增，页面即将刷新。",
-    importError: "JSON 格式或字段不正确。",
     hideSidebar: "隐藏分类栏",
     showSidebar: "显示分类栏",
     hideDetail: "隐藏概览",
@@ -67,21 +58,12 @@ const uiText = {
     paperLink: "Paper Link",
     project: "Project",
     arxiv: "arXiv",
-    addPaperButton: "Add Paper",
     promptButton: "Reading Prompt",
     promptModalTitle: "Paper Reading Prompt",
     promptModalDescription: "Choose a version to copy, then paste it into the paper-reading agent.",
     copyZhPrompt: "复制中文 Prompt",
     copyEnPrompt: "Copy English Prompt",
     promptCopied: "Copied",
-    importModalTitle: "Add Paper Notes",
-    importModalDescription: "Paste JSON that matches the website paper-object schema, or choose a local JSON file. Imported papers are stored in this browser. To publish them, put the same content in papers_extra.json.",
-    importJson: "Import JSON",
-    fillTemplate: "Fill Template",
-    clearLocalPapers: "Clear Local Papers",
-    importSuccess: "Imported",
-    importCleared: "Local papers cleared. Reloading.",
-    importError: "Invalid JSON or paper fields.",
     hideSidebar: "Hide categories",
     showSidebar: "Show categories",
     hideDetail: "Hide overview",
@@ -4193,40 +4175,7 @@ const papers = [
   }
 ];
 
-const customPapersStorageKey = "paper-notes-custom-papers";
 const externalPapersPath = "papers_extra.json";
-
-const paperImportTemplate = {
-  papers: [
-    {
-      id: "example-paper-id",
-      categories: ["locomotion"],
-      pdf: "https://arxiv.org/pdf/0000.00000",
-      project: "https://example.com/project-page",
-      arxiv: "https://arxiv.org/abs/0000.00000",
-      year: "2026",
-      venue: "arXiv:0000.00000",
-      zh: {
-        title: "论文标题",
-        authors: "作者列表",
-        status: "已整理",
-        tags: ["Locomotion", "Sim2Real"],
-        mainContent: "用 2-4 句概括研究问题、核心方法和主要结论。",
-        innovations: ["创新点 1", "创新点 2"],
-        implementation: ["实现方法 1", "实现方法 2"]
-      },
-      en: {
-        title: "Paper Title",
-        authors: "Author List",
-        status: "Summarized",
-        tags: ["Locomotion", "Sim2Real"],
-        mainContent: "Summarize the problem, method, and key result in 2-4 sentences.",
-        innovations: ["Innovation 1", "Innovation 2"],
-        implementation: ["Implementation detail 1", "Implementation detail 2"]
-      }
-    }
-  ]
-};
 
 const state = {
   lang: localStorage.getItem("paper-notes-lang") || "zh",
@@ -4245,15 +4194,10 @@ const nodes = {
   html: document.documentElement,
   body: document.body,
   langButtons: Array.from(document.querySelectorAll(".lang-button")),
-  addPaperButton: document.querySelector("#add-paper-button"),
   promptButton: document.querySelector("#prompt-button"),
   promptModal: document.querySelector("#prompt-modal"),
   promptPreview: document.querySelector("#prompt-preview"),
   promptStatus: document.querySelector("#prompt-status"),
-  paperImportModal: document.querySelector("#paper-import-modal"),
-  paperImportText: document.querySelector("#paper-import-text"),
-  paperImportFile: document.querySelector("#paper-import-file"),
-  paperImportStatus: document.querySelector("#paper-import-status"),
   sidebarToggle: document.querySelector("#sidebar-toggle"),
   sidebarRestore: document.querySelector("#sidebar-restore"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
@@ -4312,93 +4256,54 @@ function saveLayout() {
   localStorage.setItem("paper-layout-detail-width", String(state.layout.detailWidth));
 }
 
-function toArray(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  if (typeof value === "string") return value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
-  return [];
+function stringField(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
-function slugify(value) {
-  const slug = String(value)
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 72);
-
-  return slug || `paper-${Date.now()}`;
+function stringArray(value) {
+  return Array.isArray(value) ? value.map(stringField).filter(Boolean) : [];
 }
 
-function normalizeLocalizedPaper(localized, fallback, lang) {
-  const emptyAuthor = lang === "zh" ? "未填写" : "Not provided";
-  const defaultStatus = lang === "zh" ? "本地新增" : "Local";
+function normalizeLocalizedPaper(localized) {
+  const value = localized && typeof localized === "object" ? localized : {};
 
   return {
-    title: String(localized.title || fallback.title || fallback.id || "").trim(),
-    authors: String(localized.authors || fallback.authors || emptyAuthor).trim(),
-    status: String(localized.status || fallback.status || defaultStatus).trim(),
-    tags: toArray(localized.tags || fallback.tags),
-    mainContent: String(localized.mainContent || localized.summary || fallback.mainContent || fallback.summary || "").trim(),
-    innovations: toArray(localized.innovations || fallback.innovations),
-    implementation: toArray(localized.implementation || fallback.implementation),
+    title: stringField(value.title),
+    authors: stringField(value.authors),
+    status: stringField(value.status),
+    tags: stringArray(value.tags),
+    mainContent: stringField(value.mainContent),
+    innovations: stringArray(value.innovations),
+    implementation: stringArray(value.implementation),
   };
 }
 
-function normalizePaper(rawPaper) {
+function normalizePaperRecord(rawPaper) {
   if (!rawPaper || typeof rawPaper !== "object") {
     throw new Error("Paper item must be an object.");
   }
 
-  const zh = rawPaper.zh || {};
-  const en = rawPaper.en || {};
-  const title = rawPaper.title || zh.title || en.title;
-  const id = String(rawPaper.id || slugify(title)).trim();
-  if (!id) throw new Error("Paper id or title is required.");
+  const id = stringField(rawPaper.id);
+  if (!id) throw new Error("Paper id is required.");
 
-  const paper = {
+  return {
     id,
-    categories: toArray(rawPaper.categories || rawPaper.category),
-    pdf: String(rawPaper.pdf || "").trim(),
-    project: String(rawPaper.project || "").trim(),
-    arxiv: String(rawPaper.arxiv || "").trim(),
-    year: String(rawPaper.year || "").trim(),
-    venue: String(rawPaper.venue || "").trim(),
-    zh: normalizeLocalizedPaper(zh, { ...rawPaper, title }, "zh"),
-    en: normalizeLocalizedPaper(en, { ...rawPaper, title }, "en"),
+    categories: stringArray(rawPaper.categories),
+    pdf: stringField(rawPaper.pdf),
+    project: stringField(rawPaper.project),
+    arxiv: stringField(rawPaper.arxiv),
+    year: stringField(rawPaper.year),
+    venue: stringField(rawPaper.venue),
+    zh: normalizeLocalizedPaper(rawPaper.zh),
+    en: normalizeLocalizedPaper(rawPaper.en),
   };
-
-  if (!paper.categories.length) paper.categories = ["manipulation"];
-
-  const link = String(rawPaper.link || "").trim();
-  if (link && !paper.arxiv && link.includes("arxiv.org/abs/")) {
-    paper.arxiv = link;
-    paper.pdf = paper.pdf || link.replace("/abs/", "/pdf/");
-  } else if (link && !paper.pdf && link.includes("arxiv.org/pdf/")) {
-    paper.pdf = link;
-    paper.arxiv = paper.arxiv || link.replace("/pdf/", "/abs/").replace(/\.pdf$/, "");
-  } else if (link && !paper.pdf && link.toLowerCase().endsWith(".pdf")) {
-    paper.pdf = link;
-  } else if (link && !paper.project) {
-    paper.project = link;
-  }
-
-  if (!paper.venue && paper.arxiv) {
-    const match = paper.arxiv.match(/arxiv\.org\/abs\/([^/?#]+)/i);
-    paper.venue = match ? `arXiv:${match[1]}` : "arXiv";
-  }
-  if (!paper.year) paper.year = "Unknown";
-  if (!paper.venue) paper.venue = "Imported";
-
-  return paper;
 }
 
-function parsePaperImport(textValue) {
+function parsePaperJson(textValue) {
   const payload = JSON.parse(textValue);
-  const rawItems = Array.isArray(payload) ? payload : Array.isArray(payload.papers) ? payload.papers : [payload];
+  const rawItems = payload && typeof payload === "object" && Array.isArray(payload.papers) ? payload.papers : [];
   if (!rawItems.length) return [];
-  return rawItems.map(normalizePaper);
+  return rawItems.map(normalizePaperRecord);
 }
 
 function upsertPaperList(target, imported) {
@@ -4419,38 +4324,12 @@ function upsertPaperList(target, imported) {
   return { added, updated };
 }
 
-function readCustomPapers() {
-  try {
-    const value = localStorage.getItem(customPapersStorageKey);
-    return value ? parsePaperImport(value) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCustomPapers(imported) {
-  const current = readCustomPapers();
-  upsertPaperList(current, imported);
-  localStorage.setItem(customPapersStorageKey, JSON.stringify({ papers: current }, null, 2));
-}
-
-function importPapersFromText(textValue) {
-  const imported = parsePaperImport(textValue);
-  if (!imported.length) throw new Error("No papers found.");
-  saveCustomPapers(imported);
-  const result = upsertPaperList(papers, imported);
-  state.selectedId = imported[0].id;
-  render();
-  return { ...result, total: imported.length };
-}
-
 async function loadExternalPapers() {
   try {
     const response = await fetch(externalPapersPath, { cache: "no-cache" });
     if (!response.ok) return 0;
-    const imported = parsePaperImport(await response.text());
+    const imported = parsePaperJson(await response.text());
     upsertPaperList(papers, imported);
-    upsertPaperList(papers, readCustomPapers());
     render();
     return imported.length;
   } catch {
@@ -4751,10 +4630,6 @@ nodes.promptButton.addEventListener("click", () => {
   openPromptModal();
 });
 
-nodes.addPaperButton.addEventListener("click", () => {
-  openPaperImportModal();
-});
-
 nodes.sidebarToggle.addEventListener("click", () => {
   state.layout.sidebarCollapsed = true;
   saveLayout();
@@ -4845,19 +4720,6 @@ nodes.paperList.addEventListener("click", (event) => {
   renderList();
 });
 
-function openPaperImportModal() {
-  nodes.paperImportStatus.textContent = "";
-  if (!nodes.paperImportText.value.trim()) {
-    nodes.paperImportText.value = JSON.stringify(paperImportTemplate, null, 2);
-  }
-  nodes.paperImportModal.hidden = false;
-}
-
-function closePaperImportModal() {
-  nodes.paperImportModal.hidden = true;
-  nodes.paperImportStatus.textContent = "";
-}
-
 function openPromptModal() {
   nodes.promptStatus.textContent = "";
   nodes.promptPreview.textContent = readingPrompts[state.lang] || readingPrompts.zh;
@@ -4889,57 +4751,13 @@ nodes.promptModal.addEventListener("click", async (event) => {
   }
 });
 
-nodes.paperImportFile.addEventListener("change", async () => {
-  const file = nodes.paperImportFile.files && nodes.paperImportFile.files[0];
-  if (!file) return;
-  nodes.paperImportText.value = await file.text();
-  nodes.paperImportStatus.textContent = "";
-});
-
-nodes.paperImportModal.addEventListener("click", (event) => {
-  if (event.target.closest("[data-paper-import-close]")) {
-    closePaperImportModal();
-    return;
-  }
-
-  const button = event.target.closest("[data-paper-import-action]");
-  if (!button) return;
-
-  const action = button.dataset.paperImportAction;
-  if (action === "template") {
-    nodes.paperImportText.value = JSON.stringify(paperImportTemplate, null, 2);
-    nodes.paperImportStatus.textContent = "";
-    return;
-  }
-
-  if (action === "clear") {
-    localStorage.removeItem(customPapersStorageKey);
-    nodes.paperImportStatus.textContent = text("importCleared");
-    window.setTimeout(() => window.location.reload(), 500);
-    return;
-  }
-
-  if (action === "import") {
-    try {
-      const result = importPapersFromText(nodes.paperImportText.value);
-      nodes.paperImportStatus.textContent = `${text("importSuccess")} ${result.total}`;
-    } catch {
-      nodes.paperImportStatus.textContent = text("importError");
-    }
-  }
-});
-
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !nodes.promptModal.hidden) {
     closePromptModal();
   }
-  if (event.key === "Escape" && !nodes.paperImportModal.hidden) {
-    closePaperImportModal();
-  }
 });
 
 function initialize() {
-  upsertPaperList(papers, readCustomPapers());
   render();
   loadExternalPapers();
 }
