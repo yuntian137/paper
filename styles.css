@@ -360,9 +360,9 @@ body.is-detail-collapsed .paper-detail {
 
 .paper-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   align-content: start;
-  align-items: stretch;
+  align-items: start;
   gap: 12px;
   max-height: calc(100vh - 136px);
   overflow-y: auto;
@@ -373,11 +373,9 @@ body.is-detail-collapsed .paper-detail {
 .paper-card {
   display: grid;
   gap: 12px;
-  grid-template-rows: auto auto auto minmax(74px, 1fr) minmax(52px, auto);
+  grid-template-rows: auto;
+  align-self: start;
   width: 100%;
-  height: 340px;
-  min-height: 340px;
-  overflow: hidden;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -396,18 +394,13 @@ body.is-detail-collapsed .paper-detail {
 }
 
 .paper-card h3 {
-  display: -webkit-box;
-  overflow: hidden;
   margin-bottom: 0;
   font-size: 1.02rem;
   line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
 }
 
 .paper-card-takeaway {
-  display: -webkit-box;
-  overflow: hidden;
   margin: 0;
   padding: 9px 10px;
   border-left: 3px solid var(--brick);
@@ -417,22 +410,13 @@ body.is-detail-collapsed .paper-detail {
   font-size: 0.86rem;
   font-weight: 720;
   line-height: 1.5;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .paper-card-summary,
 .paper-card-tags {
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 3px;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-
-.paper-card-summary::-webkit-scrollbar,
-.paper-card-tags::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .paper-card-summary p {
@@ -440,10 +424,6 @@ body.is-detail-collapsed .paper-detail {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.58;
-}
-
-.paper-card-tags {
-  max-height: 92px;
 }
 
 .meta-row,
@@ -851,10 +831,5 @@ body.is-detail-collapsed .paper-detail {
 
   .paper-list {
     grid-template-columns: 1fr;
-  }
-
-  .paper-card {
-    height: 320px;
-    min-height: 320px;
   }
 }
