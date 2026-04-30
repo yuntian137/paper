@@ -3,5 +3,13 @@
   "High-Performance Reinforcement Learning on Spot: Optimizing Simulation Parameters with Distributional Measures": "还是用 CMA-ES 优化了 T-N 曲线和摩擦。",
   "NeuralSim: Augmenting Differentiable Simulators with Neural Networks": "一个 NN 放入仿真器的工作，niuB。混合数学分析模型和对难以建模部分的 NN。",
   "Learning Torque Control for Quadrupedal Locomotion": "首个 torque-control locomotion 带实机。",
-  "Dynamics Randomization Revisited: A Case Study for Quadrupedal Locomotion": "核心问题是 dynamics randomization 到底有没有用。"
+  "Dynamics Randomization Revisited: A Case Study for Quadrupedal Locomotion": "核心问题是 dynamics randomization 到底有没有用。",
+  "SRBTrack": {
+    "takeaway": "本质是把高维人体动作先转换成低维、可解释、可仿真的 SRB 物理轨迹。",
+    "note": "再用策略学习自适应脚步和接触，最后通过 CVAE 与 MMSTO 把这个物理轨迹重建为 COM、动量和脚接触一致的全身动作；可以理解为从运动学数据集导出动力学参考 motion。"
+  },
+  "SITT": {
+    "takeaway": "在教师 PPO 目标中嵌入动态更新的学生模型，让教师始终背负“学生能否学会”的约束。",
+    "note": "这个设计让教师进化过程直接考虑后续蒸馏难度，最终蒸馏出既强大又鲁棒的感知控制策略。"
+  }
 }
