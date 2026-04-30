@@ -81,6 +81,7 @@ system identification, domain randomization, real-world finetuning
 4. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
 5. `categories` 使用上面的固定分类 id。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
+7. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
 
 ```json
 {
@@ -97,6 +98,7 @@ system identification, domain randomization, real-world finetuning
         "title": "中文或英文论文标题",
         "authors": "作者",
         "status": "摘要已整理",
+        "takeaway": "一句话写清楚：这篇论文对我来说最该记住什么。",
         "tags": ["Dexterous Hand", "PPO", "Sim-to-Real"],
         "mainContent": "根据摘要概括：研究问题、核心方法和主要结论。",
         "innovations": ["摘要中明确提到的创新点；不确定时写待阅读全文补充"],
@@ -106,6 +108,7 @@ system identification, domain randomization, real-world finetuning
         "title": "Paper title",
         "authors": "Authors",
         "status": "Abstract summarized",
+        "takeaway": "One sentence on how I should remember this paper.",
         "tags": ["Dexterous Hand", "PPO", "Sim-to-Real"],
         "mainContent": "Summarize the problem, core method, and main claim from the abstract.",
         "innovations": ["Innovation explicitly stated in the abstract; otherwise mark as pending full reading"],

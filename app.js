@@ -15,6 +15,7 @@ const uiText = {
     venue: "来源",
     year: "年份",
     status: "状态",
+    takeaway: "一句话理解",
     mainContent: "简介",
     keywords: "关键词",
     innovations: "创新点",
@@ -51,6 +52,7 @@ const uiText = {
     venue: "Venue",
     year: "Year",
     status: "Status",
+    takeaway: "Takeaway",
     mainContent: "Summary",
     keywords: "Keywords",
     innovations: "Innovations",
@@ -4271,6 +4273,7 @@ function normalizeLocalizedPaper(localized) {
     title: stringField(value.title),
     authors: stringField(value.authors),
     status: stringField(value.status),
+    takeaway: stringField(value.takeaway),
     tags: stringArray(value.tags),
     mainContent: stringField(value.mainContent),
     innovations: stringArray(value.innovations),
@@ -4442,6 +4445,7 @@ function searchableText(paper) {
   return [
     localized.title,
     localized.authors,
+    localized.takeaway,
     localized.mainContent,
     localized.innovations.join(" "),
     localized.implementation.join(" "),
@@ -4534,6 +4538,9 @@ function renderPaperCard(paper) {
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const selectedClass = paper.id === state.selectedId ? "is-selected" : "";
+  const takeaway = localized.takeaway
+    ? `<p class="paper-card-takeaway">${renderText(localized.takeaway)}</p>`
+    : "";
 
   return `
     <button class="paper-card ${selectedClass}" type="button" data-paper-id="${paper.id}">
@@ -4542,6 +4549,7 @@ function renderPaperCard(paper) {
         <span>${paper.venue}</span>
       </div>
       <h3>${escapeHtml(localized.title)}</h3>
+      ${takeaway}
       <div class="paper-card-summary">
         <p>${renderText(localized.mainContent)}</p>
       </div>
@@ -4562,11 +4570,20 @@ function renderDetail(paper) {
   const linkAction = link
     ? `<a class="action-link primary" href="${link.url}" target="_blank" rel="noreferrer">${link.label}</a>`
     : "";
+  const takeaway = localized.takeaway
+    ? `
+      <section class="detail-takeaway">
+        <span>${text("takeaway")}</span>
+        <p>${renderText(localized.takeaway)}</p>
+      </section>
+    `
+    : "";
 
   nodes.paperDetail.innerHTML = `
     <div class="tag-row">${categoryTags}</div>
     <h2 class="detail-title">${escapeHtml(localized.title)}</h2>
     <p class="detail-subtitle">${escapeHtml(localized.authors)}</p>
+    ${takeaway}
 
     <div class="detail-grid">
       <div class="info-tile">

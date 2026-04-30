@@ -1,3 +1,4 @@
 {
+  "_note": "Add paper objects to papers. See README for full schema. zh/en can include takeaway for one-sentence review notes.",
   "papers": []
 }
