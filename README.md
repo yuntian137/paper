@@ -21,9 +21,10 @@ index.html                页面结构
 styles.css                页面样式
 app.js                    UI 文案、论文数据、分类、筛选、搜索和详情渲染
 papers_extra.json         可选的新增论文 JSON 数据，网站启动时自动读取
+paper_notes.json          个人复习笔记，按 id、标题片段或链接匹配论文
 ```
 
-网站发布只依赖 `app.js`、`papers_extra.json` 和外部论文链接。
+网站发布只依赖 `app.js`、`papers_extra.json`、`paper_notes.json` 和外部论文链接。
 
 ## 分类方式
 
@@ -130,6 +131,37 @@ system identification, domain randomization, real-world finetuning
 ```
 
 `innovations` 和 `implementation` 只记录摘要里能确认的信息。摘要没有说明的内容可以保留为“待阅读全文补充”，不要写成已经确认的细节。
+
+## 个人复习笔记
+
+如果只是临时想到一句“这篇论文该怎么理解”，优先改 `paper_notes.json`，不需要复制完整论文对象。
+
+key 可以写：
+
+```txt
+论文 id
+论文标题片段
+论文链接
+```
+
+value 可以直接写字符串，网站会当作 `takeaway` 显示在卡片和详情页：
+
+```json
+{
+  "NeuralSim": "一个 NN 放入仿真器的工作，混合数学分析模型和对难以建模部分的 NN。"
+}
+```
+
+如果想写长一点，可以用对象，`takeaway` 会显示在卡片和详情页，`note` 只显示在详情页：
+
+```json
+{
+  "Dynamics Randomization Revisited": {
+    "takeaway": "核心问题是 dynamics randomization 到底有没有用。",
+    "note": "复习时重点看它的 case study 条件，不要把结论泛化到所有 sim2real。"
+  }
+}
+```
 
 ## 本地预览
 

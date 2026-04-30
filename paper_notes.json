@@ -1,0 +1,7 @@
+{
+  "_note": "Keys can be paper id, title substring, or paper link. String values are shown as takeaway. Object values can use takeaway and note.",
+  "High-Performance Reinforcement Learning on Spot: Optimizing Simulation Parameters with Distributional Measures": "还是用 CMA-ES 优化了 T-N 曲线和摩擦。",
+  "NeuralSim: Augmenting Differentiable Simulators with Neural Networks": "一个 NN 放入仿真器的工作，niuB。混合数学分析模型和对难以建模部分的 NN。",
+  "Learning Torque Control for Quadrupedal Locomotion": "首个 torque-control locomotion 带实机。",
+  "Dynamics Randomization Revisited: A Case Study for Quadrupedal Locomotion": "核心问题是 dynamics randomization 到底有没有用。"
+}

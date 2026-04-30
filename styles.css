@@ -516,7 +516,8 @@ body.is-detail-collapsed .paper-detail {
   line-height: 1.65;
 }
 
-.detail-takeaway {
+.detail-takeaway,
+.detail-note {
   margin: 18px 0 22px;
   padding: 16px 18px;
   border: 1px solid rgba(182, 83, 60, 0.2);
@@ -525,7 +526,14 @@ body.is-detail-collapsed .paper-detail {
   background: rgba(182, 83, 60, 0.08);
 }
 
-.detail-takeaway span {
+.detail-note {
+  border-color: rgba(36, 124, 117, 0.18);
+  border-left-color: var(--teal);
+  background: rgba(36, 124, 117, 0.08);
+}
+
+.detail-takeaway span,
+.detail-note span {
   display: block;
   margin-bottom: 7px;
   color: #8f3e2b;
@@ -534,12 +542,21 @@ body.is-detail-collapsed .paper-detail {
   text-transform: uppercase;
 }
 
-.detail-takeaway p {
+.detail-note span {
+  color: var(--teal-dark);
+}
+
+.detail-takeaway p,
+.detail-note p {
   margin: 0;
   color: #3f2b25;
   font-size: 1rem;
   font-weight: 720;
   line-height: 1.7;
+}
+
+.detail-note p {
+  color: #243f3b;
 }
 
 .detail-grid {

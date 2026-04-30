@@ -16,6 +16,7 @@ const uiText = {
     year: "年份",
     status: "状态",
     takeaway: "一句话理解",
+    personalNote: "个人笔记",
     mainContent: "简介",
     keywords: "关键词",
     innovations: "创新点",
@@ -53,6 +54,7 @@ const uiText = {
     year: "Year",
     status: "Status",
     takeaway: "Takeaway",
+    personalNote: "Personal Note",
     mainContent: "Summary",
     keywords: "Keywords",
     innovations: "Innovations",
@@ -4178,6 +4180,8 @@ const papers = [
 ];
 
 const externalPapersPath = "papers_extra.json";
+const externalNotesPath = "paper_notes.json";
+const paperNotes = new Map();
 
 const state = {
   lang: localStorage.getItem("paper-notes-lang") || "zh",
@@ -4266,6 +4270,16 @@ function stringArray(value) {
   return Array.isArray(value) ? value.map(stringField).filter(Boolean) : [];
 }
 
+function normalizeMatchKey(value) {
+  return stringField(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/^https?:\/\/(www\.)?/, "")
+    .replace(/\/+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeLocalizedPaper(localized) {
   const value = localized && typeof localized === "object" ? localized : {};
 
@@ -4309,6 +4323,107 @@ function parsePaperJson(textValue) {
   return rawItems.map(normalizePaperRecord);
 }
 
+function normalizePaperNote(value) {
+  if (typeof value === "string") {
+    return {
+      takeaway: stringField(value),
+      note: "",
+    };
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const zh = typeof value.zh === "string" ? { takeaway: value.zh } : value.zh;
+  const en = typeof value.en === "string" ? { takeaway: value.en } : value.en;
+
+  return {
+    takeaway: stringField(value.takeaway),
+    note: stringField(value.note),
+    zh: zh && typeof zh === "object" ? normalizePaperNote(zh) : null,
+    en: en && typeof en === "object" ? normalizePaperNote(en) : null,
+  };
+}
+
+function localPaperNote(paper) {
+  const note = paperNotes.get(paper.id);
+  if (!note) {
+    return {
+      takeaway: localPaper(paper).takeaway,
+      note: "",
+    };
+  }
+
+  const localized = note[state.lang] || {};
+
+  return {
+    takeaway: localized.takeaway || note.takeaway || localPaper(paper).takeaway,
+    note: localized.note || note.note || "",
+  };
+}
+
+function allNoteText(paper) {
+  const note = paperNotes.get(paper.id);
+  if (!note) return localPaper(paper).takeaway;
+
+  return [
+    note.takeaway,
+    note.note,
+    note.zh && note.zh.takeaway,
+    note.zh && note.zh.note,
+    note.en && note.en.takeaway,
+    note.en && note.en.note,
+    localPaper(paper).takeaway,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function noteMatchValues(paper) {
+  return [
+    paper.id,
+    paper.zh && paper.zh.title,
+    paper.en && paper.en.title,
+    paper.arxiv,
+    paper.pdf,
+    paper.project,
+  ]
+    .map(normalizeMatchKey)
+    .filter(Boolean);
+}
+
+function findPaperForNoteKey(rawKey) {
+  const key = normalizeMatchKey(rawKey);
+  if (!key || key.startsWith("_")) return null;
+
+  const exact = papers.find((paper) => noteMatchValues(paper).some((value) => value === key));
+  if (exact) return exact;
+
+  if (key.length < 4) return null;
+
+  return papers.find((paper) =>
+    noteMatchValues(paper).some((value) => value.includes(key) || key.includes(value)),
+  );
+}
+
+function parsePaperNotes(textValue) {
+  const payload = JSON.parse(textValue);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return 0;
+
+  let matched = 0;
+  Object.entries(payload).forEach(([key, value]) => {
+    if (key.startsWith("_")) return;
+    const paper = findPaperForNoteKey(key);
+    const note = normalizePaperNote(value);
+    if (!paper || !note) return;
+    paperNotes.set(paper.id, note);
+    matched += 1;
+  });
+
+  return matched;
+}
+
 function upsertPaperList(target, imported) {
   let added = 0;
   let updated = 0;
@@ -4333,8 +4448,17 @@ async function loadExternalPapers() {
     if (!response.ok) return 0;
     const imported = parsePaperJson(await response.text());
     upsertPaperList(papers, imported);
-    render();
     return imported.length;
+  } catch {
+    return 0;
+  }
+}
+
+async function loadPaperNotes() {
+  try {
+    const response = await fetch(externalNotesPath, { cache: "no-cache" });
+    if (!response.ok) return 0;
+    return parsePaperNotes(await response.text());
   } catch {
     return 0;
   }
@@ -4445,7 +4569,7 @@ function searchableText(paper) {
   return [
     localized.title,
     localized.authors,
-    localized.takeaway,
+    allNoteText(paper),
     localized.mainContent,
     localized.innovations.join(" "),
     localized.implementation.join(" "),
@@ -4535,11 +4659,12 @@ function renderList() {
 
 function renderPaperCard(paper) {
   const localized = localPaper(paper);
+  const note = localPaperNote(paper);
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const selectedClass = paper.id === state.selectedId ? "is-selected" : "";
-  const takeaway = localized.takeaway
-    ? `<p class="paper-card-takeaway">${renderText(localized.takeaway)}</p>`
+  const takeaway = note.takeaway
+    ? `<p class="paper-card-takeaway">${renderText(note.takeaway)}</p>`
     : "";
 
   return `
@@ -4564,17 +4689,26 @@ function renderDetail(paper) {
   if (!paper) return;
 
   const localized = localPaper(paper);
+  const note = localPaperNote(paper);
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const link = primaryLink(paper);
   const linkAction = link
     ? `<a class="action-link primary" href="${link.url}" target="_blank" rel="noreferrer">${link.label}</a>`
     : "";
-  const takeaway = localized.takeaway
+  const takeaway = note.takeaway
     ? `
       <section class="detail-takeaway">
         <span>${text("takeaway")}</span>
-        <p>${renderText(localized.takeaway)}</p>
+        <p>${renderText(note.takeaway)}</p>
+      </section>
+    `
+    : "";
+  const personalNote = note.note
+    ? `
+      <section class="detail-note">
+        <span>${text("personalNote")}</span>
+        <p>${renderText(note.note)}</p>
       </section>
     `
     : "";
@@ -4584,6 +4718,7 @@ function renderDetail(paper) {
     <h2 class="detail-title">${escapeHtml(localized.title)}</h2>
     <p class="detail-subtitle">${escapeHtml(localized.authors)}</p>
     ${takeaway}
+    ${personalNote}
 
     <div class="detail-grid">
       <div class="info-tile">
@@ -4776,7 +4911,15 @@ document.addEventListener("keydown", (event) => {
 
 function initialize() {
   render();
-  loadExternalPapers();
+  loadExternalData();
+}
+
+async function loadExternalData() {
+  const importedCount = await loadExternalPapers();
+  const noteCount = await loadPaperNotes();
+  if (importedCount || noteCount) {
+    render();
+  }
 }
 
 initialize();
