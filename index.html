@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paper Reading Notes</title>
+    <meta
+      name="description"
+      content="A bilingual paper reading notebook with main content, innovations, implementation notes, categories, and links."
+    />
+    <link rel="stylesheet" href="styles.css?v=20260430-11" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
+          processEscapes: true,
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+    ></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand-block">
+        <p class="eyebrow" data-i18n="siteLabel">Paper Reading Notes</p>
+        <h1 data-i18n="siteTitle">论文阅读笔记</h1>
+      </div>
+
+      <div class="header-actions" aria-label="language switcher">
+        <button class="tool-button" type="button" id="prompt-button">精读 Prompt</button>
+        <button class="tool-button" type="button" id="add-paper-button" data-i18n="addPaperButton">
+          新增论文
+        </button>
+        <button class="lang-button is-active" type="button" data-lang="zh">中文</button>
+        <button class="lang-button" type="button" data-lang="en">English</button>
+      </div>
+    </header>
+
+    <main class="shell" id="app-shell">
+      <button class="edge-toggle sidebar-restore" id="sidebar-restore" type="button">›</button>
+      <aside class="sidebar" id="sidebar" aria-label="paper navigation">
+        <div class="sidebar-header">
+          <label class="search-label" for="paper-search" data-i18n="searchLabel">搜索论文</label>
+          <button class="panel-toggle" id="sidebar-toggle" type="button">‹</button>
+        </div>
+        <input id="paper-search" class="search-input" type="search" autocomplete="off" />
+
+        <nav class="category-nav" id="category-nav" aria-label="categories"></nav>
+
+        <section class="quick-stats" aria-label="statistics">
+          <div>
+            <span id="paper-count">0</span>
+            <small data-i18n="papers">篇论文</small>
+          </div>
+          <div>
+            <span id="category-count">0</span>
+            <small data-i18n="topics">个方向</small>
+          </div>
+        </section>
+      </aside>
+      <div
+        class="layout-resizer sidebar-resizer"
+        id="sidebar-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        tabindex="0"
+      ></div>
+
+      <section class="content-area" aria-live="polite">
+        <div class="toolbar">
+          <div>
+            <p class="section-kicker" data-i18n="libraryLabel">Library</p>
+            <h2 id="view-title">全部论文</h2>
+          </div>
+          <div class="toolbar-actions">
+            <p id="result-count" class="result-count"></p>
+            <button class="panel-toggle" id="detail-toggle" type="button">›</button>
+          </div>
+        </div>
+
+        <div class="workspace" id="workspace">
+          <section class="paper-list" id="paper-list" aria-label="papers"></section>
+          <div
+            class="layout-resizer detail-resizer"
+            id="detail-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            tabindex="0"
+          ></div>
+          <article class="paper-detail" id="paper-detail" aria-label="paper detail"></article>
+        </div>
+      </section>
+    </main>
+
+    <div class="prompt-modal" id="prompt-modal" hidden>
+      <button class="prompt-backdrop" type="button" data-prompt-close aria-label="close"></button>
+      <section class="prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title">
+        <div class="prompt-dialog-header">
+          <div>
+            <p class="section-kicker">Prompt</p>
+            <h2 id="prompt-modal-title" data-i18n="promptModalTitle">论文精读 Prompt</h2>
+          </div>
+          <button class="icon-close" type="button" data-prompt-close aria-label="close">×</button>
+        </div>
+        <p class="prompt-dialog-copy" data-i18n="promptModalDescription">
+          选择要复制的版本，直接粘贴给读论文的 agent。
+        </p>
+        <pre class="prompt-preview" id="prompt-preview"></pre>
+        <div class="prompt-dialog-actions">
+          <button class="action-link primary" type="button" data-prompt-copy="zh" data-i18n="copyZhPrompt">
+            复制中文 Prompt
+          </button>
+          <button class="action-link" type="button" data-prompt-copy="en" data-i18n="copyEnPrompt">
+            Copy English Prompt
+          </button>
+        </div>
+        <p class="prompt-status" id="prompt-status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <div class="prompt-modal" id="paper-import-modal" hidden>
+      <button class="prompt-backdrop" type="button" data-paper-import-close aria-label="close"></button>
+      <section
+        class="prompt-dialog paper-import-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paper-import-title"
+      >
+        <div class="prompt-dialog-header">
+          <div>
+            <p class="section-kicker">JSON</p>
+            <h2 id="paper-import-title" data-i18n="importModalTitle">新增论文解读</h2>
+          </div>
+          <button class="icon-close" type="button" data-paper-import-close aria-label="close">×</button>
+        </div>
+        <p class="prompt-dialog-copy" data-i18n="importModalDescription">
+          粘贴 JSON 或选择本地 JSON 文件，导入后会保存在当前浏览器。
+        </p>
+        <input id="paper-import-file" class="file-input" type="file" accept=".json,application/json" />
+        <textarea
+          id="paper-import-text"
+          class="json-input"
+          spellcheck="false"
+          aria-label="paper json"
+        ></textarea>
+        <div class="prompt-dialog-actions">
+          <button class="action-link primary" type="button" data-paper-import-action="import" data-i18n="importJson">
+            导入 JSON
+          </button>
+          <button class="action-link" type="button" data-paper-import-action="template" data-i18n="fillTemplate">
+            填入模板
+          </button>
+          <button class="action-link" type="button" data-paper-import-action="clear" data-i18n="clearLocalPapers">
+            清空本地新增
+          </button>
+        </div>
+        <p class="prompt-status" id="paper-import-status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <script src="app.js?v=20260430-26"></script>
+  </body>
+</html>
