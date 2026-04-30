@@ -23,7 +23,7 @@ app.js                    UI 文案、论文数据、分类、筛选、搜索和
 papers_extra.json         可选的新增论文 JSON 数据，网站启动时自动读取
 ```
 
-网站发布只依赖 `app.js`、`papers_extra.json` 和外部论文链接，不保存本地 PDF，也不维护 `read/` 目录。这样 GitHub Pages 仓库不会因为论文文件变大。
+网站发布只依赖 `app.js`、`papers_extra.json` 和外部论文链接。
 
 ## 分类方式
 
