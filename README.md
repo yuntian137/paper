@@ -20,6 +20,7 @@ https://yuntian137.github.io/paper/
 index.html                页面结构
 styles.css                页面样式
 app.js                    UI 文案、论文数据、分类、筛选、搜索和详情渲染
+example.json              给论文阅读 agent 使用的论文卡片填写模板
 papers_extra.json         可选的新增论文 JSON 数据，网站启动时自动读取
 paper_notes.json          个人复习笔记，按 id、标题片段或链接匹配论文
 ```
@@ -69,6 +70,8 @@ system identification, domain randomization, real-world finetuning
 
 推荐优先维护 `papers_extra.json`，网站启动时会自动读取其中的 `papers` 数组。网页本身只负责展示，不在浏览器里编辑或保存新增论文。
 
+如果使用另一个 AI agent 阅读和总结论文，推荐先把 `example.json` 交给它，让它按模板补全论文对象。agent 填好后，把生成结果中的 `papers` 数组追加到 `papers_extra.json` 即可。
+
 长期维护有两种方式：
 
 1. 少量稳定内置论文：在 `app.js` 的 `papers` 数组里新增一个对象。
@@ -83,6 +86,7 @@ system identification, domain randomization, real-world finetuning
 5. `categories` 使用上面的固定分类 id。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
 7. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
+8. `example.json` 里的 `_comment`、`_id_comment` 等字段只是合法 JSON 注释，复制到 `papers_extra.json` 里不会影响页面读取，但正式维护时可以删除以保持简洁。
 
 ```json
 {

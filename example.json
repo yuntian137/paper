@@ -1,0 +1,119 @@
+{
+  "_comment": "论文卡片填写模板。这个文件必须保持合法 JSON，所以注释都写在 _comment 字段里，不使用 // 或 /* */。",
+  "_workflow": "把这个文件交给论文阅读 agent，让它根据论文 PDF、arXiv 页面或摘要补全 papers 数组里的对象。填好后可以把 papers 数组追加到 papers_extra.json。",
+  "_important_rules": [
+    "不要编造论文中没有说明的实验、实现细节或结论。",
+    "mainContent 默认基于摘要整理，写 2-4 句，覆盖研究问题、核心方法和主要结论。",
+    "innovations 和 implementation 只写论文中能确认的信息；不确定时写“待阅读全文补充”或“not specified in the paper”。",
+    "建议同时填写 zh 和 en，保证网页中英文切换稳定。",
+    "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。"
+  ],
+  "available_categories": [
+    {
+      "id": "locomotion",
+      "zh": "运动控制 / Locomotion",
+      "en": "Motion Control / Locomotion"
+    },
+    {
+      "id": "manipulation",
+      "zh": "Manipulation",
+      "en": "Manipulation"
+    },
+    {
+      "id": "loco-manipulation",
+      "zh": "Loco-Manipulation",
+      "en": "Loco-Manipulation"
+    },
+    {
+      "id": "sim2real",
+      "zh": "Sim2Real / 动力学辨识",
+      "en": "Sim2Real / System ID"
+    },
+    {
+      "id": "real-robot-rl",
+      "zh": "真机 RL",
+      "en": "Real-Robot RL"
+    },
+    {
+      "id": "imitation-teleop",
+      "zh": "模仿学习 / 遥操作",
+      "en": "Imitation / Teleop"
+    },
+    {
+      "id": "vla-world-model",
+      "zh": "VLA / 世界模型",
+      "en": "VLA / World Model"
+    },
+    {
+      "id": "benchmark-dataset",
+      "zh": "Benchmark / Dataset",
+      "en": "Benchmark / Dataset"
+    }
+  ],
+  "papers": [
+    {
+      "_comment": "复制这个对象来添加论文。id 必须填写且保持稳定；同 id 会覆盖已有论文。",
+      "id": "paper-id-in-english-slug",
+      "_id_comment": "建议格式：论文简称或标题关键词的小写英文 slug，例如 dexndm、sitt-student-informed-teacher-training。",
+      "categories": [
+        "manipulation",
+        "sim2real"
+      ],
+      "_categories_comment": "只能使用 available_categories 里的 id；一篇论文可以属于多个分类。优先复用现有分类，不要随意新增页面主分类。",
+      "pdf": "https://arxiv.org/pdf/xxxx.xxxxx",
+      "_pdf_comment": "外部 PDF 链接；没有就填空字符串，不要写本地 PDF 路径。",
+      "project": "https://example.com/project-page",
+      "_project_comment": "项目主页、代码主页或补充材料页面；没有就填空字符串。网页会优先把真正的项目页作为主按钮。",
+      "arxiv": "https://arxiv.org/abs/xxxx.xxxxx",
+      "_arxiv_comment": "arXiv / OpenReview / 论文页面链接；没有就填空字符串。",
+      "year": "2026",
+      "_year_comment": "论文年份，字符串即可。",
+      "venue": "arXiv:xxxx.xxxxx",
+      "_venue_comment": "会议、期刊、workshop 或 arXiv 编号，例如 ICLR 2026、RSS 2025、arXiv:2601.00000。",
+      "zh": {
+        "_comment": "中文展示内容。卡片会显示 title、takeaway、mainContent、tags；详情页还会显示 authors、status、innovations、implementation。",
+        "title": "论文标题",
+        "authors": "作者 1, 作者 2, 作者 3",
+        "status": "摘要已整理",
+        "takeaway": "一句话写清楚：这篇论文对我来说最该记住什么。",
+        "tags": [
+          "PPO",
+          "Sim-to-Real",
+          "Dexterous Hand"
+        ],
+        "mainContent": "用 2-4 句概括：论文解决什么问题，使用什么核心方法，实验或结果声称解决了什么。尽量基于摘要，不要为了填内容而脑补全文细节。",
+        "innovations": [
+          "摘要或正文中明确提出的创新点 1。",
+          "摘要或正文中明确提出的创新点 2。",
+          "如果没有足够信息，写：待阅读全文补充。"
+        ],
+        "implementation": [
+          "论文中能确认的训练流程、模型结构、输入输出、奖励设计、数据来源或部署方式。",
+          "如果论文没有说明具体实现，写：论文未说明具体实现细节。"
+        ]
+      },
+      "en": {
+        "_comment": "English display content. Keep it semantically aligned with zh, but it does not need to be a word-for-word translation.",
+        "title": "Paper title",
+        "authors": "Author 1, Author 2, Author 3",
+        "status": "Abstract summarized",
+        "takeaway": "One sentence on how I should remember this paper.",
+        "tags": [
+          "PPO",
+          "Sim-to-Real",
+          "Dexterous Hand"
+        ],
+        "mainContent": "In 2-4 sentences, summarize the problem, core method, and main claim. Prefer information from the abstract; do not invent details just to fill the card.",
+        "innovations": [
+          "Innovation explicitly stated in the abstract or paper.",
+          "Another confirmed novelty or contribution.",
+          "If information is insufficient, write: pending full reading."
+        ],
+        "implementation": [
+          "Confirmed implementation details such as training pipeline, model structure, inputs/outputs, reward design, data source, or deployment setup.",
+          "If the paper does not specify details, write: not specified in the paper."
+        ]
+      }
+    }
+  ]
+}
