@@ -45,6 +45,57 @@
           "Deploy the observation-limited student policy after distillation."
         ]
       }
+    },
+    {
+      "id": "mocapact",
+      "categories": ["locomotion", "imitation-teleop", "benchmark-dataset"],
+      "pdf": "https://arxiv.org/pdf/2208.07363",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2208.07363",
+      "year": "2022",
+      "venue": "NeurIPS 2022",
+      "zh": {
+        "title": "MoCapAct: 面向仿真人形控制的多任务数据集",
+        "authors": "Nolan Wagener, Andrey Kolobov, Felipe Vieira Frujeri, Ricky Loynd, Ching-An Cheng, Matthew Hausknecht",
+        "status": "全文已精读",
+        "takeaway": "通过预计算 RL 专家策略并开源其 rollout 数据，将高维人形机器人运动跟踪的准入门槛从 50 年分布式 RL 降至 3 小时监督学习。",
+        "tags": ["Motion Capture", "Imitation Learning", "PPO", "Distillation", "Humanoid", "Dataset", "GPT"],
+        "mainContent": "针对公开 MoCap 数据仅含运动学信息、物理跟踪需大规模 RL 计算的问题，本文训练并发布了 MoCapAct 数据集——包含能跟踪 3.5 小时 CMU MoCap 数据的专家策略及其噪声注入 rollout。基于该数据集，通过蒸馏训练了单一多片段跟踪策略，并复用其低层解码器加速下游 RL 任务；此外训练了 GPT 模型实现给定运动提示后的物理仿真运动补全。",
+        "innovations": [
+          "首次公开与 CMU MoCap 配套的大规模物理控制数据集（含专家策略、观测、动作、奖励、价值与优势估计），覆盖 3.5 小时运动数据。",
+          "提出两阶段研究范式：先以 PPO 并行训练 2589 个逐片段专家（总计约 50 年 wall-clock），再以监督学习/蒸馏训练统一多片段策略，单 GPU 仅需约 3 小时。",
+          "系统比较 BC/CWR/AWR/RWR 四种加权蒸馏方案，证明 Reward-Weighted Regression 最优（较 BC 提升约 5%）。",
+          "将 minGPT adapted 到连续控制域，仅基于历史观测自回归生成动作，实现物理仿真器中的运动补全。"
+        ],
+        "implementation": [
+          "环境：dm_control CMU Humanoid（56 关节，MuJoCo 后端），动作空间为目标关节角度，经 PD 控制器转换为力矩。",
+          "阶段一（专家训练）：Stable-Baselines3 PPO；策略网络为 3 层 1024 神经元 MLP，tanh 激活；每 snippet 训练 150M 环境步，采用 RSI 初始化和早终止条件；动作分布固定标准差 σ=0.1；共 2589 个 snippet。",
+          "阶段二（数据采集）：对每个专家执行 200 次噪声注入 rollout（Large 版）或 20 次（Small 版），记录状态、参考轨迹、采样动作、均值动作、奖励、价值与优势；Large 版 600 GB 共 67M transitions，Small 版 50 GB 共 5.5M transitions。",
+          "阶段三（多片段策略）：Encoder-Decoder 架构；Encoder 为 2 层 1024 神经元 MLP（LayerNorm+ELU），输出 60 维高斯意图 z_t；Decoder 为 3 层 1024 神经元 MLP，输出 56 维动作均值（固定 σ=0.1）；优化目标为加权 log 似然减去 β·KL 散度（β=0.1，先验 α=0）；Adam 学习率 5e-4，序列长度 T=30，batch size 256，单 GPU 约 3 小时/50k 步收敛。",
+          "阶段四（GPT）：基于 minGPT adapted 至连续输入/输出，57M 参数，8 层 8 头 768 维嵌入，上下文 32 步；以 MSE 损失自回归预测动作；PyTorch Lightning 训练 2M 步约 1 周（4×V100）。"
+        ]
+      },
+      "en": {
+        "title": "MoCapAct: A Multi-Task Dataset for Simulated Humanoid Control",
+        "authors": "Nolan Wagener, Andrey Kolobov, Felipe Vieira Frujeri, Ricky Loynd, Ching-An Cheng, Matthew Hausknecht",
+        "status": "Full paper reviewed",
+        "takeaway": "By precomputing RL expert policies and open-sourcing their noisy rollouts, the paper lowers the barrier of humanoid motion tracking from 50 years of distributed RL to 3 hours of supervised learning.",
+        "tags": ["Motion Capture", "Imitation Learning", "PPO", "Distillation", "Humanoid", "Dataset", "GPT"],
+        "mainContent": "To address the problem that public MoCap data contains only kinematic information while physics-based tracking requires prohibitive RL computation, this paper trains and releases MoCapAct—a dataset of expert policies and their rollouts covering 3.5 hours of CMU MoCap. Using this dataset, the authors distill a single multi-clip tracking policy and reuse its low-level decoder to accelerate downstream RL tasks; they also train a GPT model for motion completion in physics simulation given a prompt.",
+        "innovations": [
+          "First large-scale public dataset of physics-based control actions paired with CMU MoCap, including expert policies, proprioceptive observations, actions, rewards, values, and advantages.",
+          "Two-stage paradigm: first train 2589 per-snippet experts with PPO (~50 years wall-clock in parallel), then distill a unified multi-clip policy via supervised learning in ~3 hours on a single GPU.",
+          "Systematic comparison of BC/CWR/AWR/RWR weighted regression, showing Reward-Weighted Regression is best (~5% over BC).",
+          "Adaptation of minGPT to continuous control for autoregressive motion completion in a physics simulator using only historical observations."
+        ],
+        "implementation": [
+          "Environment: dm_control CMU Humanoid (56 DoF, MuJoCo backend). Action space is target joint angles converted to torques via PD controllers.",
+          "Stage 1 (Expert training): Stable-Baselines3 PPO; 3-layer 1024-unit MLP with tanh; 150M env steps per snippet with RSI and early termination; fixed action std σ=0.1; 2589 snippets total.",
+          "Stage 2 (Dataset generation): 200 noisy rollouts per snippet (Large) or 20 (Small), logging states, references, sampled actions, mean actions, rewards, values, and advantages; Large: 600 GB / 67M transitions; Small: 50 GB / 5.5M transitions.",
+          "Stage 3 (Multi-clip policy): Encoder-decoder; Encoder is 2-layer 1024-unit MLP (LayerNorm+ELU) outputting 60-dim Gaussian intention z_t; Decoder is 3-layer 1024-unit MLP outputting 56-dim action mean (fixed σ=0.1); objective is weighted log-likelihood minus β·KL (β=0.1, prior α=0); Adam lr=5e-4, sequence length T=30, batch size 256, ~3 hours / 50k steps on one GPU.",
+          "Stage 4 (GPT): minGPT adapted to continuous inputs/outputs, 57M params, 8 layers, 8 heads, 768 dim, context 32 steps; MSE loss for autoregressive action prediction; trained 2M steps over ~1 week on 4×V100."
+        ]
+      }
     }
   ]
 }
