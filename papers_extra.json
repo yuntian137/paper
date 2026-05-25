@@ -96,6 +96,73 @@
           "Stage 4 (GPT): minGPT adapted to continuous inputs/outputs, 57M params, 8 layers, 8 heads, 768 dim, context 32 steps; MSE loss for autoregressive action prediction; trained 2M steps over ~1 week on 4×V100."
         ]
       }
+    },
+    {
+      "id": "beyondmimic",
+      "categories": ["locomotion", "sim2real", "imitation-teleop"],
+      "pdf": "https://arxiv.org/pdf/2508.08241",
+      "project": "https://beyondmimic.github.io/",
+      "arxiv": "https://arxiv.org/abs/2508.08241",
+      "year": "2025",
+      "venue": "arXiv:2508.08241",
+      "zh": {
+        "title": "BeyondMimic: From Motion Tracking to Versatile Humanoid Control via Guided Diffusion",
+        "authors": "Qiayuan Liao, Takara E. Truong, Xiaoyu Huang, Yuman Gao, Guy Tevet, Koushil Sreenath, C. Karen Liu",
+        "status": "已精读整理",
+        "takeaway": "这篇论文把人类动作模仿从“跟踪参考轨迹”推进到“用人类运动先验和 guided diffusion 在测试时组合技能解决新任务”。",
+        "tags": [
+          "Humanoid Control",
+          "Motion Tracking",
+          "Guided Diffusion",
+          "Sim-to-Real",
+          "Human Motion Imitation"
+        ],
+        "mainContent": "BeyondMimic 面向人形机器人的敏捷、自然和通用控制问题，目标是让机器人从多样的人类动作中学习可真实部署的运动技能，并在测试时组合这些技能解决未见任务。方法分为两阶段：先用统一的 RL motion tracking formulation 学习大量人类动作，再训练 latent state-action diffusion model，通过 classifier guidance 在推理阶段优化 joystick、waypoint、motion inpainting 和 obstacle avoidance 等任务。论文展示了真实机器人上的高动态动作、自然走跑、户外部署和零样本任务组合能力。",
+        "innovations": [
+          "提出紧凑的 motion-tracking formulation，使用统一 task-space tracking reward 和少量物理一致性正则，在多种动作上共享超参数并减少 motion-specific tuning。",
+          "使用 anchor-centered relative body tracking，使策略在保留动作风格的同时允许由扰动和 sim-to-real gap 引起的全局漂移。",
+          "提出 latent state-action diffusion model，同时预测未来状态和 latent actions，使任务 cost 可以作用在未来状态上，并通过 guided diffusion 影响当前控制动作。",
+          "利用 classifier guidance 在测试时对未见任务进行在线优化，实现 joystick teleoperation、waypoint navigation、motion inpainting 和 obstacle avoidance，而不需要任务特定训练或微调。"
+        ],
+        "implementation": [
+          "第一阶段将 retargeted human motion 表示为机器人广义位置和速度，通过 forward kinematics 得到目标 body pose/twist，并用 RL 训练 motion-tracking policy。",
+          "tracking reward 由 position、orientation、linear velocity、angular velocity 的 task-space tracking 项组成，并加入 joint limit、action smoothness 和 self-contact penalty 三类正则。",
+          "policy observation 包含 motion phase、anchor pose error、IMU twist、关节位置/速度和上一时刻 action；action 为 normalized joint position setpoints，经低层 PD controller 转换为执行器输入。",
+          "domain randomization 主要作用于地面摩擦和恢复系数、默认关节位置、躯干 CoM 位置，并加入随机速度扰动；论文强调避免过度随机化。",
+          "第二阶段先训练 conditional VAE，将 motion intent 编码为 latent，再用 VAE rollout 生成 state-latent trajectories 训练 diffusion model。",
+          "部署时 diffusion model 以 receding-horizon 方式生成未来短时域轨迹，并用 differentiable task cost 进行 guidance；当前 latent 由 VAE decoder 结合最新 proprioception 解码为当前 action。",
+          "真实部署使用低延迟 C++ 框架；论文强调延迟、armature、actuator modeling 和系统同步对 sim-to-real transfer 很关键。"
+        ]
+      },
+      "en": {
+        "title": "BeyondMimic: From Motion Tracking to Versatile Humanoid Control via Guided Diffusion",
+        "authors": "Qiayuan Liao, Takara E. Truong, Xiaoyu Huang, Yuman Gao, Guy Tevet, Koushil Sreenath, C. Karen Liu",
+        "status": "Full reading summarized",
+        "takeaway": "This paper moves humanoid imitation beyond tracking reference clips by turning human motion into a guided diffusion prior for test-time skill composition.",
+        "tags": [
+          "Humanoid Control",
+          "Motion Tracking",
+          "Guided Diffusion",
+          "Sim-to-Real",
+          "Human Motion Imitation"
+        ],
+        "mainContent": "BeyondMimic studies how to achieve agile, natural, and versatile humanoid control from diverse human motion data. The framework first trains scalable RL motion-tracking policies with a compact shared formulation, then learns a latent state-action diffusion model that can be guided at inference time by task costs. The resulting controller is demonstrated on real humanoid hardware for dynamic motions, natural walking and running, joystick control, waypoint navigation, motion inpainting, and obstacle avoidance.",
+        "innovations": [
+          "A compact and motion-agnostic tracking formulation with unified task-space rewards and only a few physically motivated regularizers, reducing the need for motion-specific tuning.",
+          "Anchor-centered relative body tracking that preserves motion style while tolerating global drift caused by perturbations and sim-to-real mismatch.",
+          "A latent state-action diffusion model that predicts future states and latent actions jointly, enabling task costs to guide future states and affect current actions.",
+          "Classifier-guided test-time optimization for unseen downstream tasks such as joystick teleoperation, waypoint navigation, motion inpainting, and obstacle avoidance without task-specific retraining or fine-tuning."
+        ],
+        "implementation": [
+          "Stage one retargets human motion into robot generalized positions and velocities, computes target body poses and twists through forward kinematics, and trains RL motion-tracking policies.",
+          "The tracking reward includes task-space position, orientation, linear velocity, and angular velocity terms, plus joint-limit, action-smoothness, and self-contact penalties.",
+          "The policy observation includes motion phase, anchor pose error, IMU twist, joint positions and velocities, and the previous action; the action is a normalized joint position setpoint executed through low-level PD control.",
+          "Domain randomization is applied to ground friction and restitution, default joint positions, torso center of mass, and random velocity perturbations; the paper emphasizes avoiding excessive randomization.",
+          "Stage two trains a conditional VAE to encode motion intent into a latent space, then rolls out the VAE to collect state-latent trajectories for diffusion training.",
+          "At deployment, the diffusion model generates short-horizon trajectories in a receding-horizon manner and incorporates differentiable task costs through classifier guidance; the current latent is decoded into an action using the latest proprioception.",
+          "The real-robot deployment uses a low-latency C++ framework, and the paper highlights latency, armature modeling, actuator modeling, and system synchronization as important factors for sim-to-real transfer."
+        ]
+      }
     }
   ]
 }
