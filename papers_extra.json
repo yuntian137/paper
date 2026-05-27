@@ -163,6 +163,81 @@
           "The real-robot deployment uses a low-latency C++ framework, and the paper highlights latency, armature modeling, actuator modeling, and system synchronization as important factors for sim-to-real transfer."
         ]
       }
+    },
+    {
+      "id": "bfm-behavior-foundation-model-humanoid",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2509.13780",
+      "project": "https://bfm4humanoid.github.io/",
+      "arxiv": "https://arxiv.org/abs/2509.13780",
+      "year": "2025",
+      "venue": "arXiv:2509.13780",
+      "zh": {
+        "title": "Behavior Foundation Model for Humanoid Robots",
+        "authors": "Weishuai Zeng, Shunlin Lu, Kangning Yin, Xiaojie Niu, Minyue Dai, Jingbo Wang, Jiangmiao Pang",
+        "status": "已精读",
+        "takeaway": "把不同人形机器人 WBC 任务统一为行为生成问题，通过 masked control interface 和 CVAE 行为潜空间实现多控制模式共享的 humanoid behavior prior。",
+        "tags": [
+          "Humanoid Control",
+          "Behavior Foundation Model",
+          "Motion Imitation",
+          "CVAE",
+          "Online Distillation",
+          "Whole-Body Control",
+          "Sim-to-Real"
+        ],
+        "mainContent": "本文针对人形机器人全身控制中 task-specific policy 难以跨控制模式泛化的问题，提出 Behavior Foundation Model，将速度指令、VR 遥操作、运动跟踪等不同控制模式统一理解为对 humanoid behavior 的不同 specification。方法先通过 motion imitation 训练具备 privileged information 的 proxy agent，再用 masked online distillation 和 CVAE 将其行为知识蒸馏到可实机部署的生成式策略中。实验在 motion tracking、VR teleoperation、locomotion、behavior composition、behavior modulation 和 residual learning for new behaviors 上验证了 BFM 的泛化性和新行为快速适应能力，并在 Unitree G1 实机上进行了展示。",
+        "innovations": [
+          "提出将 humanoid WBC 从 task-specific control 转向统一 behavior learning 的视角，把不同控制模式看作对同一行为分布的不同条件约束。",
+          "设计 root control、kinematic position control 和 joint angle control 组成的统一 low-level control interface，并通过 bit-wise binary mask 支持不同控制模式及其任意组合。",
+          "采用 CVAE 建模条件行为分布，并通过 masked online distillation 从 proxy agent 中学习可复用行为先验；decoder 不直接输入 goal state，而是鼓励 latent variable 编码行为知识。",
+          "展示了 BFM latent space 的行为组合与调制能力，例如通过 latent interpolation 组合 root/keypoint 控制，通过类似 classifier-free guidance 的 latent extrapolation 改善高动态动作稳定性。",
+          "通过冻结 BFM 并训练 residual decoder，实现对 side salto 等新行为的高效获取，避免从零 RL 训练的低效探索。"
+        ],
+        "implementation": [
+          "数据来源为 AMASS human motion dataset，动作由 SMPL 表示；论文采用两阶段 retargeting，将 SMPL 动作迁移到 humanoid robot，包括 rest pose 形状对齐和整段序列的 root/joint 优化。",
+          "proxy agent 使用 motion imitation 训练，输入 privileged proprioception 和 reference-derived goal state，输出目标关节位置 action；训练采用 PPO、RSI、early termination、hard negative mining、motion filtering、domain randomization 和 curriculum。",
+          "BFM 的 real-world proprioception 包含最近 25 步的关节位置、关节速度、root angular velocity、projected gravity 和历史动作；部署时不依赖仿真 privileged state。",
+          "BFM 使用 CVAE，包括 prior、encoder 和 decoder；训练时 encoder 使用 privileged simulation state 辅助推断 latent，部署时丢弃 encoder，仅使用 prior 和 decoder 输出动作。",
+          "BFM 预训练采用 DAgger-style online distillation：当前 BFM 在仿真中 rollout，随后查询 proxy agent 得到 reference action，并优化 action reconstruction loss 与 KL regularization。",
+          "实验在 IsaacGym 中使用 8192 个并行环境训练，并在 MuJoCo sim-to-sim 和 Unitree G1 真实机器人上展示部署；Unitree G1 原有 29 DoF，实验中冻结双手 wrist 后控制 23 DoF。"
+        ]
+      },
+      "en": {
+        "title": "Behavior Foundation Model for Humanoid Robots",
+        "authors": "Weishuai Zeng, Shunlin Lu, Kangning Yin, Xiaojie Niu, Minyue Dai, Jingbo Wang, Jiangmiao Pang",
+        "status": "Fully read",
+        "takeaway": "This paper reframes humanoid whole-body control as unified behavior generation and learns a reusable humanoid behavior prior through a masked control interface and a CVAE latent space.",
+        "tags": [
+          "Humanoid Control",
+          "Behavior Foundation Model",
+          "Motion Imitation",
+          "CVAE",
+          "Online Distillation",
+          "Whole-Body Control",
+          "Sim-to-Real"
+        ],
+        "mainContent": "This paper addresses the lack of cross-task generalization in task-specific humanoid whole-body controllers by interpreting velocity commands, VR teleoperation signals, and motion tracking references as different specifications of humanoid behaviors. The method first trains a privileged proxy agent through motion imitation, then distills its behavioral knowledge into a deployable generative policy using masked online distillation and a CVAE. Experiments cover motion tracking, VR teleoperation, locomotion, behavior composition, behavior modulation, and residual learning for novel behaviors, with demonstrations in simulation and on a Unitree G1 humanoid robot.",
+        "innovations": [
+          "Reframes humanoid whole-body control from task-specific policy learning to unified behavior learning, where different control modes are treated as different conditional specifications of the same behavior distribution.",
+          "Introduces a unified low-level control interface composed of root control, kinematic position control, and joint angle control, with bit-wise binary masks enabling diverse control modes and arbitrary combinations.",
+          "Models the conditional behavior distribution with a CVAE and learns reusable behavior priors through masked online distillation from a privileged proxy agent; the decoder does not directly consume the goal state, encouraging the latent variable to encode behavioral knowledge.",
+          "Demonstrates behavior composition and modulation in the learned latent space, including latent interpolation across control modes and classifier-free-guidance-like latent extrapolation for stabilizing challenging behaviors.",
+          "Uses residual learning on top of a frozen pretrained BFM to efficiently acquire novel behaviors such as side salto, reducing inefficient exploration compared with RL from scratch."
+        ],
+        "implementation": [
+          "The motion data comes from the AMASS human motion dataset parameterized by SMPL; the paper uses a two-stage retargeting pipeline to transfer SMPL motions to the humanoid, including rest-pose shape alignment and sequence-level optimization of root and joint states.",
+          "The proxy agent is trained by motion imitation with PPO. It takes privileged proprioception and reference-derived goal states as inputs and outputs target joint positions. The training uses RSI, early termination, hard negative mining, motion filtering, domain randomization, and curriculum learning.",
+          "The deployable BFM uses real-world proprioception consisting of a 25-step history of joint positions, joint velocities, root angular velocity, projected gravity, and previous actions, avoiding privileged simulation-only quantities at inference time.",
+          "The BFM is implemented as a CVAE with a prior, encoder, and decoder. The encoder uses privileged simulation states during training to infer latent variables, while only the prior and decoder are kept for deployment.",
+          "BFM pretraining follows DAgger-style online distillation: the current BFM is rolled out in simulation, the proxy agent is queried for reference actions, and the model is optimized using action reconstruction loss plus KL regularization.",
+          "Training is conducted in IsaacGym with 8192 parallel environments, and the paper reports IsaacGym metrics while also showing MuJoCo sim-to-sim and real-world deployment on a Unitree G1 humanoid. The original 29-DoF robot is simplified to 23 DoF by freezing both wrists."
+        ]
+      }
     }
   ]
 }
