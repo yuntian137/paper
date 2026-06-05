@@ -4270,15 +4270,6 @@ function stringArray(value) {
   return Array.isArray(value) ? value.map(stringField).filter(Boolean) : [];
 }
 
-function latestYearValue(value) {
-  const years = stringField(value).match(/\b(?:19|20)\d{2}\b/g);
-  return years ? Math.max(...years.map(Number)) : Number.NEGATIVE_INFINITY;
-}
-
-function comparePapersByNewest(a, b) {
-  return latestYearValue(b.year) - latestYearValue(a.year);
-}
-
 function normalizeMatchKey(value) {
   return stringField(value)
     .normalize("NFKC")
@@ -4598,7 +4589,7 @@ function filteredPapers() {
     const matchesCategory = state.category === "all" || paper.categories.includes(state.category);
     const matchesQuery = !query || searchableText(paper).includes(query);
     return matchesCategory && matchesQuery;
-  }).sort(comparePapersByNewest);
+  }).reverse();
 }
 
 function syncLanguage() {
