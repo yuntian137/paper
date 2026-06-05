@@ -238,6 +238,82 @@
           "Training is conducted in IsaacGym with 8192 parallel environments, and the paper reports IsaacGym metrics while also showing MuJoCo sim-to-sim and real-world deployment on a Unitree G1 humanoid. The original 29-DoF robot is simplified to 23 DoF by freezing both wrists."
         ]
       }
+    },
+    {
+      "id": "nmr-neural-motion-retargeting",
+      "categories": [
+        "imitation-teleop",
+        "locomotion"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.22201",
+      "project": "https://nju3dv-humanoidgroup.github.io/nmr.github.io/",
+      "arxiv": "https://arxiv.org/abs/2603.22201",
+      "year": "2026",
+      "venue": "arXiv:2603.22201",
+      "zh": {
+        "title": "Making Tracking Easy: Neural Motion Retargeting for Humanoid Whole-body Control",
+        "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
+        "status": "已精读",
+        "takeaway": "将人到人形机器人的动作重定向从逐帧非凸几何优化改写为学习人类动作分布到机器人可行动作流形的映射，从而为下游 whole-body tracking policy 提供更干净、更物理可行的参考动作。",
+        "tags": [
+          "Humanoid Retargeting",
+          "Whole-Body Control",
+          "Motion Imitation",
+          "Transformer",
+          "RL Refinement",
+          "SMPL",
+          "Unitree G1"
+        ],
+        "mainContent": "本文针对人类 SMPL 动作到人形机器人动作重定向中的非凸优化、局部最优、关节跳变、自碰撞和噪声传播问题，提出 Neural Motion Retargeting（NMR）框架。方法先通过 Clustered-Expert Physics Refinement（CEPR）构造物理一致的人-机器人配对动作数据，再训练一个非自回归 CNN-Transformer 网络，将人类动作序列直接映射为 Unitree G1 的机器人动作参考。实验表明，NMR 相比 GMR 和 PHUMA 显著减少 joint jump、self-collision 和 joint-limit violation，并能提升下游 whole-body tracking policy 的训练效率和跟踪表现。",
+        "innovations": [
+          "从 Hessian 角度分析传统优化式 retargeting 的非凸性，指出局部最优、关节跳变和自碰撞并非单纯调参问题，而是几何优化目标本身的结构性风险。",
+          "提出 CEPR 数据构造管线，通过人体动作过滤、GMR 初始重定向、异常机器人动作过滤、动作聚类和 RL expert policy 物理仿真 refinement，生成约 30K 对物理一致的 SMPL-robot 动作数据。",
+          "提出基于 CNN-Transformer 的 Neural Motion Retargeting 网络，用双向 self-attention 利用全局时间上下文，直接从 human motion sequence 预测 humanoid motion sequence，减少逐帧优化带来的噪声传播和不连续。",
+          "采用两阶段训练策略：先用大规模 kinematic retargeting 数据预训练以获得动作覆盖度，再用 CEPR 物理一致数据微调以提升机器人动作的可执行性。"
+        ],
+        "implementation": [
+          "输入为 SMPL human motion sequence，人体动作表示包含 root 在 XZ 平面的线速度、root 6D rotation、局部关节位置和局部关节速度；输出为 humanoid motion sequence，额外包含机器人 actuated joint DoFs。",
+          "CEPR 首先过滤 excessive jerk、CoM 远离支撑区域、足地接触不足、漂浮和穿地等异常人体动作；随后使用 GMR 生成初始机器人动作，并根据关节速度、自碰撞比例和足端漂浮高度等阈值过滤异常片段。",
+          "CEPR 使用 motion latent feature 对动作进行聚类，并为每个 cluster 训练 RL expert tracking policy；expert policy 的 observation 包括 reference motion state、robot proprioception 和 previous action，总维度为 509。",
+          "RL expert policy 使用 PPO 和 symmetric actor-critic 框架训练，奖励主要由 anchor/body link 的位置、姿态、线速度、角速度 tracking reward 构成，并加入 action rate 与 undesired contacts penalty；训练中使用 adaptive standard deviation schedule 逐步提高 tracking 精度。",
+          "NMR 网络结构包括 1D Conv / ResNet encoder、Bi-directional Transformer、Upsample 和 1D Conv decoder；由于 human 与 humanoid motion 在时间上严格一一对应，网络使用 full self-attention 而非 causal attention。",
+          "NMR 使用 L1 loss 监督训练：先在大规模 kinematic retargeting 数据上用 AdamW 训练 500 epochs，batch size 为 128，初始学习率为 2e-4；再在约 30K CEPR 物理一致数据上以 1e-5 学习率微调 50 epochs。",
+          "实验在 Unitree G1 humanoid 上进行，测试集来自 AMASS，包含 82 条 motion sequences、约 119K frames；对比方法包括 GMR、PHUMA、NMR w/o RL 和完整 NMR。",
+          "论文报告 NMR 在 retargeting quality 上实现 0 joint jumps、0.87% self-collision frames 和 16.80% joint-limit frames，并在下游 BeyondMimic-style tracking policy 训练中带来更高 reward、更长 episode length 和更低 MPJPE/W-MPJPE。"
+        ]
+      },
+      "en": {
+        "title": "Making Tracking Easy: Neural Motion Retargeting for Humanoid Whole-body Control",
+        "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
+        "status": "Fully read",
+        "takeaway": "This paper reframes human-to-humanoid retargeting from frame-wise non-convex geometric optimization into a learned distribution mapping from human motion to the robot's feasible motion manifold, producing cleaner references for downstream whole-body tracking.",
+        "tags": [
+          "Humanoid Retargeting",
+          "Whole-Body Control",
+          "Motion Imitation",
+          "Transformer",
+          "RL Refinement",
+          "SMPL",
+          "Unitree G1"
+        ],
+        "mainContent": "This paper addresses the non-convexity, local minima, joint jumps, self-collisions, and noise propagation issues in retargeting SMPL human motions to humanoid robots. It proposes Neural Motion Retargeting (NMR), which first builds physically consistent human-robot motion pairs through Clustered-Expert Physics Refinement (CEPR), and then trains a non-autoregressive CNN-Transformer to directly map human motion sequences to Unitree G1 motion references. Experiments show that NMR significantly reduces joint jumps, self-collisions, and joint-limit violations compared with GMR and PHUMA, while also improving the convergence and tracking performance of downstream whole-body control policies.",
+        "innovations": [
+          "Provides a Hessian-based analysis showing that optimization-based retargeting is generally non-convex, explaining why local minima, joint discontinuities, and self-collisions can occur structurally rather than merely due to poor tuning.",
+          "Introduces the CEPR data construction pipeline, which combines human motion filtering, GMR-based initial retargeting, robot motion quality filtering, motion clustering, and RL expert policy refinement to generate about 30K physically consistent SMPL-robot motion pairs.",
+          "Proposes a CNN-Transformer-based Neural Motion Retargeting model that uses bidirectional self-attention over the whole sequence to suppress frame-wise noise and directly predict humanoid motion from human motion.",
+          "Uses a two-stage training strategy: large-scale kinematic pretraining for broad motion coverage, followed by CEPR-based physical fine-tuning for improved robot feasibility."
+        ],
+        "implementation": [
+          "The input is an SMPL human motion sequence represented by root linear velocities on the XZ plane, root 6D rotation, local joint positions, and local joint velocities; the output is a humanoid motion sequence with additional robot actuated joint DoFs.",
+          "CEPR first filters abnormal human motions such as excessive jerk, CoM far outside the support base, insufficient foot-ground contact, floating, and penetration; it then applies GMR for initial robot retargeting and filters segments using joint velocity, self-collision ratio, and foot floating thresholds.",
+          "CEPR clusters motions using latent motion features and trains one RL expert tracking policy for each cluster; the expert policy observation includes reference motion state, robot proprioception, and previous action, with a total dimension of 509.",
+          "The RL expert policies are trained with PPO and a symmetric actor-critic framework. Rewards are mainly tracking terms for anchor/body link position, orientation, linear velocity, and angular velocity, with penalties for action rate and undesired contacts. An adaptive standard deviation schedule is used to progressively tighten tracking precision.",
+          "The NMR architecture consists of 1D Conv / ResNet encoding, a bidirectional Transformer, and Upsample / 1D Conv decoding. Since human and humanoid motions are temporally aligned, it uses full self-attention rather than causal attention.",
+          "NMR is trained with an L1 regression loss. It is first pretrained on large-scale kinematic retargeting data for 500 epochs with AdamW, batch size 128, and learning rate 2e-4, and then fine-tuned on about 30K CEPR-refined motion pairs for 50 epochs with learning rate 1e-5.",
+          "Experiments are conducted on the Unitree G1 humanoid using an AMASS test suite with 82 motion sequences and about 119K frames. Baselines include GMR, PHUMA, NMR without RL fine-tuning, and full NMR.",
+          "The paper reports that NMR achieves 0 joint jumps, 0.87% self-collision frames, and 16.80% joint-limit frames, and improves downstream BeyondMimic-style tracking policy training in terms of reward, episode length, MPJPE, and W-MPJPE."
+        ]
+      }
     }
   ]
 }
