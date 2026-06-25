@@ -133,6 +133,7 @@ h1 {
   top: 116px;
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .sidebar-header,
@@ -248,6 +249,7 @@ body.is-sidebar-collapsed .sidebar-restore {
 .category-nav {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .category-button {
@@ -255,6 +257,8 @@ body.is-sidebar-collapsed .sidebar-restore {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   padding: 0 12px;
   border: 1px solid transparent;
