@@ -314,6 +314,156 @@
           "The paper reports that NMR achieves 0 joint jumps, 0.87% self-collision frames, and 16.80% joint-limit frames, and improves downstream BeyondMimic-style tracking policy training in terms of reward, episode length, MPJPE, and W-MPJPE."
         ]
       }
+    },
+    {
+      "id": "tram-global-trajectory-motion",
+      "categories": [
+        "imitation-teleop",
+        "benchmark-dataset"
+      ],
+      "pdf": "https://arxiv.org/pdf/2403.17346",
+      "project": "https://yufu-wang.github.io/tram4d/",
+      "arxiv": "https://arxiv.org/abs/2403.17346",
+      "year": "2024",
+      "venue": "ECCV 2024",
+      "zh": {
+        "title": "TRAM: 从野外视频恢复三维人体的全局轨迹与运动",
+        "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
+        "status": "已精读",
+        "takeaway": "TRAM 最值得记住的是：它不从人体运动先验中猜全局位移，而是先用背景恢复 metric-scale 相机轨迹，再把相机系 SMPL 人体运动变换到世界坐标系。",
+        "tags": [
+          "SMPL",
+          "Human Motion Recovery",
+          "Monocular Video",
+          "SLAM",
+          "Metric Scale",
+          "VIMO",
+          "Motion Retargeting"
+        ],
+        "mainContent": "本文研究如何从真实场景、移动相机拍摄的单目视频中恢复三维人体的完整世界空间运动，包括全局 root trajectory 和局部 SMPL body motion。TRAM 采用两阶段框架：先通过 Masked DROID-SLAM 从背景恢复鲁棒的相机轨迹，并利用 ZoeDepth 的 metric depth 估计轨迹尺度；再用视频 Transformer 模型 VIMO 回归相机坐标系下的人体 SMPL 运动。最后将 metric-scale camera motion 与 camera-frame human motion 组合，得到世界坐标系下的人体全局轨迹和运动。实验显示，TRAM 在 EMDB 上显著降低全局人体轨迹误差，并且 VIMO 在人体 pose/shape 重建和运动平滑性上优于多种 baseline。",
+        "innovations": [
+          "提出 scene-centric 的全局人体运动恢复思路：不依赖 MoCap locomotion prior 估计人体全局轨迹，而是从背景中恢复 metric-scale camera trajectory，再与相机系人体运动组合。",
+          "提出 Masked DROID-SLAM：同时 mask 输入图像中的动态人体区域和 dense bundle adjustment 中的人体区域置信度，使 SLAM 主要依赖静态背景像素，提升移动人体场景下的相机轨迹鲁棒性。",
+          "提出基于背景 metric depth 的轨迹尺度估计：用 ZoeDepth 预测关键帧深度，并通过鲁棒优化和全轨迹 median 估计单目 SLAM 的尺度，而不是直接把预测深度作为 RGB-D SLAM 输入。",
+          "提出 VIMO：在 HMR2.0 基础上加入两个 temporal transformer，一个在 image patch token 域传播时序信息，另一个在 SMPL pose motion 域学习运动平滑和去噪。"
+        ],
+        "implementation": [
+          "输入为 in-the-wild 单目视频；输出包括 metric-scale camera trajectory、相机坐标系下的人体 root pose、SMPL 局部姿态和形状参数，以及组合后的世界坐标系人体 root trajectory。",
+          "人体模型采用 SMPL，局部身体运动表示为 Θ_t={θ_t,β_t}，人体相对相机的 root 位姿表示为 T_t={r_t,π_t}；世界坐标系人体轨迹通过 H_t=G_t∘T_t 得到，其中 G_t 是相机在世界坐标系中的位姿。",
+          "相机轨迹恢复使用 DROID-SLAM，并通过 YOLOv7 检测人体、Segment Anything 生成 mask；mask 同时作用于输入图像和 DROID-SLAM 的 dense bundle adjustment confidence。",
+          "尺度估计使用 ZoeDepth 预测关键帧 metric depth，将 DROID-SLAM 的任意尺度深度 d_i 与 metric depth D_i 对齐，优化尺度 α，并对所有关键帧尺度取 median。",
+          "VIMO 建立在 HMR2.0 之上，冻结 ViT-Huge backbone，只微调两个 temporal transformer 和原 transformer decoder；训练使用 3DPW、Human3.6M 和 BEDLAM。",
+          "VIMO 训练 100K iterations，优化器为 AdamW，weight decay 为 0.01，batch size 为 24 个 16 帧序列；transformer decoder 学习率为 1e-5，两个 temporal transformer 学习率为 3e-5。",
+          "论文未说明完整端到端推理速度，也未给出实时部署结果；从模型组成看，该方法更偏离线视频处理。"
+        ]
+      },
+      "en": {
+        "title": "TRAM: Global Trajectory and Motion of 3D Humans from in-the-Wild Videos",
+        "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
+        "status": "Fully read",
+        "takeaway": "TRAM should be remembered as a scene-centric pipeline that recovers metric-scale camera motion from the background and composes it with camera-frame SMPL motion to obtain world-space human motion.",
+        "tags": [
+          "SMPL",
+          "Human Motion Recovery",
+          "Monocular Video",
+          "SLAM",
+          "Metric Scale",
+          "VIMO",
+          "Motion Retargeting"
+        ],
+        "mainContent": "This paper studies how to recover complete 3D human motion from in-the-wild monocular videos captured by a moving camera, including the global root trajectory and local SMPL body motion. TRAM uses a two-stage pipeline: it first robustifies monocular SLAM with dynamic-human masking and estimates metric scale from background depth, then uses a video transformer model called VIMO to regress camera-frame SMPL motion. The recovered metric camera trajectory and camera-frame human motion are composed to produce world-space human trajectory and motion. Experiments on EMDB show large reductions in global motion error, while VIMO improves pose/shape reconstruction accuracy and temporal smoothness over strong baselines.",
+        "innovations": [
+          "A scene-centric formulation for global human motion recovery: the method estimates metric-scale camera trajectory from the background instead of inferring global human displacement from a learned MoCap locomotion prior.",
+          "Masked DROID-SLAM: dynamic human regions are masked both in the input images and in the dense bundle adjustment confidence, forcing SLAM to rely on static background pixels.",
+          "A robust metric-scale estimation procedure that aligns DROID-SLAM depth with ZoeDepth metric depth using robust optimization and aggregates keyframe scale estimates with the median.",
+          "VIMO, a video transformer model built on HMR2.0 with two temporal transformers: one propagates temporal information over image patch tokens, and the other denoises and smooths motion directly in the SMPL pose domain."
+        ],
+        "implementation": [
+          "The input is an in-the-wild monocular video. The outputs include metric-scale camera trajectory, camera-frame human root pose, SMPL local pose and shape parameters, and the composed world-frame human root trajectory.",
+          "The human body is represented by SMPL. Local body motion is Θ_t={θ_t,β_t}, the human root pose relative to the camera is T_t={r_t,π_t}, and the world-space human trajectory is computed as H_t=G_t∘T_t, where G_t is the camera pose in the world frame.",
+          "Camera trajectory is recovered with DROID-SLAM. Human masks are obtained using YOLOv7 detections as prompts for Segment Anything, and the masks are applied to both the input images and the dense bundle adjustment confidence.",
+          "Metric scale is estimated by aligning DROID-SLAM depth d_i with ZoeDepth metric depth D_i for keyframes, optimizing a scale α with a robust loss, and taking the median over all keyframes.",
+          "VIMO builds on HMR2.0, freezes the ViT-Huge backbone, and finetunes two temporal transformers together with the original transformer decoder. It is trained on 3DPW, Human3.6M, and BEDLAM.",
+          "VIMO is trained for 100K iterations with AdamW, weight decay 0.01, a batch size of 24 sequences, and 16 frames per sequence. The learning rate is 1e-5 for the transformer decoder and 3e-5 for the two temporal transformers.",
+          "The paper does not report full end-to-end runtime or real-time deployment results; based on the pipeline components, the method is better understood as an offline video processing system."
+        ]
+      }
+    },
+    {
+      "id": "asap-aligning-simulation-real-physics",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "real-robot-rl",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2502.01143",
+      "project": "https://agile.human2humanoid.com/",
+      "arxiv": "https://arxiv.org/abs/2502.01143",
+      "year": "2025",
+      "venue": "RSS 2025 / arXiv:2502.01143",
+      "zh": {
+        "title": "ASAP: Aligning Simulation and Real-World Physics for Learning Agile Humanoid Whole-Body Skills",
+        "authors": "Tairan He, Jiawei Gao, Wenli Xiao, Yuanhang Zhang, Zi Wang, Jiashun Wang, Zhengyi Luo, Guanqi He, Nikhil Sobanbabu, Chaoyi Pan, Zeji Yi, Guannan Qu, Kris Kitani, Jessica Hodgins, Linxi “Jim” Fan, Yuke Zhu, Changliu Liu, Guanya Shi",
+        "status": "精读已整理",
+        "takeaway": "用真实 rollout 学一个 delta action model 来把仿真动力学对齐到真实机器人，再在对齐后的仿真中微调策略，是敏捷人形机器人 sim-to-real 的一条很有代表性的 real-to-sim-to-real 路线。",
+        "tags": [
+          "Humanoid",
+          "Sim-to-Real",
+          "Delta Action",
+          "PPO",
+          "Motion Tracking",
+          "Unitree G1",
+          "TRAM",
+          "MaskedMimic"
+        ],
+        "mainContent": "这篇论文面向人形机器人敏捷全身技能的 sim-to-real 问题，核心挑战是仿真动力学与真实机器人之间的 mismatch 会导致高动态动作在真机上退化。ASAP 采用两阶段框架：第一阶段从人类视频中重建 SMPL 动作，经物理清洗与重定向得到 Unitree G1 参考轨迹，并训练 phase-based motion tracking policy；第二阶段在真实 G1 上采集 rollout，训练 delta action model 来补偿仿真与真实状态转移之间的偏差。作者将冻结的 delta action model 嵌入仿真器形成 aligned simulation physics，再微调原策略，最终在真实部署时只使用微调后的 policy，不使用 delta action model。实验覆盖 IsaacGym→IsaacSim、IsaacGym→Genesis 和 IsaacGym→真实 Unitree G1，结果显示 ASAP 相比 SysID、domain randomization 和 delta dynamics baseline 降低 tracking error，并提升敏捷全身动作的真机执行质量。",
+        "innovations": [
+          "提出用 action-space residual / delta action model 对齐仿真与真实物理，而不是只依赖显式 SysID 参数搜索、domain randomization 或直接学习 state residual dynamics。",
+          "把 delta action model 作为训练环境对齐器：训练时嵌入仿真器形成 aligned simulation physics，微调 motion tracking policy；真实部署时直接部署微调后的 policy，不额外运行 delta action model。",
+          "构建从人类视频到真机人形技能的完整 pipeline：TRAM 重建 SMPL 运动，MaskedMimic 做 simulation-based data cleaning，human-to-humanoid retargeting 生成 G1 参考轨迹，再训练 phase-conditioned tracking policy。",
+          "在高动态 Unitree G1 全身动作上验证 sim-to-real，对比 SysID、DeltaDynamics、Vanilla 等 baseline，并分析 dataset size、training horizon、action norm、随机 action noise 等因素。"
+        ],
+        "implementation": [
+          "预训练阶段：输入人类视频；TRAM 输出 SMPL 格式的 global root translation、orientation、body poses 和 shape parameters；MaskedMimic 在 IsaacGym 中模仿并过滤不物理可行的 SMPL 动作；再通过 shape-and-motion two-stage retargeting 得到 G1 机器人轨迹数据。",
+          "motion tracking policy：使用 PPO 训练 phase-based policy，actor 输入为本体历史和 phase；本体历史包括 5-step joint position、joint velocity、root angular velocity、root projected gravity 和历史 action；action 为 23-DoF target joint positions，并交给 PD controller 执行。",
+          "post-training 数据采集：把预训练 policy 部署到真实 Unitree G1，记录真实 rollout。论文记录的状态为 base 3D position、base linear velocity、base orientation quaternion、base angular velocity、23-DoF joint position 和 joint velocity；这些信息由 MoCap 与 onboard sensors 共同获得。",
+          "delta action learning：训练 \\(\\Delta a_t = \\pi_\\theta^\\Delta(s_t,a_t)\\)，在仿真中执行 \\(a_t^r + \\Delta a_t\\)，目标是让 simulated next state 接近真实记录的 next state；训练使用 PPO 和状态跟踪 reward、action norm / action rate regularization、DoF / torque limit penalty 等。",
+          "policy fine-tuning 与部署：冻结 delta action model，将仿真器改为 \\(f^{ASAP}(s_t,a_t)=f^{sim}(s_t,a_t+\\pi^\\Delta(s_t,a_t))\\)，用原 motion tracking reward 微调 policy；最终真实部署时不使用 delta action model，只部署微调后的 tracking policy。",
+          "真实实验：由于高动态数据采集导致电机过热和硬件损坏风险，论文没有训练完整 23-DoF delta action model，而是聚焦 G1 脚踝 4-DoF delta action model；真实数据包含 100 个 motion clips，并对每个任务执行 30 次，另采集 10 分钟 locomotion data 用于 policy transition。"
+        ]
+      },
+      "en": {
+        "title": "ASAP: Aligning Simulation and Real-World Physics for Learning Agile Humanoid Whole-Body Skills",
+        "authors": "Tairan He, Jiawei Gao, Wenli Xiao, Yuanhang Zhang, Zi Wang, Jiashun Wang, Zhengyi Luo, Guanqi He, Nikhil Sobanbabu, Chaoyi Pan, Zeji Yi, Guannan Qu, Kris Kitani, Jessica Hodgins, Linxi “Jim” Fan, Yuke Zhu, Changliu Liu, Guanya Shi",
+        "status": "Full reading summarized",
+        "takeaway": "ASAP is a representative real-to-sim-to-real pipeline: learn a delta action model from real rollouts to align simulator dynamics, fine-tune the policy in the aligned simulator, and deploy only the fine-tuned policy on the real humanoid.",
+        "tags": [
+          "Humanoid",
+          "Sim-to-Real",
+          "Delta Action",
+          "PPO",
+          "Motion Tracking",
+          "Unitree G1",
+          "TRAM",
+          "MaskedMimic"
+        ],
+        "mainContent": "This paper studies sim-to-real transfer for agile humanoid whole-body skills, where dynamics mismatch between simulation and the real robot causes high-dynamic motions to degrade on hardware. ASAP uses a two-stage framework: it first pre-trains a phase-based motion tracking policy from human-video-derived and retargeted G1 motions, then collects real-world rollouts to train a delta action model that compensates for the discrepancy between simulated and real state transitions. The learned delta action model is frozen and integrated into the simulator as aligned simulation physics for policy fine-tuning; at deployment, only the fine-tuned policy is used. Experiments cover IsaacGym-to-IsaacSim, IsaacGym-to-Genesis, and IsaacGym-to-real Unitree G1 transfer, showing lower tracking error and better agile whole-body coordination than SysID, domain randomization, and delta dynamics baselines.",
+        "innovations": [
+          "Introduces action-space residual learning via a delta action model to align simulator and real-world physics, instead of relying only on explicit SysID parameter search, domain randomization, or state-residual dynamics learning.",
+          "Uses the delta action model as a training-time simulator aligner: it is embedded into the simulator for policy fine-tuning, while real-world deployment runs only the fine-tuned policy.",
+          "Builds an end-to-end human-video-to-humanoid-skill pipeline: TRAM reconstructs SMPL motions, MaskedMimic performs simulation-based data cleaning, human-to-humanoid retargeting generates G1 reference trajectories, and a phase-conditioned tracking policy is trained.",
+          "Validates the approach on dynamic Unitree G1 whole-body motions and analyzes key design factors including dataset size, training horizon, action norm, and random action noise fine-tuning."
+        ],
+        "implementation": [
+          "Pre-training data pipeline: input human videos; TRAM estimates SMPL-format global root translation, orientation, body poses, and shape parameters; MaskedMimic tracks and filters physically infeasible SMPL motions in IsaacGym; a two-stage shape-and-motion retargeting process produces Unitree G1 robot trajectories.",
+          "Motion tracking policy: trained with PPO as a phase-based policy. The actor uses proprioceptive history and phase; proprioception includes 5-step histories of joint positions, joint velocities, root angular velocity, root projected gravity, and previous actions. The action is a 23-DoF target joint-position command passed to a PD controller.",
+          "Post-training data collection: the pre-trained policy is deployed on a real Unitree G1 and real rollouts are recorded. The recorded state includes base 3D position, base linear velocity, base orientation quaternion, base angular velocity, 23-DoF joint positions, and joint velocities, obtained from a MoCap device and onboard sensors.",
+          "Delta action learning: train \\(\\Delta a_t = \\pi_\\theta^\\Delta(s_t,a_t)\\). In simulation, execute \\(a_t^r + \\Delta a_t\\) so the simulated next state matches the recorded real next state. PPO is used with state-tracking rewards, action norm / action rate regularization, and DoF / torque-limit penalties.",
+          "Policy fine-tuning and deployment: freeze the delta action model and use \\(f^{ASAP}(s_t,a_t)=f^{sim}(s_t,a_t+\\pi^\\Delta(s_t,a_t))\\) as the aligned simulator, then fine-tune the original tracking policy with the same motion-tracking reward. The final real-world deployment does not use the delta action model.",
+          "Real-world experiment detail: because high-dynamic data collection overheats motors and risks hardware damage, the paper does not train a full 23-DoF real-world delta action model; it trains a 4-DoF ankle delta action model for G1. The real-world dataset contains 100 motion clips, with 30 executions per task, plus 10 minutes of locomotion data for policy transition."
+        ]
+      }
     }
   ]
 }
