@@ -86,7 +86,8 @@ system identification, domain randomization, real-world finetuning
 5. `categories` 使用上面的固定分类 id。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
 7. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
-8. `example.json` 里的 `_comment`、`_id_comment` 等字段只是合法 JSON 注释，复制到 `papers_extra.json` 里不会影响页面读取，但正式维护时可以删除以保持简洁。
+8. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
+9. `example.json` 里的 `_comment`、`_id_comment` 等字段只是合法 JSON 注释，复制到 `papers_extra.json` 里不会影响页面读取，但正式维护时可以删除以保持简洁。
 
 ```json
 {
@@ -102,6 +103,7 @@ system identification, domain randomization, real-world finetuning
       "zh": {
         "title": "中文或英文论文标题",
         "authors": "作者",
+        "institutions": "机构 1；机构 2",
         "status": "摘要已整理",
         "takeaway": "一句话写清楚：这篇论文对我来说最该记住什么。",
         "tags": ["Dexterous Hand", "PPO", "Sim-to-Real"],
@@ -112,6 +114,7 @@ system identification, domain randomization, real-world finetuning
       "en": {
         "title": "Paper title",
         "authors": "Authors",
+        "institutions": "Institution 1; Institution 2",
         "status": "Abstract summarized",
         "takeaway": "One sentence on how I should remember this paper.",
         "tags": ["Dexterous Hand", "PPO", "Sim-to-Real"],

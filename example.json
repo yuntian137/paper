@@ -5,6 +5,7 @@
     "不要编造论文中没有说明的实验、实现细节或结论。",
     "mainContent 默认基于摘要整理，写 2-4 句，覆盖研究问题、核心方法和主要结论。",
     "innovations 和 implementation 只写论文中能确认的信息；不确定时写“待阅读全文补充”或“not specified in the paper”。",
+    "institutions 填论文首页或官方页面明确列出的作者机构；查不到或不确定时留空字符串，不要猜测。",
     "建议同时填写 zh 和 en，保证网页中英文切换稳定。",
     "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。"
   ],
@@ -71,9 +72,10 @@
       "venue": "arXiv:xxxx.xxxxx",
       "_venue_comment": "会议、期刊、workshop 或 arXiv 编号，例如 ICLR 2026、RSS 2025、arXiv:2601.00000。",
       "zh": {
-        "_comment": "中文展示内容。卡片会显示 title、takeaway、mainContent、tags；详情页还会显示 authors、status、innovations、implementation。",
+        "_comment": "中文展示内容。卡片会显示 title、institutions、takeaway、mainContent、tags；详情页还会显示 authors、status、innovations、implementation。",
         "title": "论文标题",
         "authors": "作者 1, 作者 2, 作者 3",
+        "institutions": "机构 1；机构 2",
         "status": "摘要已整理",
         "takeaway": "一句话写清楚：这篇论文对我来说最该记住什么。",
         "tags": [
@@ -96,6 +98,7 @@
         "_comment": "English display content. Keep it semantically aligned with zh, but it does not need to be a word-for-word translation.",
         "title": "Paper title",
         "authors": "Author 1, Author 2, Author 3",
+        "institutions": "Institution 1; Institution 2",
         "status": "Abstract summarized",
         "takeaway": "One sentence on how I should remember this paper.",
         "tags": [

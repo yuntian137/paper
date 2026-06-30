@@ -4181,6 +4181,49 @@ const papers = [
 
 const externalPapersPath = "papers_extra.json";
 const externalNotesPath = "paper_notes.json";
+const paperInstitutionOverrides = {
+  "dextrah-rgb": "NVIDIA Corporation; University of California, Berkeley",
+  "resfit-real-robot-rl": "Amazon FAR; Stanford University; Carnegie Mellon University; UC Berkeley",
+  "dexndm": "Tsinghua University; Peking University; Shanghai Qi Zhi Institute; Galbot",
+  "pi06-recap": "Physical Intelligence",
+  "viral-humanoid": "NVIDIA; Carnegie Mellon University; UC Berkeley; The Chinese University of Hong Kong",
+  "demobot": "ByteDance Seed",
+  "simtoolreal": "Cornell University; Stanford University",
+  "omnireset": "University of Washington; NVIDIA; Microsoft Research",
+  "posterior-bc": "UC Berkeley; Stanford University",
+  "visual-dexterity": "Massachusetts Institute of Technology; Tsinghua University; Meta AI",
+  "sim2real-humanoid-dexterous-rl": "UC Berkeley; NVIDIA; UT Austin",
+  "human2sim2robot": "Stanford University",
+  "pi05-open-world-vla": "Physical Intelligence",
+  "symdex": "TU Darmstadt; Honda Research Institute Europe; Istituto Italiano di Tecnologia; DFKI; Hessian.AI; Robotics Institute Germany",
+  "spi-active": "Carnegie Mellon University; Google DeepMind",
+  "multimodal-visual-transformer-rl": "Hebei Medical University; Harbin Institute of Technology",
+  "anyteleop": "UC San Diego; NVIDIA",
+  "rma-legged-robots": "UC Berkeley; Carnegie Mellon University; Facebook",
+  "pen-spinning": "UC San Diego; Carnegie Mellon University; UC Berkeley",
+  "hora-in-hand-rotation": "UC Berkeley; Meta AI",
+  "bidexhands": "Peking University; University College London; Carnegie Mellon University; Beijing Institute for General Artificial Intelligence",
+  "dextrah-g": "Stanford University; University of Utah; NVIDIA; University of California, Berkeley",
+  "mimicgen": "NVIDIA; The University of Texas at Austin",
+  "pi0": "Physical Intelligence",
+  "lda-1b": "Peking University; Galbot; CASIA; BAAI; Tsinghua University; Sun Yat-sen University; NVIDIA",
+  "gigaworld-policy": "GigaAI",
+  "motiontrans-human-vr-data-enable-motion-level-learning-f": "Tsinghua University; Shanghai Qi Zhi Institute; Peking University; Shanghai Jiao Tong University; Wuhan University",
+  "dexterous-functional-grasping": "Carnegie Mellon University",
+  "efficient-sim-to-real-transfer-of-contact-rich-manipulat": "University of California, Berkeley",
+  "amp-adversarial-motion-priors": "University of California, Berkeley; Shanghai Jiao Tong University",
+  "phc-perpetual-humanoid-control-for-real-time-simulated-a": "Reality Labs Research, Meta; Carnegie Mellon University",
+  "beyondmimic": "University of California, Berkeley; Stanford University",
+  "pmtg-policies-modulating-trajectory-generators": "Google Brain",
+  "skillblender-towards-versatile-humanoid-whole-body-loco-": "University of Southern California; Stanford University; Peking University; University of California, Berkeley",
+  "hugwbc": "Shanghai Jiao Tong University; Shanghai AI Laboratory",
+  "homie": "Shanghai AI Laboratory; The Chinese University of Hong Kong",
+  "langwbc": "University of California, Berkeley",
+  "host-learning-humanoid-standing-up-control-across-divers": "Shanghai AI Laboratory; Shanghai Jiao Tong University; The University of Hong Kong; Zhejiang University; The Chinese University of Hong Kong",
+  "learning-h-infinity-locomotion-control": "Shanghai AI Laboratory; Shanghai Jiao Tong University; Zhejiang University; The Chinese University of Hong Kong",
+  "lcp-lipschitz-constrained-policies": "Simon Fraser University; UIUC; UC Berkeley; Stanford University; NVIDIA",
+  "unsupervised-actuator-net-uan": "Improbable AI Lab, Massachusetts Institute of Technology",
+};
 const paperNotes = new Map();
 
 const state = {
@@ -4286,6 +4329,7 @@ function normalizeLocalizedPaper(localized) {
   return {
     title: stringField(value.title),
     authors: stringField(value.authors),
+    institutions: stringField(value.institutions),
     status: stringField(value.status),
     takeaway: stringField(value.takeaway),
     tags: stringArray(value.tags),
@@ -4468,6 +4512,15 @@ function localPaper(paper) {
   return paper[state.lang];
 }
 
+function localInstitutions(paper) {
+  const localized = localPaper(paper);
+  const override = paperInstitutionOverrides[paper.id];
+  const overrideText =
+    typeof override === "string" ? override : override && (override[state.lang] || override.en || override.zh);
+
+  return stringField(localized.institutions) || stringField(overrideText);
+}
+
 function categoryLabel(categoryId) {
   const category = categories.find((item) => item.id === categoryId);
   return category ? category.label[state.lang] : categoryId;
@@ -4566,9 +4619,11 @@ function typesetMath() {
 
 function searchableText(paper) {
   const localized = localPaper(paper);
+  const institutions = localInstitutions(paper);
   return [
     localized.title,
     localized.authors,
+    institutions,
     allNoteText(paper),
     localized.mainContent,
     localized.innovations.join(" "),
@@ -4660,11 +4715,15 @@ function renderList() {
 function renderPaperCard(paper) {
   const localized = localPaper(paper);
   const note = localPaperNote(paper);
+  const institutions = localInstitutions(paper);
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const selectedClass = paper.id === state.selectedId ? "is-selected" : "";
   const takeaway = note.takeaway
     ? `<p class="paper-card-takeaway">${renderText(note.takeaway)}</p>`
+    : "";
+  const institutionLine = institutions
+    ? `<p class="paper-card-institutions">${escapeHtml(institutions)}</p>`
     : "";
 
   return `
@@ -4674,6 +4733,7 @@ function renderPaperCard(paper) {
         <span>${paper.venue}</span>
       </div>
       <h3>${escapeHtml(localized.title)}</h3>
+      ${institutionLine}
       ${takeaway}
       <div class="paper-card-summary">
         <p>${renderText(localized.mainContent)}</p>
@@ -4690,6 +4750,7 @@ function renderDetail(paper) {
 
   const localized = localPaper(paper);
   const note = localPaperNote(paper);
+  const institutions = localInstitutions(paper);
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const link = primaryLink(paper);
@@ -4712,11 +4773,15 @@ function renderDetail(paper) {
       </section>
     `
     : "";
+  const institutionLine = institutions
+    ? `<p class="detail-institutions">${escapeHtml(institutions)}</p>`
+    : "";
 
   nodes.paperDetail.innerHTML = `
     <div class="tag-row">${categoryTags}</div>
     <h2 class="detail-title">${escapeHtml(localized.title)}</h2>
     <p class="detail-subtitle">${escapeHtml(localized.authors)}</p>
+    ${institutionLine}
     ${takeaway}
     ${personalNote}
 

@@ -12,6 +12,7 @@
       "zh": {
         "title": "Student-Informed Teacher Training",
         "authors": "Nico Messikommer, Jiaxu Xing, Elie Aljalbout, Davide Scaramuzza",
+        "institutions": "Robotics and Perception Group, University of Zurich",
         "status": "摘要已整理",
         "tags": ["Teacher-Student", "Imitation Learning", "Privileged Teacher", "PPO", "Vision-Based Control"],
         "mainContent": "SITT 解决 privileged teacher imitation learning 中 teacher 过强、student 因部分可观测而难以模仿的问题。方法在 teacher 训练时显式考虑 student 是否能学会，把 teacher-student action 差异作为 teacher reward penalty，并加入监督式对齐步骤，使 teacher 学到更容易被视觉 student 蒸馏的行为。",
@@ -30,6 +31,7 @@
       "en": {
         "title": "Student-Informed Teacher Training",
         "authors": "Nico Messikommer, Jiaxu Xing, Elie Aljalbout, Davide Scaramuzza",
+        "institutions": "Robotics and Perception Group, University of Zurich",
         "status": "Abstract summarized",
         "tags": ["Teacher-Student", "Imitation Learning", "Privileged Teacher", "PPO", "Vision-Based Control"],
         "mainContent": "SITT addresses a failure mode in privileged-teacher imitation learning: a powerful teacher may learn behaviors that a partially observable student cannot imitate. The method makes teacher training student-aware by penalizing teacher-student action mismatch and adding a supervised alignment step, producing teachers whose behaviors can be distilled into vision-based student policies.",
@@ -57,6 +59,7 @@
       "zh": {
         "title": "MoCapAct: 面向仿真人形控制的多任务数据集",
         "authors": "Nolan Wagener, Andrey Kolobov, Felipe Vieira Frujeri, Ricky Loynd, Ching-An Cheng, Matthew Hausknecht",
+        "institutions": "Georgia Institute of Technology; Microsoft Research",
         "status": "全文已精读",
         "takeaway": "通过预计算 RL 专家策略并开源其 rollout 数据，将高维人形机器人运动跟踪的准入门槛从 50 年分布式 RL 降至 3 小时监督学习。",
         "tags": ["Motion Capture", "Imitation Learning", "PPO", "Distillation", "Humanoid", "Dataset", "GPT"],
@@ -78,6 +81,7 @@
       "en": {
         "title": "MoCapAct: A Multi-Task Dataset for Simulated Humanoid Control",
         "authors": "Nolan Wagener, Andrey Kolobov, Felipe Vieira Frujeri, Ricky Loynd, Ching-An Cheng, Matthew Hausknecht",
+        "institutions": "Georgia Institute of Technology; Microsoft Research",
         "status": "Full paper reviewed",
         "takeaway": "By precomputing RL expert policies and open-sourcing their noisy rollouts, the paper lowers the barrier of humanoid motion tracking from 50 years of distributed RL to 3 hours of supervised learning.",
         "tags": ["Motion Capture", "Imitation Learning", "PPO", "Distillation", "Humanoid", "Dataset", "GPT"],
@@ -108,6 +112,7 @@
       "zh": {
         "title": "BeyondMimic: From Motion Tracking to Versatile Humanoid Control via Guided Diffusion",
         "authors": "Qiayuan Liao, Takara E. Truong, Xiaoyu Huang, Yuman Gao, Guy Tevet, Koushil Sreenath, C. Karen Liu",
+        "institutions": "University of California, Berkeley; Stanford University",
         "status": "已精读整理",
         "takeaway": "这篇论文把人类动作模仿从“跟踪参考轨迹”推进到“用人类运动先验和 guided diffusion 在测试时组合技能解决新任务”。",
         "tags": [
@@ -137,6 +142,7 @@
       "en": {
         "title": "BeyondMimic: From Motion Tracking to Versatile Humanoid Control via Guided Diffusion",
         "authors": "Qiayuan Liao, Takara E. Truong, Xiaoyu Huang, Yuman Gao, Guy Tevet, Koushil Sreenath, C. Karen Liu",
+        "institutions": "University of California, Berkeley; Stanford University",
         "status": "Full reading summarized",
         "takeaway": "This paper moves humanoid imitation beyond tracking reference clips by turning human motion into a guided diffusion prior for test-time skill composition.",
         "tags": [
@@ -179,6 +185,7 @@
       "zh": {
         "title": "Behavior Foundation Model for Humanoid Robots",
         "authors": "Weishuai Zeng, Shunlin Lu, Kangning Yin, Xiaojie Niu, Minyue Dai, Jingbo Wang, Jiangmiao Pang",
+        "institutions": "Peking University; The Chinese University of Hong Kong, Shenzhen; Shanghai Jiao Tong University; Fudan University; Shanghai AI Laboratory",
         "status": "已精读",
         "takeaway": "把不同人形机器人 WBC 任务统一为行为生成问题，通过 masked control interface 和 CVAE 行为潜空间实现多控制模式共享的 humanoid behavior prior。",
         "tags": [
@@ -210,6 +217,7 @@
       "en": {
         "title": "Behavior Foundation Model for Humanoid Robots",
         "authors": "Weishuai Zeng, Shunlin Lu, Kangning Yin, Xiaojie Niu, Minyue Dai, Jingbo Wang, Jiangmiao Pang",
+        "institutions": "Peking University; The Chinese University of Hong Kong, Shenzhen; Shanghai Jiao Tong University; Fudan University; Shanghai AI Laboratory",
         "status": "Fully read",
         "takeaway": "This paper reframes humanoid whole-body control as unified behavior generation and learns a reusable humanoid behavior prior through a masked control interface and a CVAE latent space.",
         "tags": [
@@ -253,6 +261,7 @@
       "zh": {
         "title": "Making Tracking Easy: Neural Motion Retargeting for Humanoid Whole-body Control",
         "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
+        "institutions": "Nanjing University; Huawei Technologies",
         "status": "已精读",
         "takeaway": "将人到人形机器人的动作重定向从逐帧非凸几何优化改写为学习人类动作分布到机器人可行动作流形的映射，从而为下游 whole-body tracking policy 提供更干净、更物理可行的参考动作。",
         "tags": [
@@ -285,6 +294,7 @@
       "en": {
         "title": "Making Tracking Easy: Neural Motion Retargeting for Humanoid Whole-body Control",
         "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
+        "institutions": "Nanjing University; Huawei Technologies",
         "status": "Fully read",
         "takeaway": "This paper reframes human-to-humanoid retargeting from frame-wise non-convex geometric optimization into a learned distribution mapping from human motion to the robot's feasible motion manifold, producing cleaner references for downstream whole-body tracking.",
         "tags": [
@@ -329,6 +339,7 @@
       "zh": {
         "title": "TRAM: 从野外视频恢复三维人体的全局轨迹与运动",
         "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
+        "institutions": "University of Pennsylvania; Archimedes, Athena RC",
         "status": "已精读",
         "takeaway": "TRAM 最值得记住的是：它不从人体运动先验中猜全局位移，而是先用背景恢复 metric-scale 相机轨迹，再把相机系 SMPL 人体运动变换到世界坐标系。",
         "tags": [
@@ -360,6 +371,7 @@
       "en": {
         "title": "TRAM: Global Trajectory and Motion of 3D Humans from in-the-Wild Videos",
         "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
+        "institutions": "University of Pennsylvania; Archimedes, Athena RC",
         "status": "Fully read",
         "takeaway": "TRAM should be remembered as a scene-centric pipeline that recovers metric-scale camera motion from the background and composes it with camera-frame SMPL motion to obtain world-space human motion.",
         "tags": [
@@ -405,6 +417,7 @@
       "zh": {
         "title": "ASAP: Aligning Simulation and Real-World Physics for Learning Agile Humanoid Whole-Body Skills",
         "authors": "Tairan He, Jiawei Gao, Wenli Xiao, Yuanhang Zhang, Zi Wang, Jiashun Wang, Zhengyi Luo, Guanqi He, Nikhil Sobanbabu, Chaoyi Pan, Zeji Yi, Guannan Qu, Kris Kitani, Jessica Hodgins, Linxi “Jim” Fan, Yuke Zhu, Changliu Liu, Guanya Shi",
+        "institutions": "Carnegie Mellon University; NVIDIA",
         "status": "精读已整理",
         "takeaway": "用真实 rollout 学一个 delta action model 来把仿真动力学对齐到真实机器人，再在对齐后的仿真中微调策略，是敏捷人形机器人 sim-to-real 的一条很有代表性的 real-to-sim-to-real 路线。",
         "tags": [
@@ -436,6 +449,7 @@
       "en": {
         "title": "ASAP: Aligning Simulation and Real-World Physics for Learning Agile Humanoid Whole-Body Skills",
         "authors": "Tairan He, Jiawei Gao, Wenli Xiao, Yuanhang Zhang, Zi Wang, Jiashun Wang, Zhengyi Luo, Guanqi He, Nikhil Sobanbabu, Chaoyi Pan, Zeji Yi, Guannan Qu, Kris Kitani, Jessica Hodgins, Linxi “Jim” Fan, Yuke Zhu, Changliu Liu, Guanya Shi",
+        "institutions": "Carnegie Mellon University; NVIDIA",
         "status": "Full reading summarized",
         "takeaway": "ASAP is a representative real-to-sim-to-real pipeline: learn a delta action model from real rollouts to align simulator dynamics, fine-tune the policy in the aligned simulator, and deploy only the fine-tuned policy on the real humanoid.",
         "tags": [
