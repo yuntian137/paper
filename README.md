@@ -23,9 +23,10 @@ app.js                    UI 文案、论文数据、分类、筛选、搜索和
 example.json              给论文阅读 agent 使用的论文卡片填写模板
 papers_extra.json         可选的新增论文 JSON 数据，网站启动时自动读取
 paper_notes.json          个人复习笔记，按 id、标题片段或链接匹配论文
+site_meta.json            站点元信息，例如最近更新时间
 ```
 
-网站发布只依赖 `app.js`、`papers_extra.json`、`paper_notes.json` 和外部论文链接。
+网站发布只依赖 `app.js`、`papers_extra.json`、`paper_notes.json`、`site_meta.json` 和外部论文链接。
 
 ## 分类方式
 

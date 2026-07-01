@@ -2,6 +2,11 @@ const uiText = {
   zh: {
     siteLabel: "Paper Reading Notes",
     siteTitle: "论文阅读笔记",
+    lastUpdated: "最近更新",
+    detailNavSummary: "简介",
+    detailNavInnovations: "创新点",
+    detailNavImplementation: "实现方法",
+    detailNavLinks: "链接",
     searchLabel: "搜索论文",
     searchPlaceholder: "标题、作者、关键词",
     papers: "篇论文",
@@ -40,6 +45,11 @@ const uiText = {
   en: {
     siteLabel: "Paper Reading Notes",
     siteTitle: "Paper Reading Notes",
+    lastUpdated: "Updated",
+    detailNavSummary: "Summary",
+    detailNavInnovations: "Innovations",
+    detailNavImplementation: "Implementation",
+    detailNavLinks: "Links",
     searchLabel: "Search papers",
     searchPlaceholder: "Title, author, keyword",
     papers: "papers",
@@ -74,6 +84,15 @@ const uiText = {
     showDetail: "Show overview",
     resizeSidebar: "Resize categories",
     resizeDetail: "Resize overview",
+  },
+};
+
+const siteMetaPath = "site_meta.json";
+const siteMeta = {
+  lastUpdated: {
+    iso: "2026-07-01",
+    zh: "2026-07-01",
+    en: "Jul 1, 2026",
   },
 };
 
@@ -4252,6 +4271,7 @@ const nodes = {
   sidebarResizer: document.querySelector("#sidebar-resizer"),
   detailToggle: document.querySelector("#detail-toggle"),
   detailResizer: document.querySelector("#detail-resizer"),
+  updateBadge: document.querySelector("#update-badge"),
   search: document.querySelector("#paper-search"),
   categoryNav: document.querySelector("#category-nav"),
   paperList: document.querySelector("#paper-list"),
@@ -4508,6 +4528,25 @@ async function loadPaperNotes() {
   }
 }
 
+async function loadSiteMeta() {
+  try {
+    const response = await fetch(siteMetaPath, { cache: "no-cache" });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    const lastUpdated = payload && typeof payload === "object" ? payload.lastUpdated : null;
+    if (!lastUpdated || typeof lastUpdated !== "object") return false;
+
+    siteMeta.lastUpdated = {
+      iso: stringField(lastUpdated.iso) || siteMeta.lastUpdated.iso,
+      zh: stringField(lastUpdated.zh) || stringField(lastUpdated.iso) || siteMeta.lastUpdated.zh,
+      en: stringField(lastUpdated.en) || stringField(lastUpdated.iso) || siteMeta.lastUpdated.en,
+    };
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function localPaper(paper) {
   return paper[state.lang];
 }
@@ -4653,6 +4692,13 @@ function syncLanguage() {
     const key = node.dataset.i18n;
     node.textContent = text(key);
   });
+  if (nodes.updateBadge) {
+    const lastUpdated = siteMeta.lastUpdated;
+    nodes.updateBadge.innerHTML = `
+      <span>${text("lastUpdated")}</span>
+      <time datetime="${escapeHtml(lastUpdated.iso)}">${escapeHtml(lastUpdated[state.lang])}</time>
+    `;
+  }
   nodes.search.placeholder = text("searchPlaceholder");
   nodes.langButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.lang === state.lang);
@@ -4776,6 +4822,14 @@ function renderDetail(paper) {
   const institutionLine = institutions
     ? `<p class="detail-institutions">${escapeHtml(institutions)}</p>`
     : "";
+  const detailNav = `
+    <nav class="detail-nav" aria-label="paper sections">
+      <button type="button" data-detail-target="detail-summary">${text("detailNavSummary")}</button>
+      <button type="button" data-detail-target="detail-innovations">${text("detailNavInnovations")}</button>
+      <button type="button" data-detail-target="detail-implementation">${text("detailNavImplementation")}</button>
+      <button type="button" data-detail-target="detail-links">${text("detailNavLinks")}</button>
+    </nav>
+  `;
 
   nodes.paperDetail.innerHTML = `
     <div class="tag-row">${categoryTags}</div>
@@ -4784,6 +4838,7 @@ function renderDetail(paper) {
     ${institutionLine}
     ${takeaway}
     ${personalNote}
+    ${detailNav}
 
     <div class="detail-grid">
       <div class="info-tile">
@@ -4805,22 +4860,22 @@ function renderDetail(paper) {
       <div class="tag-row">${keywordTags}</div>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="detail-summary">
       <h3>${text("mainContent")}</h3>
       <p>${renderText(localized.mainContent)}</p>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="detail-innovations">
       <h3>${text("innovations")}</h3>
       <ul>${listItems(localized.innovations)}</ul>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="detail-implementation">
       <h3>${text("implementation")}</h3>
       <ul>${listItems(localized.implementation)}</ul>
     </section>
 
-    <div class="link-row">
+    <div class="link-row" id="detail-links">
       ${linkAction}
     </div>
   `;
@@ -4937,6 +4992,21 @@ nodes.paperList.addEventListener("click", (event) => {
   renderList();
 });
 
+nodes.paperDetail.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-detail-target]");
+  if (!button) return;
+
+  const target = nodes.paperDetail.querySelector(`#${button.dataset.detailTarget}`);
+  if (!target) return;
+
+  const nav = nodes.paperDetail.querySelector(".detail-nav");
+  const offset = nav ? nav.offsetHeight + 14 : 0;
+  nodes.paperDetail.scrollTo({
+    top: Math.max(0, target.offsetTop - offset),
+    behavior: "smooth",
+  });
+});
+
 function openPromptModal() {
   nodes.promptStatus.textContent = "";
   nodes.promptPreview.textContent = readingPrompts[state.lang] || readingPrompts.zh;
@@ -4980,9 +5050,12 @@ function initialize() {
 }
 
 async function loadExternalData() {
-  const importedCount = await loadExternalPapers();
+  const [metaLoaded, importedCount] = await Promise.all([
+    loadSiteMeta(),
+    loadExternalPapers(),
+  ]);
   const noteCount = await loadPaperNotes();
-  if (importedCount || noteCount) {
+  if (metaLoaded || importedCount || noteCount) {
     render();
   }
 }

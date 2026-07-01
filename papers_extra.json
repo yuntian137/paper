@@ -478,6 +478,104 @@
           "Real-world experiment detail: because high-dynamic data collection overheats motors and risks hardware damage, the paper does not train a full 23-DoF real-world delta action model; it trains a 4-DoF ankle delta action model for G1. The real-world dataset contains 100 motion clips, with 30 executions per task, plus 10 minutes of locomotion data for policy transition."
         ]
       }
+    },
+    {
+      "id": "sonic-supersizing-motion-tracking",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "real-robot-rl",
+        "imitation-teleop",
+        "vla-world-model",
+        "loco-manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2511.07820",
+      "project": "https://nvlabs.github.io/SONIC/",
+      "arxiv": "https://arxiv.org/abs/2511.07820",
+      "year": "2025",
+      "venue": "arXiv:2511.07820v2",
+      "zh": {
+        "title": "SONIC: Supersizing Motion Tracking for Natural Humanoid Whole-Body Control",
+        "authors": "Zhengyi Luo, Ye Yuan, Tingwu Wang, Chenran Li, Sirui Chen, Fernando Castañeda, Zi-Ang Cao, Jiefeng Li, David Minor, Qingwei Ben, Xingye Da, Runyu Ding, Cyrus Hogg, Lina Song, Edy Lim, Eugene Jeong, Tairan He, Haoru Xue, Wenli Xiao, Zi Wang, Simon Yuen, Jan Kautz, Yan Chang, Umar Iqbal, Linxi Jim Fan, Yuke Zhu",
+        "institutions": "NVIDIA",
+        "status": "论文精读已整理",
+        "takeaway": "这篇论文最值得记住的是：把大规模 motion tracking 作为 humanoid foundation control 的底座，用 mocap 数据、PPO 物理跟踪、universal token 和 kinematic planner 让同一个人形机器人策略支持自然全身控制、遥操作、多模态输入和 VLA 接入。",
+        "tags": [
+          "Humanoid Control",
+          "Motion Tracking",
+          "PPO",
+          "Sim-to-Real",
+          "Universal Token",
+          "Kinematic Planner",
+          "VR Teleoperation",
+          "VLA"
+        ],
+        "mainContent": "SONIC 研究如何将人形机器人控制从小规模、任务特定的 reward engineering 推向可扩展的基础控制模型。论文将 motion tracking 设定为可规模化基础任务，用 100M+ 帧、约 700 小时的人体动作捕捉数据训练一个通用 whole-body tracking policy，并沿模型规模、数据规模和计算量三个维度验证 scaling trend。方法上，SONIC 使用 PPO 在物理仿真中训练闭环 tracking policy，同时通过 robot/human/hybrid 三类 encoder、FSQ quantizer、robot control decoder 和 robot motion decoder 构造 universal token space。论文还引入实时 generative kinematic motion planner，把用户速度、方向、风格、蹲下、爬行、拳击等意图转成短时 kinematic reference，并在 Unitree G1 上展示 motion tracking、VR teleoperation、video/text/music control 与 VLA apple-to-plate proof-of-concept。",
+        "innovations": [
+          "将 motion tracking 明确提出为人形机器人控制的 scalable foundational task：相比为每个技能单独设计 reward，利用大规模 mocap 提供逐帧 dense supervision 来学习 human motion prior。",
+          "从数据、模型和算力三条轴扩展 humanoid tracking：论文报告使用 100M+ motion frames、约 700 小时高质量动作数据，并将网络规模扩到约 42M 参数；实验显示更大数据、模型和计算量能持续改善 tracking 性能。",
+          "提出 universal token space：robot motion、human motion 和 hybrid motion 分别经专门 MLP encoder 编码，再经 FSQ quantizer 得到 shared latent token，由同一个 robot control decoder 输出机器人控制命令。",
+          "底层 universal tracking policy 采用 single-stage training without distillation：PPO tracking loss 与 reconstruction loss、token alignment loss、cycle consistency loss 共同优化 encoder、quantizer 和 decoder。",
+          "提出 real-time generative kinematic motion planner：planner 是训练在同一 motion 数据上的 latent generative model，在 latent token 空间中做 autoregressive / masked-token motion in-betweening，用于把用户意图转成短时机器人参考动作。",
+          "展示同一 policy 可接入多种接口：interactive gamepad control、VR 3-point teleoperation、VR whole-body teleoperation、human video teleoperation、text/music motion generation 和 VLA foundation model。",
+          "在 Unitree G1 上展示 sim-to-real：论文报告 unseen AMASS 测试集上 SONIC 的 tracking success rate 为 99.6%，并在 50 条真实机器人 motion trajectories 上实现 100% success；VLA apple-to-plate proof-of-concept 为 20 次试验 95% success。"
+        ],
+        "implementation": [
+          "数据：论文使用由 170 名人类受试者组成的大规模 mocap corpus，身高范围 145-199 cm，覆盖 locomotion、daily activities、gesturing、combat motions 等，clip 长度 1-180 s，总计约 700 小时、100M+ frames at 50 Hz；human motion retargeting 适配自 GMR 和 PyRoki。",
+          "MDP 与 RL：humanoid motion tracking 被建模为 MDP，状态由 proprioception 和 motion command 组成；proprioception 包括 joint pose、joint velocity、root angular velocity、root frame gravity vector 和 previous action；motion command 包括 robot motion g_r、human motion g_h 或 hybrid motion g_m。策略用 PPO 训练，输出 29 维 target joint positions，并由各关节 PD controller 跟踪。",
+          "Reward：tracking reward 包括 root orientation、body link relative position、body link relative orientation、body link linear velocity、body link angular velocity；penalty 包括 action rate、joint limit violation 和 undesired contacts。论文未给出 formal stability proof，稳定性主要依赖物理仿真 RL、domain randomization 和实证验证。",
+          "Universal policy 网络：robot motion encoder、human motion encoder、hybrid motion encoder 均为 MLP hidden=[2048,1024,512,512]；FSQ quantizer 产生 universal token；robot control/action decoder 为 MLP hidden=[4096,4096,2048,2048,1024,1024,512,512]；auxiliary robot motion/ref decoder 为 MLP hidden=[2048,1024,512,512]；critic 也是大 MLP。论文未说明 universal token 的具体 D_z 与 L_z 数值。",
+          "Training loss：总损失为 L = L_ppo + L_recon + L_token + L_cycle。L_recon 要求 robot/human/hybrid token 都能通过 robot motion decoder 重构 robot motion command；L_token 对齐 robot token 与 human token；L_cycle 约束 human token 经 robot motion decoder 再由 robot encoder 编回后接近 robot token。",
+          "PPO 超参数：每 GPU 4096 parallel envs、每环境 24 steps、learning epochs=5、mini-batches=4、gamma=0.99、GAE lambda=0.95、clip=0.2、entropy coefficient=0.013、actor learning rate=2e-5、critic learning rate=1e-3、max grad norm=0.1、desired KL=0.01。",
+          "Domain randomization：训练中随机化静/动摩擦、restitution、default joint positions、base COM offset，并施加 root linear/angular velocity perturbations；还对 target motion command 加 position/orientation/velocity/joint jitter 以增强 sim-to-real 鲁棒性。",
+          "Adaptive sampling：motion dataset 被划分成固定时长 bins，按每个 bin 的 failure rate 进行 capped hard-example sampling，并与 uniform sampling 混合；论文给出 bin size=1s、failure rate cap beta=200、blending alpha=0.1。",
+          "Kinematic planner：planner 不是 PPO 训练的控制器，而是在同一大规模 whole-body motion data 上训练的 latent generative model。训练时采样 0.8-2.4s motion segments，取两端 keyframes 作为 context 和 target，motion representation 使用 pelvis-relative joint positions 和 global joint rotations，并随机旋转训练样本。",
+          "Planner token：连续 motion 先编码为 latent token sequence，downsampling rate=4；planner 在 token space 中使用 masked token prediction，训练时 mask ratio 从 [100%,0%] 均匀采样，推理时用 cosine schedule 逐步 finalize 高置信 token。论文说 latent token sequence 可由 Transformer 或 Conv1D 捕捉 temporal consistency，但论文未说明最终 backbone 是 Transformer 还是 Conv1D，也未明确给出 planner 的完整 loss 公式。",
+          "部署：真实机器人为 Unitree G1，policy loop 50 Hz，kinematic planner 10 Hz，低层 joint target 通过 Unitree low-level API 以 500 Hz 持续发布，user input 100 Hz；Jetson Orin 上 policy forward pass 约 1-2 ms，motion generation 约 12 ms，使用 TensorRT 与 CUDA Graph 加速。",
+          "局限：论文讨论中明确提到 safety、compliance、energy efficiency、noisy input handling 仍是局限；还把 planner、tokenizer 和 policy 的 joint training 列为未来工作，说明当前 planner/GENMO/VLA 并非与 PPO tracking policy 完整端到端联合训练。"
+        ]
+      },
+      "en": {
+        "title": "SONIC: Supersizing Motion Tracking for Natural Humanoid Whole-Body Control",
+        "authors": "Zhengyi Luo, Ye Yuan, Tingwu Wang, Chenran Li, Sirui Chen, Fernando Castañeda, Zi-Ang Cao, Jiefeng Li, David Minor, Qingwei Ben, Xingye Da, Runyu Ding, Cyrus Hogg, Lina Song, Edy Lim, Eugene Jeong, Tairan He, Haoru Xue, Wenli Xiao, Zi Wang, Simon Yuen, Jan Kautz, Yan Chang, Umar Iqbal, Linxi Jim Fan, Yuke Zhu",
+        "institutions": "NVIDIA",
+        "status": "Full reading summarized",
+        "takeaway": "SONIC is worth remembering as a large-scale humanoid motion-tracking foundation controller: it combines massive mocap data, PPO-based physical tracking, a universal token space, and a kinematic planner so that one humanoid policy can support natural whole-body control, teleoperation, multimodal inputs, and VLA integration.",
+        "tags": [
+          "Humanoid Control",
+          "Motion Tracking",
+          "PPO",
+          "Sim-to-Real",
+          "Universal Token",
+          "Kinematic Planner",
+          "VR Teleoperation",
+          "VLA"
+        ],
+        "mainContent": "SONIC studies whether humanoid whole-body control can scale beyond small task-specific policies and reward-engineered skills. It casts motion tracking as a scalable foundation task and trains on 100M+ frames, roughly 700 hours, of high-quality human motion-capture data while scaling model size, dataset size, and compute. Methodologically, SONIC trains a PPO-based closed-loop tracking policy and builds a universal token space through robot, human, and hybrid encoders, an FSQ quantizer, a robot control decoder, and an auxiliary robot motion decoder. It further introduces a real-time generative kinematic motion planner that converts user intent into short-horizon motion references, enabling demonstrations on Unitree G1 across tracking, VR teleoperation, video/text/music control, and a VLA apple-to-plate proof of concept.",
+        "innovations": [
+          "It identifies motion tracking as a scalable foundational task for humanoid control, using dense frame-level supervision from motion capture instead of designing a new task reward for every behavior.",
+          "It scales humanoid tracking along data, model, and compute axes, reporting 100M+ motion frames, around 700 hours of motion data, and a model scaled up to around 42M parameters; experiments show consistent gains from scaling.",
+          "It introduces a universal token space in which robot motion, human motion, and hybrid motion are encoded by specialized MLP encoders, quantized by FSQ, and decoded by a shared robot control decoder.",
+          "The universal tracking policy is trained in a single stage without distillation, combining PPO tracking loss with reconstruction, token-alignment, and cycle-consistency losses.",
+          "It proposes a real-time generative kinematic motion planner, trained on the same motion data, that performs autoregressive / masked-token motion in-betweening in latent space to convert user commands into short-horizon robot motion references.",
+          "It shows that the same policy can interface with gamepad control, VR 3-point teleoperation, VR whole-body teleoperation, human video teleoperation, text/music motion generation, and VLA foundation models.",
+          "It reports strong empirical results on Unitree G1: 99.6% tracking success on an unseen AMASS subset, 100% success on 50 real-world motion trajectories, and 95% success over 20 trials in a VLA apple-to-plate proof-of-concept task."
+        ],
+        "implementation": [
+          "Data: the paper uses a large-scale motion-capture corpus from 170 human subjects, covering locomotion, daily activities, gesturing, and combat motions. Clips last from 1 to 180 seconds, totaling around 700 hours and 100M+ frames at 50 Hz. Human-to-robot retargeting is adapted from GMR and PyRoki.",
+          "MDP and RL: humanoid tracking is formulated as an MDP. The state combines proprioception and motion commands. Proprioception includes joint pose, joint velocity, root angular velocity, gravity vector in the root frame, and previous action. The motion command can be robot motion g_r, human motion g_h, or hybrid motion g_m. The PPO policy outputs 29-dimensional target joint positions tracked by joint-level PD controllers.",
+          "Reward: the tracking reward includes root orientation, body-link relative position, body-link relative orientation, body-link linear velocity, and body-link angular velocity. Penalties include action-rate penalty, joint-limit violation, and undesired contacts. The paper does not provide a formal stability proof; robustness is mainly empirical and supported by simulation training, domain randomization, and real-robot deployment.",
+          "Universal policy architecture: robot, human, and hybrid motion encoders are MLPs with hidden layers [2048,1024,512,512]. The FSQ quantizer produces the universal token. The robot control/action decoder is an MLP with hidden layers [4096,4096,2048,2048,1024,1024,512,512]. The auxiliary robot motion/reference decoder is an MLP with hidden layers [2048,1024,512,512]. The critic is also a large MLP. The exact D_z and L_z values for the universal token are not specified in the paper.",
+          "Training loss: the total objective is L = L_ppo + L_recon + L_token + L_cycle. L_recon reconstructs robot motion commands from robot, human, and hybrid tokens. L_token aligns robot and human tokens. L_cycle enforces consistency after decoding a human token into robot motion and re-encoding it with the robot encoder.",
+          "PPO hyperparameters: 4096 parallel environments per GPU, 24 steps per environment, 5 learning epochs, 4 mini-batches, gamma=0.99, GAE lambda=0.95, PPO clip=0.2, entropy coefficient=0.013, actor learning rate=2e-5, critic learning rate=1e-3, max gradient norm=0.1, and desired KL=0.01.",
+          "Domain randomization: training randomizes static and dynamic friction, restitution, default joint positions, base COM offset, root linear/angular velocity perturbations, and target motion perturbations including position, orientation, velocity, angular velocity, and joint jitter.",
+          "Adaptive sampling: the motion dataset is partitioned into fixed-duration bins. Sampling is biased toward bins with higher failure rates while being blended with uniform sampling. The paper reports bin size=1s, failure-rate cap beta=200, and blending alpha=0.1.",
+          "Kinematic planner: the planner is not a PPO-trained controller. It is a latent generative model trained on the same whole-body motion data. During training, it samples 0.8-2.4s motion segments, uses endpoint keyframes as context and target conditions, represents motion with pelvis-relative joint positions and global joint rotations, and randomly rotates samples for orientation robustness.",
+          "Planner token modeling: continuous motion is encoded into a latent token sequence with downsampling rate 4. The planner performs masked token prediction in token space. During training, the mask ratio is uniformly sampled from [100%,0%]. During inference, a cosine schedule finalizes high-confidence tokens. The paper states that the latent token sequence can be modeled by Transformers or Conv1D networks, but it does not specify which backbone was ultimately used, nor does it explicitly provide the full planner loss formula.",
+          "Deployment: experiments run on a Unitree G1. The policy loop runs at 50 Hz, the kinematic planner at 10 Hz, joint targets are streamed through the Unitree low-level API at 500 Hz, and user input is captured at 100 Hz. On Jetson Orin, policy inference takes about 1-2 ms and motion generation about 12 ms, using TensorRT and CUDA Graph acceleration.",
+          "Limitations: the paper explicitly notes open issues in formal safety, compliance, energy efficiency, and noisy input handling. It also lists joint training of planner, tokenizer, and policy as future work, indicating that the planner, GENMO, VLA, and PPO tracking policy are not currently trained as one fully end-to-end system."
+        ]
+      }
     }
   ]
 }
