@@ -576,6 +576,270 @@
           "Limitations: the paper explicitly notes open issues in formal safety, compliance, energy efficiency, and noisy input handling. It also lists joint training of planner, tokenizer, and policy as future work, indicating that the planner, GENMO, VLA, and PPO tracking policy are not currently trained as one fully end-to-end system."
         ]
       }
+    },
+    {
+      "id": "omniretarget",
+      "categories": [
+        "loco-manipulation",
+        "imitation-teleop",
+        "benchmark-dataset",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2509.26633",
+      "project": "https://omniretarget.github.io",
+      "arxiv": "https://arxiv.org/abs/2509.26633",
+      "year": "2025",
+      "venue": "arXiv:2509.26633",
+      "zh": {
+        "title": "OmniRetarget: Interaction-Preserving Data Generation for Humanoid Whole-Body Loco-Manipulation and Scene Interaction",
+        "authors": "Lujie Yang, Xiaoyu Huang, Zhen Wu, Angjoo Kanazawa, Pieter Abbeel, Carmelo Sferrazza, C. Karen Liu, Rocky Duan, Guanya Shi",
+        "institutions": "Amazon FAR; MIT; UC Berkeley; Stanford University; CMU",
+        "status": "已精读",
+        "takeaway": "这篇论文最值得记住的是：复杂人形 loco-manipulation 的难点不只在 RL 奖励设计，而在于先生成高质量、交互保持、满足运动学硬约束的机器人参考轨迹。",
+        "tags": [
+          "Humanoid",
+          "Motion Retargeting",
+          "Loco-Manipulation",
+          "Interaction Mesh",
+          "Data Generation",
+          "Sim-to-Real",
+          "Motion Tracking"
+        ],
+        "mainContent": "OmniRetarget 面向人形机器人全身 loco-manipulation 与场景交互中的数据瓶颈，目标是将人类动作、物体交互和地形交互重定向为机器人可跟踪的高质量参考轨迹。核心方法是构建包含人体/机器人关键点、物体表面点和环境表面点的 interaction mesh，并通过最小化 Laplacian deformation，同时施加碰撞、关节限位、速度限制和支撑脚固定等硬运动学约束。该方法还能通过改变物体位姿、物体尺寸和地形参数，从单个示范扩增出多样化轨迹。实验在 OMOMO、LAFAN1 和自采 MoCap 数据上生成超过 8 小时轨迹，并训练纯本体感知 RL tracking policy，在 Unitree G1 上实现多种 zero-shot sim-to-real 的长时程场景交互技能。",
+        "innovations": [
+          "提出 interaction-preserving humanoid retargeting 框架，将机器人/人体关键点、物体表面点和地形采样点统一放入 interaction mesh，用 Laplacian deformation 保持身体、物体和环境之间的空间与接触关系。",
+          "将 interaction mesh 目标与硬运动学约束统一到同一个优化问题中，包括碰撞避免、关节范围、速度限制和支撑脚固定，从而减少穿透、脚滑和不可行姿态。",
+          "提出系统性数据扩增流程，可以从单个人类示范生成不同机器人 embodiment、物体初始位姿、物体形状和地形参数下的高质量参考轨迹。",
+          "展示高质量 retargeted reference 可以显著简化下游 RL：使用纯本体感知观测、5 个 reward terms 和少量 domain randomization，即可训练可 zero-shot transfer 到 Unitree G1 真机的复杂 whole-body interaction policy。"
+        ],
+        "implementation": [
+          "输入数据包括 OMOMO 的 SMPL human-object interaction 数据、LAFAN1 的 BVH 动作数据，以及作者自采的 MoCap 地形交互数据；论文将不同格式统一转换为全局 3D keypoint 序列。",
+          "retargeting 阶段构造 source 和 target interaction mesh：source 由人体关键点、物体表面采样点和环境采样点组成；target 由机器人正运动学得到的对应关键点、相同物体点和环境点组成。",
+          "核心优化变量是机器人广义构型 q_t，包括 floating base pose 和关节角；目标是最小化 source/target mesh 的 Laplacian deformation，并加入时间平滑项。",
+          "硬约束包括 signed-distance collision constraint、joint limit、velocity limit 和 stance foot sticking constraint；支撑脚通过源动作中足部水平速度低于 1 cm/s 判断。",
+          "优化器采用逐帧 sequential convex / SQP-style 求解，并用上一帧解 warm start；附录进一步说明其实现为 sequential SOCP，每帧最多迭代 10 次，并加入 trust region。",
+          "数据扩增包括 robot-object augmentation 和 robot-terrain augmentation：改变物体初始位姿、物体尺寸、平台高度和深度等；每个新场景都重新求解 retargeting optimization，而不是只在 RL 中做随机扰动。",
+          "RL policy 是 motion tracking policy，观测包括参考关节位置/速度、参考骨盆位置/姿态误差、本体速度、关节位置/速度和上一时刻动作；对高动态动作，论文会 mask 掉不可靠的骨盆线性位置误差和线速度。",
+          "奖励项只有 5 类：body tracking、object tracking、action rate、soft joint limit 和 self-collision；论文说明直接使用 BeyondMimic 的权重和超参数，没有针对每个任务做额外调参。",
+          "domain randomization 包括物体质量、质心、惯量和尺寸扰动；机器人侧只使用 torso COM position、joint default position、random push 和 observation noise 四类随机化。",
+          "实验在 Unitree G1 上展示 box carrying、platform climbing、slope crawling、chair-assisted parkour、jump-and-roll 和 wall-flip 等真机动作；论文报告 wall-flip 真机 5/5 成功，但多数真机展示主要是定性视频结果。",
+          "论文未说明完整的优化耗时、mesh 节点数量、SOCP 求解器细节、每小时数据生成所需计算资源，也未给出完整 RL reward 的具体公式和全部权重。"
+        ]
+      },
+      "en": {
+        "title": "OmniRetarget: Interaction-Preserving Data Generation for Humanoid Whole-Body Loco-Manipulation and Scene Interaction",
+        "authors": "Lujie Yang, Xiaoyu Huang, Zhen Wu, Angjoo Kanazawa, Pieter Abbeel, Carmelo Sferrazza, C. Karen Liu, Rocky Duan, Guanya Shi",
+        "institutions": "Amazon FAR; MIT; UC Berkeley; Stanford University; CMU",
+        "status": "Full reading completed",
+        "takeaway": "The key lesson is that complex humanoid loco-manipulation becomes much easier when the retargeted references already preserve interaction geometry and satisfy hard kinematic constraints, instead of relying on RL rewards to repair poor references.",
+        "tags": [
+          "Humanoid",
+          "Motion Retargeting",
+          "Loco-Manipulation",
+          "Interaction Mesh",
+          "Data Generation",
+          "Sim-to-Real",
+          "Motion Tracking"
+        ],
+        "mainContent": "OmniRetarget addresses the data bottleneck for humanoid whole-body loco-manipulation and scene interaction by converting human demonstrations with object and terrain interactions into high-quality robot reference trajectories. The core idea is to build an interaction mesh over body keypoints, object surface samples, and environment samples, then minimize Laplacian deformation while enforcing hard kinematic constraints such as collision avoidance, joint limits, velocity limits, and stance-foot sticking. The same formulation supports systematic data augmentation across object poses, object shapes, terrain variations, and robot embodiments. Experiments on OMOMO, LAFAN1, and in-house MoCap produce over 8 hours of retargeted trajectories and enable proprioceptive RL tracking policies to perform diverse zero-shot sim-to-real skills on a Unitree G1 humanoid.",
+        "innovations": [
+          "Introduces an interaction-preserving humanoid retargeting framework that models body-object-terrain relationships through an interaction mesh and preserves them via Laplacian deformation minimization.",
+          "Unifies interaction preservation with hard kinematic constraints, including non-penetration, joint limits, velocity limits, and stance-foot sticking, reducing artifacts such as penetration and foot skating.",
+          "Provides a systematic augmentation pipeline that transforms a single human demonstration into diverse robot trajectories across object configurations, object shapes, terrain parameters, and robot embodiments.",
+          "Demonstrates that high-quality retargeted references allow a minimal RL formulation: proprioceptive observations, five reward terms, limited domain randomization, and zero-shot transfer to real Unitree G1 hardware."
+        ],
+        "implementation": [
+          "Input data comes from OMOMO SMPL human-object interaction motions, LAFAN1 BVH motions, and in-house MoCap terrain-interaction data; these are converted into global 3D keypoint trajectories.",
+          "The retargeting stage constructs source and target interaction meshes. The source mesh contains human keypoints, object surface samples, and environment samples; the target mesh replaces human keypoints with robot keypoints computed by forward kinematics while keeping the same object and environment samples.",
+          "The optimization variable is the robot generalized configuration q_t, including floating-base pose and joint angles. The objective minimizes source-target Laplacian deformation plus a temporal smoothness term.",
+          "Hard constraints include signed-distance collision constraints, joint limits, velocity limits, and stance-foot sticking constraints. Stance feet are detected from source motion when horizontal foot velocity is below 1 cm/s.",
+          "The solver uses frame-wise sequential convex / SQP-style optimization with warm start from the previous frame. The appendix specifies a sequential SOCP implementation with up to 10 iterations per frame and a trust region.",
+          "Data augmentation includes robot-object and robot-terrain variants, such as changing object initial pose, object size, platform height, and platform depth. Each augmented scenario is solved as a new retargeting optimization rather than only being randomized during RL.",
+          "The RL policy is a motion tracking policy with reference joint position/velocity, reference pelvis position/orientation error, proprioceptive velocities, joint states, and previous action as observations. For highly dynamic motions, unreliable pelvis linear position error and velocity are masked out.",
+          "The reward uses only five terms: body tracking, object tracking, action rate, soft joint limit, and self-collision. The paper states that it reuses BeyondMimic weights and hyperparameters without per-task tuning.",
+          "Domain randomization covers object mass, center of mass, inertia, and shape. Robot-side randomization uses only torso COM position, joint default position, random push, and observation noise.",
+          "Hardware demonstrations on Unitree G1 include box carrying, platform climbing, slope crawling, chair-assisted parkour, jump-and-roll, and wall-flip. The paper reports a 5/5 hardware success rate for wall-flip, while most other hardware results are presented qualitatively through videos.",
+          "The paper does not specify full optimization runtime, mesh size, detailed SOCP solver settings, compute budget for generating the dataset, or the complete analytic reward formulas and weights."
+        ]
+      }
+    },
+    {
+      "id": "hover-versatile-neural-whole-body-controller",
+      "categories": [
+        "locomotion",
+        "loco-manipulation",
+        "imitation-teleop",
+        "sim2real",
+        "real-robot-rl"
+      ],
+      "pdf": "https://arxiv.org/pdf/2410.21229",
+      "project": "https://hover-versatile-humanoid.github.io",
+      "arxiv": "https://arxiv.org/abs/2410.21229",
+      "year": "2025",
+      "venue": "arXiv:2410.21229",
+      "zh": {
+        "title": "HOVER: Versatile Neural Whole-Body Controller for Humanoid Robots",
+        "authors": "Tairan He, Wenli Xiao, Toru Lin, Zhengyi Luo, Zhenjia Xu, Zhenyu Jiang, Jan Kautz, Changliu Liu, Guanya Shi, Xiaolong Wang, Linxi “Jim” Fan, Yuke Zhu",
+        "institutions": "NVIDIA; Carnegie Mellon University; UC Berkeley; The University of Texas at Austin; UC San Diego",
+        "status": "已精读",
+        "takeaway": "HOVER 将人形机器人的 root tracking、关节角跟踪和关键点位置跟踪统一到一个 masked multi-mode command space 中，并通过 full-body motion imitation oracle 蒸馏出一个可真实部署的通用全身控制器。",
+        "tags": [
+          "Humanoid Whole-Body Control",
+          "Motion Imitation",
+          "Policy Distillation",
+          "DAgger",
+          "PPO",
+          "Multi-Mode Control",
+          "Masked Command",
+          "Sim-to-Real",
+          "Unitree H1"
+        ],
+        "mainContent": "本文研究如何为同一台人形机器人训练一个统一的神经全身控制器，使其能够支持 root tracking、局部关节角跟踪和身体关键点位置跟踪等多种控制模式，而不需要为每种任务单独训练策略。方法上，作者先基于 AMASS 人体动作数据重定向得到可行的人形机器人动作数据集，并用 PPO 训练一个 full-body motion imitation oracle policy；随后通过 DAgger 蒸馏，将 oracle 的全身运动能力迁移到一个只依赖可部署 proprioception history 和 masked multi-mode command 的 HOVER student policy 中。实验在 IsaacGym 和真实 Unitree H1 上验证，结果显示 HOVER 在多种 prior-work command mode 和单手、双手、头部等 sparse control mode 下通常优于单独训练的 specialist policies，并能在真实机器人上进行模式切换和遥操作演示。",
+        "innovations": [
+          "提出统一的 versatile multi-mode command space，将 kinematic position tracking、local joint angle tracking 和 root tracking 整合到同一个人形全身控制接口中。",
+          "使用 mode mask 和 sparsity mask 对 command space 进行选择性激活，使同一个 policy 可以在 ExBody、H2O、OmniH2O、HumanPlus、head-only、left-hand-only、two-hands 等多种模式下工作。",
+          "采用 oracle-to-student policy distillation：先用 full-body reference motion 训练 privileged oracle motion imitator，再通过 DAgger 将其蒸馏为可真实部署的 HOVER policy。",
+          "实验显示，HOVER 作为 generalist policy 在多个单模式评估中通常优于对应的 RL specialist，并且优于直接从零训练的 multi-mode RL baseline。"
+        ],
+        "implementation": [
+          "数据来源为 AMASS 人体 MoCap 数据；作者通过 humanoid forward kinematics、SMPL fitting、keypoint matching 和 sim-to-data 流程，将人类动作重定向为只包含 humanoid feasible motions 的数据集。",
+          "Oracle policy 输入 privileged full-body proprioception 和完整 full-body reference goal，其中 proprioception 包含刚体位置、朝向、线速度、角速度和上一时刻动作；goal 包含当前参考 pose 以及下一帧 reference 与当前状态之间的差异。",
+          "Oracle policy 使用 PPO 训练，输出 19 维 target joint positions，并通过 PD controller 驱动机器人关节；网络结构采用三层 MLP，层维度为 [512, 256, 128]。",
+          "Student / HOVER policy 输入真实机器人可获得的 proprioception history，包括关节位置、关节速度、base angular velocity、gravity vector 和 action history，并堆叠最近 25 步历史。",
+          "Student 的 command input 由 mode mask 和 sparsity mask 生成，可从完整 reference 中选择 upper-body / lower-body 的 keypoint positions、joint angles 和 root commands 的任意子集。",
+          "Student 训练采用 DAgger：在仿真中 rollout student，每个 timestep 查询 oracle action，并最小化 student action 与 oracle action 之间的 L2 loss。",
+          "真实机器人实验平台为 19-DOF Unitree H1，论文报告其质量约 51.5 kg、高度约 1.8 m；实验包括 standing motion tracking、locomotion mode switching 和 Vision Pro 遥操作演示。",
+          "论文未说明完整代码、训练超参数、训练时长、mask 向量是否显式 concatenate 到网络输入、AMASS 子集划分、retargeted motion 文件格式和具体 domain randomization 参数。"
+        ]
+      },
+      "en": {
+        "title": "HOVER: Versatile Neural Whole-Body Controller for Humanoid Robots",
+        "authors": "Tairan He, Wenli Xiao, Toru Lin, Zhengyi Luo, Zhenjia Xu, Zhenyu Jiang, Jan Kautz, Changliu Liu, Guanya Shi, Xiaolong Wang, Linxi “Jim” Fan, Yuke Zhu",
+        "institutions": "NVIDIA; Carnegie Mellon University; UC Berkeley; The University of Texas at Austin; UC San Diego",
+        "status": "Paper read",
+        "takeaway": "HOVER unifies root tracking, joint-angle tracking, and keypoint-position tracking into a masked multi-mode command space, then distills a full-body motion imitation oracle into a deployable generalist humanoid controller.",
+        "tags": [
+          "Humanoid Whole-Body Control",
+          "Motion Imitation",
+          "Policy Distillation",
+          "DAgger",
+          "PPO",
+          "Multi-Mode Control",
+          "Masked Command",
+          "Sim-to-Real",
+          "Unitree H1"
+        ],
+        "mainContent": "This paper studies how to train a unified neural whole-body controller for a humanoid robot that can support multiple control modes, including root tracking, local joint-angle tracking, and body-keypoint position tracking, without retraining a separate policy for each task. The method first retargets AMASS human motion data into feasible humanoid motions and trains a privileged full-body motion imitation oracle with PPO. HOVER is then obtained by DAgger-style policy distillation, where the student receives deployable proprioception history and masked multi-mode commands while imitating the oracle's actions. Experiments in IsaacGym and on a real Unitree H1 show that HOVER often outperforms specialist policies under prior-work modes and sparse modes such as single-hand, two-hand, and head-only tracking, while also supporting real-world mode switching and teleoperation.",
+        "innovations": [
+          "Introduces a unified versatile multi-mode command space that combines kinematic position tracking, local joint-angle tracking, and root tracking for humanoid whole-body control.",
+          "Uses mode masks and sparsity masks to selectively activate subsets of the command space, enabling one policy to operate under ExBody, H2O, OmniH2O, HumanPlus, head-only, left-hand-only, two-hand, and other modes.",
+          "Uses oracle-to-student policy distillation: a privileged full-body motion imitation oracle is first trained with full reference motions, then distilled into a deployable HOVER policy through DAgger.",
+          "Shows that the generalist HOVER policy typically outperforms RL-trained specialist policies under multiple fixed command modes and also outperforms a multi-mode RL baseline trained from scratch."
+        ],
+        "implementation": [
+          "The motion source is AMASS human MoCap data. The paper retargets it to the humanoid through humanoid forward kinematics, SMPL fitting, keypoint matching, and a sim-to-data procedure to obtain feasible humanoid motions.",
+          "The oracle policy takes privileged full-body proprioception and a full-body reference goal. Its proprioception includes rigid-body positions, orientations, linear velocities, angular velocities, and the previous action; its goal includes the current reference pose and one-frame differences between the next reference and the current state.",
+          "The oracle is trained with PPO, outputs 19-dimensional target joint positions, and uses a PD controller to actuate the robot. The policy network follows a three-layer MLP with dimensions [512, 256, 128].",
+          "The student / HOVER policy takes deployable proprioception history, including joint positions, joint velocities, base angular velocity, gravity vector, and action history, stacked over the last 25 steps.",
+          "The student command input is generated with mode and sparsity masks, selecting arbitrary subsets of upper-body and lower-body keypoint positions, joint angles, and root commands from the full reference motion.",
+          "Student training uses DAgger: the student is rolled out in simulation, the oracle is queried at every timestep, and the student minimizes the L2 loss between its action and the oracle action.",
+          "The real-world platform is a 19-DOF Unitree H1 humanoid, reported as around 51.5 kg and 1.8 m tall. Experiments include standing motion tracking, locomotion mode switching, and Vision Pro teleoperation demos.",
+          "The paper does not specify full code-level details, complete training hyperparameters, training time, whether mask bits are explicitly concatenated to the network input, AMASS split details, the retargeted motion file format, or the exact domain randomization ranges."
+        ]
+      }
+    },
+    {
+      "id": "omnih2o",
+      "categories": [
+        "loco-manipulation",
+        "imitation-teleop",
+        "real-robot-rl",
+        "sim2real",
+        "benchmark-dataset"
+      ],
+      "pdf": "https://arxiv.org/pdf/2406.08858",
+      "project": "https://omni.human2humanoid.com",
+      "arxiv": "https://arxiv.org/abs/2406.08858",
+      "year": "2024",
+      "venue": "arXiv:2406.08858",
+      "zh": {
+        "title": "OmniH2O: Universal and Dexterous Human-to-Humanoid Whole-Body Teleoperation and Learning",
+        "authors": "Tairan He, Zhengyi Luo, Xialin He, Wenli Xiao, Chong Zhang, Weinan Zhang, Kris Kitani, Changliu Liu, Guanya Shi",
+        "institutions": "Carnegie Mellon University; Shanghai Jiao Tong University",
+        "status": "论文已精读",
+        "takeaway": "OmniH2O 将运动学姿态作为统一控制接口，用 teacher-student sim-to-real 策略把 VR、RGB、语言、GPT-4o 和示范学习产生的高层目标稳定转化为全尺寸人形机器人的全身运动与灵巧操作。",
+        "tags": [
+          "Humanoid Teleoperation",
+          "Whole-Body Control",
+          "Loco-Manipulation",
+          "Sim-to-Real",
+          "PPO",
+          "DAgger",
+          "Diffusion Policy",
+          "GPT-4o",
+          "MDM",
+          "OmniH2O-6"
+        ],
+        "mainContent": "本文提出 OmniH2O，一个面向全尺寸人形机器人的学习式全身遥操作与自主控制系统，目标是在真实世界中同时支持稳定 locomotion、上肢灵巧操作和可扩展数据采集。核心方法是使用 kinematic pose 作为统一中间控制接口，先在仿真中训练具有 privileged information 的 teacher policy，再通过 DAgger 蒸馏到只依赖稀疏头手目标和真实可用本体历史的 student policy。系统支持 VR、RGB、语言到运动模型 MDM、GPT-4o motion primitive selection，以及基于遥操作数据训练的 Diffusion Policy / BC 自主策略。论文还发布 OmniH2O-6 数据集，包含六个真实人形机器人全身 loco-manipulation 任务，用于验证从遥操作示范中学习自主技能。",
+        "innovations": [
+          "提出以 kinematic pose / sparse motion goal 作为通用控制接口，使 VR、RGB、语言模型、GPT-4o 和 LfD policy 都能接入同一个人形机器人低层全身控制策略。",
+          "采用 privileged teacher policy 与 DAgger student distillation 的 sim-to-real 训练流程，使部署策略只依赖真实可获得的传感输入，而不依赖 MoCap 提供的全局线速度。",
+          "使用 25 步本体历史信息隐式补偿全局线速度估计，真实实验中避免了 VIO 线速度估计噪声导致的部署问题。",
+          "通过 retargeted AMASS 数据、standing / squatting motion augmentation、reward curriculum 和 domain randomization，提高人形机器人在站立操作、下蹲操作和扰动环境中的稳定性。",
+          "发布 OmniH2O-6 数据集，并在真实人形机器人上展示基于 Diffusion Policy 的 Learning from Demonstrations，用第一人称视觉预测未来稀疏运动目标，再由 OmniH2O 低层策略执行。"
+        ],
+        "implementation": [
+          "低层控制问题被建模为 goal-conditioned RL；动作为 19 维身体关节目标角，由 PD controller 执行，论文中控制策略频率为 50 Hz，PD 控制频率为 200 Hz。",
+          "Teacher policy 输入包含 humanoid rigid-body position、orientation、linear velocity、angular velocity、previous action 以及完整 reference pose / difference motion goal；使用 PPO 训练，状态维度为 913。",
+          "Student policy 即 OmniH2O 部署策略，输入为头和双手 3 点 motion goal，以及 25 步历史的 DoF position、DoF velocity、root angular velocity、root gravity 和 previous actions；不使用 global linear velocity，状态维度为 1665。",
+          "Policy distillation 使用 DAgger：在仿真中 rollout student，构造对应 privileged state，查询 teacher 得到 reference action，并用 L2 action matching loss 训练 student。",
+          "灵巧手控制使用 VR 估计 hand pose，再通过 inverse kinematics 计算 joint targets，并交给 off-the-shelf low-level hand controller；论文说明该 hand pose interface 可替换为 MoCap gloves 或 RGB cameras。",
+          "语言控制部分连接 pretrained text-to-motion generative model MDM，由自然语言生成 motion goals，再由 OmniH2O 跟踪执行。",
+          "GPT-4o 自主控制部分使用头戴相机第一人称 RGB 图像，让 GPT-4o 根据视觉上下文在预定义 motion primitives 中选择动作；论文说明由于 GPT-4o 响应较慢，主实验采用 primitive selection 而不是实时连续 motion goal 生成。",
+          "LfD 部分将策略定义为从第一人称图像预测未来若干帧 sparse motion goals 和 dexterous hand commands；实验比较 vanilla BC with ResNet、Diffusion Policy with DDIM 和 Diffusion Policy with DDPM。",
+          "OmniH2O-6 数据集由 VR 遥操作采集，包含 Catch-Release、Squat、Rock-Paper-Scissors、Hammer-Catch、Boxing、Basket-Pick-Place 六个任务，总计约 40 分钟，数据包括头部 RGBD、头和双手相对 root 的 motion goals 以及 motor joint targets，频率为 30 Hz。",
+          "论文未说明完整训练墙钟时间、并行仿真环境数量、模型参数量，以及跨不同人形机器人平台的迁移实现细节。"
+        ]
+      },
+      "en": {
+        "title": "OmniH2O: Universal and Dexterous Human-to-Humanoid Whole-Body Teleoperation and Learning",
+        "authors": "Tairan He, Zhengyi Luo, Xialin He, Wenli Xiao, Chong Zhang, Weinan Zhang, Kris Kitani, Changliu Liu, Guanya Shi",
+        "institutions": "Carnegie Mellon University; Shanghai Jiao Tong University",
+        "status": "Full paper read",
+        "takeaway": "OmniH2O uses kinematic pose as a universal control interface and distills a privileged sim-to-real teacher into a deployable student policy, enabling VR, RGB, language, GPT-4o, and demonstration-learned goals to drive full-size humanoid whole-body loco-manipulation.",
+        "tags": [
+          "Humanoid Teleoperation",
+          "Whole-Body Control",
+          "Loco-Manipulation",
+          "Sim-to-Real",
+          "PPO",
+          "DAgger",
+          "Diffusion Policy",
+          "GPT-4o",
+          "MDM",
+          "OmniH2O-6"
+        ],
+        "mainContent": "This paper presents OmniH2O, a learning-based whole-body teleoperation and autonomy system for full-size humanoids with dexterous hands. The core idea is to use kinematic pose as a universal intermediate control interface, train a privileged teacher policy in simulation, and distill it via DAgger into a real-world deployable student policy using sparse head-and-hand goals and proprioceptive history. The same low-level controller can be driven by VR, RGB cameras, verbal instructions through MDM, GPT-4o primitive selection, or imitation policies trained from teleoperated demonstrations. The paper also releases OmniH2O-6, a real-world humanoid loco-manipulation dataset with six everyday tasks.",
+        "innovations": [
+          "Introduces kinematic pose and sparse motion goals as a universal humanoid control interface compatible with VR, RGB, language models, GPT-4o, and LfD policies.",
+          "Uses a privileged teacher policy and DAgger-based student distillation to obtain a sim-to-real deployable whole-body controller that does not require MoCap-based global linear velocity.",
+          "Leverages 25-step proprioceptive history to implicitly recover motion information and improve real-world robustness without explicit global linear velocity input.",
+          "Improves standing and squatting manipulation through retargeted AMASS motions, standing/squatting motion augmentation, reward curriculum, and domain randomization.",
+          "Releases OmniH2O-6 and demonstrates humanoid Learning from Demonstrations by predicting future sparse motion goals from egocentric visual observations and executing them with the OmniH2O low-level controller."
+        ],
+        "implementation": [
+          "The low-level control problem is formulated as goal-conditioned RL. The action is a 19-dimensional body joint target vector, executed by a PD controller. The policy runs at 50 Hz and the PD controller runs at 200 Hz.",
+          "The teacher policy observes privileged rigid-body position, orientation, linear velocity, angular velocity, previous action, and full reference pose / motion-goal differences. It is trained with PPO and has a 913-dimensional state.",
+          "The deployable student policy observes 3-point head-and-hand motion goals and 25-step histories of DoF position, DoF velocity, root angular velocity, root gravity, and previous actions. It excludes global linear velocity and has a 1665-dimensional state.",
+          "Policy distillation follows DAgger: roll out the student in simulation, construct the corresponding privileged state, query the teacher for reference actions, and optimize an L2 action-matching loss.",
+          "Dexterous hand control uses VR-estimated hand poses, inverse kinematics, and an off-the-shelf low-level hand controller. The paper notes that the hand-pose interface could be replaced by MoCap gloves or RGB cameras.",
+          "Language control is enabled by connecting OmniH2O with a pretrained text-to-motion generative model, MDM, which converts verbal instructions into motion goals tracked by the low-level policy.",
+          "GPT-4o autonomous control uses egocentric RGB images from a head-mounted camera and prompts GPT-4o to select from predefined motion primitives. The paper chooses primitive selection rather than direct continuous motion-goal generation because of GPT-4o's relatively long response time.",
+          "The LfD policy maps egocentric images to future sparse motion goals and dexterous hand commands. The paper benchmarks vanilla BC with ResNet, Diffusion Policy with DDIM, and Diffusion Policy with DDPM.",
+          "OmniH2O-6 is collected through VR teleoperation and includes six tasks: Catch-Release, Squat, Rock-Paper-Scissors, Hammer-Catch, Boxing, and Basket-Pick-Place. It contains about 40 minutes of data with head-mounted RGBD images, root-relative head-and-hand motion goals, and motor joint targets at 30 Hz.",
+          "The paper does not specify full wall-clock training time, the number of parallel simulation environments, model parameter counts, or implementation details for transferring the system across different humanoid platforms."
+        ]
+      }
     }
   ]
 }
