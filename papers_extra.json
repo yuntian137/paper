@@ -263,28 +263,31 @@
         "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
         "institutions": "Nanjing University; Huawei Technologies",
         "status": "已精读",
-        "takeaway": "将人到人形机器人的动作重定向从逐帧非凸几何优化改写为学习人类动作分布到机器人可行动作流形的映射，从而为下游 whole-body tracking policy 提供更干净、更物理可行的参考动作。",
+        "takeaway": "这篇论文用昂贵的仿真 RL 离线生成物理可执行标签，再把这种“物理修正能力”蒸馏进一个快速神经重定向网络，从而让下游全身 tracking policy 更容易训练和跟踪。",
         "tags": [
           "Humanoid Retargeting",
           "Whole-Body Control",
           "Motion Imitation",
-          "Transformer",
+          "CEPR",
+          "Supervised Retargeting",
           "RL Refinement",
           "SMPL",
           "Unitree G1"
         ],
-        "mainContent": "本文针对人类 SMPL 动作到人形机器人动作重定向中的非凸优化、局部最优、关节跳变、自碰撞和噪声传播问题，提出 Neural Motion Retargeting（NMR）框架。方法先通过 Clustered-Expert Physics Refinement（CEPR）构造物理一致的人-机器人配对动作数据，再训练一个非自回归 CNN-Transformer 网络，将人类动作序列直接映射为 Unitree G1 的机器人动作参考。实验表明，NMR 相比 GMR 和 PHUMA 显著减少 joint jump、self-collision 和 joint-limit violation，并能提升下游 whole-body tracking policy 的训练效率和跟踪表现。",
+        "mainContent": "本文真正解决的不是“人体动作能不能几何映射到机器人”，而是“映射后的机器人参考动作是否容易被控制器稳定跟踪”。传统 GMR / IK 主要做几何匹配，容易产生局部最优、关节跳变、自碰撞、撞限位和脚滑，使后续 tracking policy 被迫学习额外补偿。NMR 的关键在 CEPR：先用 GMR 生成粗标签，再用分簇 RL expert 在物理仿真中追踪并修复这些动作，把实际 rollout 状态保存为物理修正后的标签，最后监督训练序列重定向网络将这种修正能力蒸馏出来。实验表明，NMR 生成的参考轨迹更平滑、更少碰撞和限位问题，并能提升下游 whole-body tracking policy 的训练效率和跟踪表现。",
         "innovations": [
           "从 Hessian 角度分析传统优化式 retargeting 的非凸性，指出局部最优、关节跳变和自碰撞并非单纯调参问题，而是几何优化目标本身的结构性风险。",
-          "提出 CEPR 数据构造管线，通过人体动作过滤、GMR 初始重定向、异常机器人动作过滤、动作聚类和 RL expert policy 物理仿真 refinement，生成约 30K 对物理一致的 SMPL-robot 动作数据。",
-          "提出基于 CNN-Transformer 的 Neural Motion Retargeting 网络，用双向 self-attention 利用全局时间上下文，直接从 human motion sequence 预测 humanoid motion sequence，减少逐帧优化带来的噪声传播和不连续。",
-          "采用两阶段训练策略：先用大规模 kinematic retargeting 数据预训练以获得动作覆盖度，再用 CEPR 物理一致数据微调以提升机器人动作的可执行性。"
+          "核心创新在 CEPR 数据构造管线：GMR 先生成粗糙机器人动作，分簇 RL expert 再作为离线数据清洗器和标注器，在物理仿真中追踪并修复这些动作，保存实际 rollout 轨迹作为物理一致标签。",
+          "将“GMR 粗标签 → RL expert 物理修复 → NMR 蒸馏”组织成高质量数据构建 pipeline，把昂贵的仿真 RL 计算转化为可复用的监督学习训练数据。",
+          "提出基于 CNN-Transformer 的序列重定向网络，输入整段 SMPL 动作，输出整段 Unitree G1 参考运动；网络本身更像监督学习的快速 retargeter，而不是新的 PPO 或 Transformer 理论贡献。",
+          "采用两阶段训练策略：先用大规模 GMR/kinematic retargeting 数据预训练学习人到机器人的基础对应，再用 CEPR 物理一致数据微调以输出更平滑、更少碰撞、更少撞限位的参考轨迹。"
         ],
         "implementation": [
           "输入为 SMPL human motion sequence，人体动作表示包含 root 在 XZ 平面的线速度、root 6D rotation、局部关节位置和局部关节速度；输出为 humanoid motion sequence，额外包含机器人 actuated joint DoFs。",
           "CEPR 首先过滤 excessive jerk、CoM 远离支撑区域、足地接触不足、漂浮和穿地等异常人体动作；随后使用 GMR 生成初始机器人动作，并根据关节速度、自碰撞比例和足端漂浮高度等阈值过滤异常片段。",
           "CEPR 使用 motion latent feature 对动作进行聚类，并为每个 cluster 训练 RL expert tracking policy；expert policy 的 observation 包括 reference motion state、robot proprioception 和 previous action，总维度为 509。",
           "RL expert policy 使用 PPO 和 symmetric actor-critic 框架训练，奖励主要由 anchor/body link 的位置、姿态、线速度、角速度 tracking reward 构成，并加入 action rate 与 undesired contacts penalty；训练中使用 adaptive standard deviation schedule 逐步提高 tracking 精度。",
+          "CEPR 中的 RL expert 和最终部署用的 tracking policy 是两回事：expert 只在离线阶段用于物理修复、数据清洗和生成监督标签，最终部署流程是 SMPL → NMR → 机器人参考轨迹 → 底层 tracking policy → 真机。",
           "NMR 网络结构包括 1D Conv / ResNet encoder、Bi-directional Transformer、Upsample 和 1D Conv decoder；由于 human 与 humanoid motion 在时间上严格一一对应，网络使用 full self-attention 而非 causal attention。",
           "NMR 使用 L1 loss 监督训练：先在大规模 kinematic retargeting 数据上用 AdamW 训练 500 epochs，batch size 为 128，初始学习率为 2e-4；再在约 30K CEPR 物理一致数据上以 1e-5 学习率微调 50 epochs。",
           "实验在 Unitree G1 humanoid 上进行，测试集来自 AMASS，包含 82 条 motion sequences、约 119K frames；对比方法包括 GMR、PHUMA、NMR w/o RL 和完整 NMR。",
@@ -296,28 +299,31 @@
         "authors": "Qingrui Zhao, Kaiyue Yang, Xiyu Wang, Shiqi Zhao, Yi Lu, Xinfang Zhang, Qiu Shen, Xiao-Xiao Long, Xun Cao",
         "institutions": "Nanjing University; Huawei Technologies",
         "status": "Fully read",
-        "takeaway": "This paper reframes human-to-humanoid retargeting from frame-wise non-convex geometric optimization into a learned distribution mapping from human motion to the robot's feasible motion manifold, producing cleaner references for downstream whole-body tracking.",
+        "takeaway": "This paper uses expensive simulation RL offline to generate physically executable labels, then distills that physical correction capability into a fast neural retargeting network so downstream whole-body tracking policies are easier to train and track.",
         "tags": [
           "Humanoid Retargeting",
           "Whole-Body Control",
           "Motion Imitation",
-          "Transformer",
+          "CEPR",
+          "Supervised Retargeting",
           "RL Refinement",
           "SMPL",
           "Unitree G1"
         ],
-        "mainContent": "This paper addresses the non-convexity, local minima, joint jumps, self-collisions, and noise propagation issues in retargeting SMPL human motions to humanoid robots. It proposes Neural Motion Retargeting (NMR), which first builds physically consistent human-robot motion pairs through Clustered-Expert Physics Refinement (CEPR), and then trains a non-autoregressive CNN-Transformer to directly map human motion sequences to Unitree G1 motion references. Experiments show that NMR significantly reduces joint jumps, self-collisions, and joint-limit violations compared with GMR and PHUMA, while also improving the convergence and tracking performance of downstream whole-body control policies.",
+        "mainContent": "The real issue addressed by this paper is not whether human motion can be geometrically mapped to a robot, but whether the mapped robot reference is easy for a controller to track. Traditional GMR / IK mainly performs geometric matching and can produce local minima, joint jumps, self-collisions, joint-limit violations, and foot skating, forcing the downstream tracking policy to compensate for bad references. NMR's key contribution is CEPR: GMR first produces rough robot labels, clustered RL experts then track and physically repair those motions in simulation, and the resulting rollout states are saved as physically corrected labels for supervised distillation. Experiments show that NMR produces smoother and more feasible references, improving downstream whole-body tracking training and tracking quality.",
         "innovations": [
           "Provides a Hessian-based analysis showing that optimization-based retargeting is generally non-convex, explaining why local minima, joint discontinuities, and self-collisions can occur structurally rather than merely due to poor tuning.",
-          "Introduces the CEPR data construction pipeline, which combines human motion filtering, GMR-based initial retargeting, robot motion quality filtering, motion clustering, and RL expert policy refinement to generate about 30K physically consistent SMPL-robot motion pairs.",
-          "Proposes a CNN-Transformer-based Neural Motion Retargeting model that uses bidirectional self-attention over the whole sequence to suppress frame-wise noise and directly predict humanoid motion from human motion.",
-          "Uses a two-stage training strategy: large-scale kinematic pretraining for broad motion coverage, followed by CEPR-based physical fine-tuning for improved robot feasibility."
+          "Centers the contribution on CEPR data construction: GMR generates rough robot motions, clustered RL experts act as offline data cleaners and labelers, and their physical rollouts become corrected supervision labels.",
+          "Organizes the system as GMR rough labels → RL expert physical repair → NMR distillation, turning expensive simulation RL into reusable supervised training data.",
+          "Uses a CNN-Transformer sequence retargeting network that maps a full SMPL motion sequence to a full Unitree G1 reference sequence; the network is best understood as a fast supervised retargeter rather than a new PPO or Transformer theory contribution.",
+          "Uses two-stage training: large-scale GMR / kinematic pretraining for broad human-to-robot correspondence, followed by CEPR fine-tuning for smoother, less colliding, and less joint-limit-violating references."
         ],
         "implementation": [
           "The input is an SMPL human motion sequence represented by root linear velocities on the XZ plane, root 6D rotation, local joint positions, and local joint velocities; the output is a humanoid motion sequence with additional robot actuated joint DoFs.",
           "CEPR first filters abnormal human motions such as excessive jerk, CoM far outside the support base, insufficient foot-ground contact, floating, and penetration; it then applies GMR for initial robot retargeting and filters segments using joint velocity, self-collision ratio, and foot floating thresholds.",
           "CEPR clusters motions using latent motion features and trains one RL expert tracking policy for each cluster; the expert policy observation includes reference motion state, robot proprioception, and previous action, with a total dimension of 509.",
           "The RL expert policies are trained with PPO and a symmetric actor-critic framework. Rewards are mainly tracking terms for anchor/body link position, orientation, linear velocity, and angular velocity, with penalties for action rate and undesired contacts. An adaptive standard deviation schedule is used to progressively tighten tracking precision.",
+          "The CEPR RL experts are not the final deployment tracking policy. They are used only offline for physical repair, data cleaning, and supervised label generation. The deployment pipeline is SMPL → NMR → robot reference trajectory → low-level tracking policy → real robot.",
           "The NMR architecture consists of 1D Conv / ResNet encoding, a bidirectional Transformer, and Upsample / 1D Conv decoding. Since human and humanoid motions are temporally aligned, it uses full self-attention rather than causal attention.",
           "NMR is trained with an L1 regression loss. It is first pretrained on large-scale kinematic retargeting data for 500 epochs with AdamW, batch size 128, and learning rate 2e-4, and then fine-tuned on about 30K CEPR-refined motion pairs for 50 epochs with learning rate 1e-5.",
           "Experiments are conducted on the Unitree G1 humanoid using an AMASS test suite with 82 motion sequences and about 119K frames. Baselines include GMR, PHUMA, NMR without RL fine-tuning, and full NMR.",
@@ -838,6 +844,81 @@
           "The LfD policy maps egocentric images to future sparse motion goals and dexterous hand commands. The paper benchmarks vanilla BC with ResNet, Diffusion Policy with DDIM, and Diffusion Policy with DDPM.",
           "OmniH2O-6 is collected through VR teleoperation and includes six tasks: Catch-Release, Squat, Rock-Paper-Scissors, Hammer-Catch, Boxing, and Basket-Pick-Place. It contains about 40 minutes of data with head-mounted RGBD images, root-relative head-and-hand motion goals, and motor joint targets at 30 Hz.",
           "The paper does not specify full wall-clock training time, the number of parallel simulation environments, model parameter counts, or implementation details for transferring the system across different humanoid platforms."
+        ]
+      }
+    },
+    {
+      "id": "smp-motion-priors",
+      "categories": [
+        "locomotion",
+        "loco-manipulation",
+        "sim2real",
+        "real-robot-rl",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2512.03028",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2512.03028",
+      "year": "2026",
+      "venue": "arXiv:2512.03028v3",
+      "zh": {
+        "title": "SMP：用于基于物理角色控制的可复用分数匹配运动先验",
+        "authors": "Yuxuan Mu, Ziyu Zhang, Yi Shi, Dun Yang, Minami Matsumoto, Kotaro Imamura, Guy Tevet, Chuan Guo, Michael Taylor, Chang Shu, Pengcheng Xi, Xue Bin Peng",
+        "institutions": "Simon Fraser University; Sony Interactive Entertainment; Stanford University; Snap Inc.; National Research Council Canada; NVIDIA",
+        "status": "已精读",
+        "takeaway": "把预训练运动扩散模型冻结为可复用的自然性奖励，用 SDS/score matching 替代每个任务都要重训的对抗式 motion prior。",
+        "tags": [
+          "Physics-Based Control",
+          "Motion Prior",
+          "Diffusion Model",
+          "Score Distillation Sampling",
+          "PPO",
+          "Humanoid",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究如何为物理仿真人形角色构造可复用、模块化的运动先验，使新任务策略在不持续访问原始动作数据的情况下仍能产生自然动作。方法先在动作数据上训练任务无关的运动扩散模型，再冻结该模型，并通过 score distillation sampling 将其转化为 motion naturalness reward，与任务奖励一起训练 PPO 控制策略。实验覆盖 100STYLE 多风格控制、多任务 locomotion、dodgeball、object carry、stair traversal、getup、单 clip imitation 与 Unitree G1 真机部署，结果显示运动质量接近 AMP，同时显著提升先验的复用性。",
+        "innovations": [
+          "提出 Score-Matching Motion Prior：将预训练 motion diffusion model 冻结后作为通用奖励模型，用 SDS error 衡量策略生成运动与参考动作分布的相似性。",
+          "相比 AMP/GAIL 类对抗运动先验，SMP 不需要为每个新任务持续重训判别器，也不需要在下游策略训练时长期保留原始 reference motion dataset。",
+          "提出或采用面向 RL 稳定性的 Ensemble Score-Matching、adaptive normalization 与 Generative State Initialization，使扩散先验既能提供奖励，也能生成策略训练初始状态。",
+          "通过 classifier-free guidance 生成 style-specific priors，并在 epsilon-space 组合不同风格，得到训练数据中不存在的新风格运动先验。"
+        ],
+        "implementation": [
+          "运动表示包含 root 线速度与角速度、局部关节旋转，以及手脚等 end-effector 的 3D 位置；特征均在角色局部坐标系下计算，球形关节使用 6D rotation representation。",
+          "扩散模型使用两层 Transformer encoder、adaptive normalization、10 帧 motion window、N=50 个 diffusion timesteps，约 3M 参数；论文报告在 100STYLE 约 20 小时数据上也可建模，训练 400k-800k iterations，单张 RTX 4090 约 5 小时收敛。",
+          "策略训练使用 PPO；MLP policy 输入当前状态与任务目标，输出高斯动作分布，动作是各关节 PD controller 的目标关节位置；总奖励为 task reward 与 SMP reward 的线性组合。",
+          "SMP reward 由 r_smp = exp(-w_s ||eps_hat - eps||^2) 构造；默认 Ensemble Score-Matching 在 K={22,15,8} 三个 diffusion timesteps 上平均 SDS error，并配合 adaptive normalization 降低奖励尺度差异。",
+          "Generative State Initialization 用同一个扩散先验生成初始化状态，以减少下游训练对原始动作数据的依赖；真实 G1 部署使用本体感知观测、asymmetric actor-critic 与 domain randomization。"
+        ]
+      },
+      "en": {
+        "title": "SMP: Reusable Score-Matching Motion Priors for Physics-Based Character Control",
+        "authors": "Yuxuan Mu, Ziyu Zhang, Yi Shi, Dun Yang, Minami Matsumoto, Kotaro Imamura, Guy Tevet, Chuan Guo, Michael Taylor, Chang Shu, Pengcheng Xi, Xue Bin Peng",
+        "institutions": "Simon Fraser University; Sony Interactive Entertainment; Stanford University; Snap Inc.; National Research Council Canada; NVIDIA",
+        "status": "Full paper summarized",
+        "takeaway": "Freeze a pretrained motion diffusion model as a reusable naturalness reward, replacing task-specific adversarial motion priors with SDS-based score matching.",
+        "tags": [
+          "Physics-Based Control",
+          "Motion Prior",
+          "Diffusion Model",
+          "Score Distillation Sampling",
+          "PPO",
+          "Humanoid",
+          "Sim-to-Real"
+        ],
+        "mainContent": "This paper studies how to build reusable and modular motion priors for physically simulated humanoid characters, so that downstream policies can produce natural behavior without continuously accessing the original motion dataset. SMP first trains a task-agnostic motion diffusion model on motion data, freezes it, and repurposes it through score distillation sampling as a motion-naturalness reward combined with task rewards in PPO. Experiments cover 100STYLE multi-style control, locomotion tasks, dodgeball, object carry, stair traversal, getup, single-clip imitation, and Unitree G1 deployment, showing motion quality comparable to AMP while substantially improving reusability.",
+        "innovations": [
+          "Introduces Score-Matching Motion Priors, which freeze a pretrained motion diffusion model and use SDS error as a reusable reward measuring similarity to the reference motion distribution.",
+          "Unlike AMP/GAIL-style adversarial priors, SMP does not require retraining a discriminator for each downstream controller or retaining the reference dataset throughout policy training.",
+          "Uses RL-oriented stabilizing designs including Ensemble Score-Matching, adaptive normalization, and Generative State Initialization, allowing the same diffusion prior to serve as both reward model and initialization sampler.",
+          "Supports style-specific priors via classifier-free guidance and new composed styles by blending style-conditioned diffusion predictions in epsilon-space."
+        ],
+        "implementation": [
+          "Motion features include root linear/angular velocities, local joint rotations, and 3D end-effector positions, all represented in the character's local frame; spherical joint rotations use a 6D representation.",
+          "The diffusion model is a two-layer Transformer encoder with adaptive normalization, 10-frame motion windows, N=50 diffusion timesteps, and about 3M parameters; the paper reports 400k-800k training iterations and convergence in about five hours on a single RTX 4090.",
+          "Policy training uses PPO. The MLP policy maps state and task goal to a Gaussian action distribution, and actions specify target joint positions for PD controllers. The composite reward is a linear combination of task reward and SMP reward.",
+          "The SMP reward is r_smp = exp(-w_s ||eps_hat - eps||^2). By default, Ensemble Score-Matching averages SDS errors at K={22,15,8} diffusion timesteps and uses adaptive normalization to reduce timestep-dependent scale variation.",
+          "Generative State Initialization samples initial states from the same diffusion prior, reducing downstream dependence on the original motion clips. Real-world G1 deployment uses proprioceptive observations, asymmetric actor-critic training, and domain randomization."
         ]
       }
     }
