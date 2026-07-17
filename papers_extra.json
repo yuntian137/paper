@@ -921,6 +921,123 @@
           "Generative State Initialization samples initial states from the same diffusion prior, reducing downstream dependence on the original motion clips. Real-world G1 deployment uses proprioceptive observations, asymmetric actor-critic training, and domain randomization."
         ]
       }
+    },
+    {
+      "_comment": "OmniXtreme 论文卡片。内容基于论文首页、摘要、方法、附录和实验部分整理。",
+      "id": "omnixtreme",
+      "_id_comment": "稳定英文 slug，使用论文简称小写形式。",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real",
+        "real-robot-rl"
+      ],
+      "_categories_comment": "本文主要研究高动态人形机器人运动跟踪，同时包含专家模仿蒸馏、残差强化学习后训练和真实机器人 Sim-to-Real 部署。",
+      "pdf": "https://arxiv.org/pdf/2602.23843",
+      "_pdf_comment": "论文 PDF 链接。",
+      "project": "https://extreme-humanoid.github.io/",
+      "_project_comment": "论文首页明确给出的项目主页。",
+      "arxiv": "https://arxiv.org/abs/2602.23843",
+      "_arxiv_comment": "arXiv 论文页面。",
+      "year": "2026",
+      "_year_comment": "arXiv 首版日期为 2026 年 2 月 27 日。",
+      "venue": "arXiv:2602.23843",
+      "_venue_comment": "论文当前以 arXiv 预印本形式公开。",
+      "zh": {
+        "_comment": "中文展示内容。",
+        "title": "OmniXtreme：突破高动态人形机器人控制中的通用性壁垒",
+        "authors": "Yunshen Wang, Shaohang Zhu, Peiyuan Zhi, Yuhan Li, Jiaxin Li, Yong-Lu Li, Yuchen Xiao, Xingxing Wang, Baoxiong Jia, Siyuan Huang",
+        "institutions": "北京通用人工智能研究院通用人工智能国家重点实验室；北京通用人工智能研究院与宇树科技具身智能及人形机器人联合实验室；上海交通大学；中国科学技术大学；宇树科技；华中科技大学；北京理工大学",
+        "status": "全文已精读",
+        "takeaway": "先用单动作 PPO 专家和 DAgger 蒸馏出一个大容量统一跟踪策略，再冻结基础策略，通过执行器感知的残差强化学习适配真实硬件；但论文没有充分证明性能提升主要来自 Flow Matching 本身。",
+        "tags": [
+          "Humanoid Motion Tracking",
+          "Flow Matching",
+          "DAgger",
+          "PPO",
+          "Transformer",
+          "Residual RL",
+          "Actuation-Aware Control",
+          "Sim-to-Real",
+          "Unitree G1",
+          "High-Dynamic Motion"
+        ],
+        "mainContent": "本文研究统一人形机器人控制策略在动作库规模和动作难度增加时出现的跟踪精度下降问题，并将其归因于多动作联合优化中的表示与梯度干扰，以及真实执行器的物理可执行性约束。方法先为不同参考动作训练独立 PPO 专家，再通过 DAgger 采集统一策略访问状态，并使用条件 Flow Matching 将专家动作蒸馏到一个包含 Transformer 状态编码器的统一基础策略中。随后冻结基础策略，在包含电机力矩—转速包络、非线性摩擦、强域随机化和负机械功率惩罚的仿真环境中训练残差 PPO 策略。论文报告该统一策略可在 Unitree G1 上执行翻转、手翻、杂技、霹雳舞和武术动作，并在 157 次真机测试中获得 91.08% 的总体成功率。",
+        "innovations": [
+          "提出一个两阶段高动态人形机器人控制框架，将大规模动作表示学习与真实硬件执行适配分开优化：预训练阶段学习统一基础策略，后训练阶段仅学习执行器感知的残差修正。",
+          "采用 specialist-to-unified 的训练范式：先使用 BeyondMimic 风格的 PPO 为每个参考动作训练专家，再在统一策略自身访问的状态上使用 DAgger 获取专家动作标签。",
+          "使用条件 Flow Matching 蒸馏专家动作：网络学习从高斯噪声到专家动作的条件速度场，并通过有限步 Euler 积分生成最终动作。",
+          "在 Flow Matching 策略中使用 Transformer 编码当前本体状态、参考运动命令和 15 步历史信息，再与带噪动作嵌入和 Flow 时间嵌入共同预测动作空间速度场。",
+          "在残差后训练中显式加入电机力矩—转速工作包络、平滑库仑摩擦、黏性摩擦、强域随机化以及膝关节负机械功率惩罚，以提高高冲击动作的真实硬件可执行性。",
+          "需要批判性看待的是，论文没有提供“相同 Transformer、相同 DAgger 数据、直接回归专家动作”的关键基线，因此尚不能确认主要增益来自 Flow Matching，而不是更大的模型、历史编码或 DAgger。"
+        ],
+        "implementation": [
+          "动作数据来自经过 Unitree G1 重定向的 LAFAN1、AMASS、MimicKit 和 Reallusion 动作库；论文另外整理了包含约 60 个高动态动作的 XtremeMotion 集合。",
+          "每个参考动作分别训练一个 PPO 专家策略。专家 actor 和 critic 均为隐藏层维度 [512, 256, 128] 的 ELU MLP，并采用非对称 actor-critic 训练。",
+          "专家 actor 输入包括参考关节位置与速度、躯干相对参考的位置和 6D 姿态误差、基座线速度与角速度、相对默认姿态的关节位置、关节速度和上一时刻动作。",
+          "专家策略输出归一化动作 a，该动作通过 q_tar = q_0 + alpha ⊙ a 映射为目标关节位置，再由 PD 控制器计算关节力矩；因此专家动作在控制意义上是目标关节位置偏移命令，而不是关节速度。",
+          "Flow 预训练首先让当前统一策略在仿真中执行，再在学生访问的状态上查询对应动作专家，构造包含状态、参考动作和专家动作标签的 DAgger 数据。",
+          "Flow Matching 使用线性概率路径 a_t = (1 - t)a_expert + t epsilon，其中 epsilon 服从标准高斯分布，t 从 Beta 分布采样；训练目标为最小化 ||v_theta(a_t, t, o) - (epsilon - a_expert)||^2。",
+          "Flow Matching 中的 v_theta 是生成过程在动作空间中的速度场，不是机器人关节角速度；推理时从高斯噪声开始，沿反向时间执行 Euler 积分得到最终基础动作。",
+          "Flow 策略将当前本体状态 p 和运动命令 c 各编码为一个 token，将 15 步历史分别编码为 15 个 token，共形成 17 个 token。每类输入先经过两层、每层 256 单元的 ReLU MLP，再送入 Transformer encoder。",
+          "Transformer 输出经过全局平均池化和线性投影形成 1024 维状态表示；带噪动作和 Flow 时间分别编码为 1024 维表示，三者拼接后通过隐藏层维度 [2048, 2048, 2048] 的 MLP 输出 Flow 速度场。",
+          "论文未说明 Transformer 的具体层数、注意力头数、前馈网络宽度，以及 Beta 分布参数 alpha 和 beta。",
+          "基础 Flow 策略完成后被冻结，残差策略使用隐藏层维度 [1024, 512, 256, 128, 64] 的 MLP，并通过 PPO 学习与基础动作同维度的修正动作。",
+          "残差策略输入包含机器人本体感知、参考躯干姿态、参考关节位置和速度、上一时刻最终动作，以及当前 Flow 基础动作；最终动作等于基础动作与残差动作之和。",
+          "执行器模型根据关节转速动态限制可用力矩，并加入平滑库仑摩擦和黏性摩擦；负功率惩罚主要用于抑制膝关节在高冲击落地阶段产生过大的再生制动力。",
+          "真实部署使用 Unitree G1 的关节状态和骨盆 IMU，通过 FK 构造观测。Flow 基础策略和残差策略导出为 ONNX，并使用 ONNX Runtime 与 TensorRT 在 Jetson Orin NX 上板载运行。",
+          "部署时每个控制周期使用 5 次 Flow ODE Euler 积分，输出 29 维全身动作；论文报告端到端推理延迟约 10 ms，控制周期为 20 ms，即 50 Hz。",
+          "论文未报告每个动作专家的总训练成本、Flow 预训练总迭代数、DAgger 外循环次数、训练 GPU 时间、Flow 噪声在相邻控制周期中的采样方式，以及残差动作的显式幅值限制。"
+        ]
+      },
+      "en": {
+        "_comment": "English display content.",
+        "title": "OmniXtreme: Breaking the Generality Barrier in High-Dynamic Humanoid Control",
+        "authors": "Yunshen Wang, Shaohang Zhu, Peiyuan Zhi, Yuhan Li, Jiaxin Li, Yong-Lu Li, Yuchen Xiao, Xingxing Wang, Baoxiong Jia, Siyuan Huang",
+        "institutions": "State Key Laboratory of General Artificial Intelligence, Beijing Institute for General Artificial Intelligence; Joint Laboratory of Embodied AI and Humanoid Robots, BIGAI and Unitree Robotics; Shanghai Jiao Tong University; University of Science and Technology of China; Unitree Robotics; Huazhong University of Science and Technology; Beijing Institute of Technology",
+        "status": "Full paper reviewed",
+        "takeaway": "The paper first distills per-motion PPO specialists into a high-capacity unified tracker and then adapts the frozen tracker to real hardware through actuation-aware residual RL, although it does not isolate whether Flow Matching itself is the essential source of improvement.",
+        "tags": [
+          "Humanoid Motion Tracking",
+          "Flow Matching",
+          "DAgger",
+          "PPO",
+          "Transformer",
+          "Residual RL",
+          "Actuation-Aware Control",
+          "Sim-to-Real",
+          "Unitree G1",
+          "High-Dynamic Motion"
+        ],
+        "mainContent": "This paper studies the loss of tracking fidelity that occurs when a unified humanoid controller is scaled to increasingly diverse and high-dynamic motion libraries. It first trains motion-specific PPO specialists and uses DAgger to label states visited by the unified learner, then distills the expert actions into a conditional Flow Matching base policy with a Transformer state encoder. The base policy is subsequently frozen while a residual PPO policy is trained under torque-speed constraints, nonlinear actuator friction, aggressive domain randomization, and negative mechanical power penalties. The resulting unified policy is deployed on a Unitree G1 and is reported to achieve a 91.08% overall success rate across 157 real-robot trials involving flips, handsprings, acrobatics, breakdance, and martial-arts motions.",
+        "innovations": [
+          "A two-stage framework that separates large-scale motion representation learning from hardware-oriented physical refinement: a unified base tracker is pretrained first, followed by residual actuation-aware post-training.",
+          "A specialist-to-unified pipeline in which motion-specific PPO teachers are trained first and queried on states visited by the unified learner through DAgger.",
+          "Conditional Flow Matching is used to distill expert actions by learning a velocity field that transports Gaussian noise toward the expert action distribution through finite-step Euler integration.",
+          "A Transformer encodes current proprioception, the reference motion command, and a 15-step proprioceptive history before the resulting state embedding is combined with noisy-action and flow-time embeddings.",
+          "The residual post-training environment explicitly models torque-speed envelopes, smoothed Coulomb friction, viscous friction, stronger domain randomization, and negative knee mechanical power penalties for high-impact motions.",
+          "A key limitation is that the paper does not compare against a matched Transformer and DAgger policy trained by direct expert-action regression, so the gain cannot be cleanly attributed to Flow Matching itself."
+        ],
+        "implementation": [
+          "Motion data are collected from Unitree-retargeted LAFAN1, AMASS, MimicKit, and Reallusion libraries. The paper additionally curates an XtremeMotion set containing roughly 60 challenging high-dynamic motions.",
+          "A separate PPO specialist is trained for each reference motion. The teacher actor and critic are ELU MLPs with hidden dimensions [512, 256, 128] and use an asymmetric actor-critic setup.",
+          "Teacher actor observations contain reference joint positions and velocities, torso position and 6D orientation errors, base linear and angular velocity, joint positions relative to the default pose, joint velocities, and the previous action.",
+          "The teacher outputs a normalized action that is converted into desired joint positions through q_tar = q_0 + alpha ⊙ a and then tracked by a PD controller. Thus, the expert action is a desired joint-position offset command rather than a physical joint velocity.",
+          "For Flow pretraining, the current unified policy is rolled out in simulation and the corresponding motion specialist labels the states visited by the learner, producing DAgger supervision.",
+          "The Flow Matching path is a_t = (1 - t)a_expert + t epsilon, where epsilon is Gaussian noise and t is sampled from a Beta distribution. The objective minimizes ||v_theta(a_t, t, o) - (epsilon - a_expert)||^2.",
+          "The predicted v_theta is a velocity in the artificial action-generation flow, not the robot joint velocity. At inference, the policy starts from Gaussian noise and integrates the velocity field backward in flow time.",
+          "Current proprioception p and motion command c are each mapped to one token, while the 15-step history is mapped to 15 tokens, resulting in a sequence of 17 tokens. Dedicated preprocessing MLPs contain two 256-unit ReLU layers.",
+          "The token sequence is processed by a Transformer encoder, followed by global average pooling and a linear projection to a 1024-dimensional state embedding.",
+          "The noisy action and flow timestep are separately embedded into 1024-dimensional representations. The state, action, and time embeddings are concatenated and passed through an MLP with hidden dimensions [2048, 2048, 2048] to predict the flow velocity.",
+          "The paper does not specify the number of Transformer layers, attention heads, feed-forward width, or the alpha and beta parameters of the timestep Beta distribution.",
+          "The pretrained Flow policy is frozen during post-training. The residual policy is an MLP with hidden dimensions [1024, 512, 256, 128, 64] and is optimized with PPO.",
+          "Residual actor inputs include proprioception, relative torso orientation, reference joint positions and velocities, the previous final action, and the current Flow base action. The final action is the sum of the base and residual actions.",
+          "The actuator model applies a speed-dependent torque envelope and nonlinear friction after torque clipping. A negative mechanical power penalty is selectively applied to the knee joints to reduce unsafe regenerative braking during impact landings.",
+          "For real-robot deployment, joint states and pelvis IMU measurements are used to construct observations, while torso rotation is obtained through forward kinematics. The base and residual policies are exported to ONNX and executed with ONNX Runtime and TensorRT on the onboard Jetson Orin NX.",
+          "The deployed base policy uses five Euler ODE integration steps and outputs a 29-dimensional whole-body action. The paper reports approximately 10 ms end-to-end inference latency at a 20 ms control period, corresponding to 50 Hz.",
+          "The paper does not report the total cost of training all specialists, the number of Flow training iterations, the number of DAgger rounds, total GPU time, temporal noise sampling details during deployment, or an explicit magnitude bound on the residual action."
+        ]
+      }
     }
   ]
 }
