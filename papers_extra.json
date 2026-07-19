@@ -1038,6 +1038,83 @@
           "The paper does not report the total cost of training all specialists, the number of Flow training iterations, the number of DAgger rounds, total GPU time, temporal noise sampling details during deployment, or an explicit magnitude bound on the residual action."
         ]
       }
+    },
+    {
+      "_comment": "基于 arXiv v2 全文整理；创新表述按系统整合贡献克制描述。",
+      "id": "hil-dynamic-athletic-control",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2505.12619",
+      "project": "https://jiashunwang.github.io/HIL",
+      "arxiv": "https://arxiv.org/abs/2505.12619",
+      "year": "2026",
+      "venue": "ACM Transactions on Graphics (TOG)",
+      "zh": {
+        "title": "HIL：面向动态运动控制的混合模仿学习",
+        "authors": "Jiashun Wang, Yifeng Jiang, Haotian Zhang, Chen Tessler, Davis Rempe, Jessica Hodgins, Xue Bin Peng",
+        "institutions": "卡内基梅隆大学；NVIDIA；西蒙弗雷泽大学",
+        "status": "全文已精读（v2）",
+        "takeaway": "把 HIL 记成“统一目标条件接口下的 AMP + 持续运动跟踪 rehearsal”：新意主要在共享观测、适应阶段持续防遗忘以及场景条件判别器，而不是新的强化学习优化算法。",
+        "tags": [
+          "Hybrid Imitation Learning",
+          "Motion Tracking",
+          "Adversarial Imitation Learning",
+          "Goal-Conditioned RL",
+          "PPO",
+          "Parkour",
+          "Physics-Based Character Control"
+        ],
+        "mainContent": "本文针对物理仿真人体控制中“逐帧运动跟踪保真但难适应新场景、对抗模仿可适应但易模式坍缩”的矛盾，提出 HIL：在统一目标条件观测空间下，用并行环境共同训练同一个策略的运动跟踪模式和 AMP 风格任务模式。跑酷策略以身体状态、局部场景点云和目标位置为输入，持续跟踪分支负责保留参考技能，任务奖励与风格奖励负责场景适应和技能组合。扰动跑酷评测中，HIL 获得最高技能准确率 0.66 和最低跟踪误差 0.31，但任务完成率为 0.74，低于 AMP warm start 的 0.85，说明其主要优势是技能多样性与动作保真度，而非最高纯任务成功率。",
+        "innovations": [
+          "构造统一的目标条件观测空间：运动跟踪与对抗任务模式都以角色状态和任务/场景条件作为策略输入，不再依赖只在跟踪阶段可用的显式相位或完整未来目标姿态。",
+          "在任务适应阶段持续并行保留运动跟踪环境，并用两类 rollout 共同更新同一个策略；该持续参考约束用于减轻技能遗忘和 AMP 的模式坍缩。",
+          "为跑酷任务使用场景条件判别器，将连续 10 步角色状态与局部场景点云共同输入判别器，使风格奖励同时衡量动作自然性和动作与当前障碍的匹配程度。",
+          "采用 Perturbed State Initialization，在参考初始状态上加入高斯扰动，以提高偏离参考轨迹后的恢复能力，并改善不同技能之间的过渡。"
+        ],
+        "implementation": [
+          "跑酷数据包含 19 个来自 YouTube 的参考片段，总计约 30 秒、覆盖 15 种技能；作者使用 TRAM 恢复人体运动，通过身体朝向线索修正地面方向，人工用盒体标注场景，并用物理运动跟踪器修正碰撞、抖动和滑动。",
+          "跑酷策略输入角色状态、最近 60 个场景点和目标位置；状态与目标由 MLP 编码，点云由 PointNet 编码，再送入 2 层、2 头、隐空间维度 256 的 Transformer。策略输出高斯分布下的目标关节位置，固定动作标准差为 0.055，并由 PD 控制器转换为关节力矩。",
+          "训练在 Isaac Gym 中进行，仿真频率为 120 Hz、策略频率为 30 Hz，采用 PPO 和 GAE；使用 4096 个并行环境和 4 张 NVIDIA V100。先用 40 亿样本进行运动跟踪预训练，再用 20 亿样本进行混合训练，其中一半环境运行运动跟踪，另一半运行对抗模仿任务。",
+          "运动跟踪模式使用 0.5×跟踪奖励 + 0.5×风格奖励；对抗任务模式使用 0.5×任务奖励 + 0.5×风格奖励。评论家额外接收二值训练模式标识，策略不接收该标识。",
+          "跑酷跟踪模式的目标位置从参考轨迹未来 1–2 秒的根部位置采样；任务模式的目标位置在后续障碍附近采样，并加入论文记为 N(0, 0.2) 的高斯扰动。评估使用五障碍序列，并以 DTW 计算技能准确率与跟踪误差。",
+          "方向控制实验使用约 7 分钟的剑盾动作捕捉数据，并以目标行进方向和身体朝向作为条件；论文还报告了与 AMP、ASE 和 MaskedMimic 的比较。",
+          "论文未说明 PSI 的噪声尺度、PD 增益与力矩上限、随机种子数量、置信区间以及实际 wall-clock 训练时间。"
+        ]
+      },
+      "en": {
+        "title": "HIL: Hybrid Imitation Learning for Dynamic Athletic Control",
+        "authors": "Jiashun Wang, Yifeng Jiang, Haotian Zhang, Chen Tessler, Davis Rempe, Jessica Hodgins, Xue Bin Peng",
+        "institutions": "Carnegie Mellon University; NVIDIA; Simon Fraser University",
+        "status": "Full paper reviewed (v2)",
+        "takeaway": "Remember HIL as AMP plus persistent motion-tracking rehearsal under a unified goal-conditioned interface: the contribution is mainly the shared observation design, continual anti-forgetting signal, and scene-conditioned discriminator rather than a new RL optimizer.",
+        "tags": [
+          "Hybrid Imitation Learning",
+          "Motion Tracking",
+          "Adversarial Imitation Learning",
+          "Goal-Conditioned RL",
+          "PPO",
+          "Parkour",
+          "Physics-Based Character Control"
+        ],
+        "mainContent": "The paper addresses the tension between precise but inflexible frame-wise tracking and adaptable but mode-collapsing adversarial imitation. HIL trains one goal-conditioned policy in parallel motion-tracking and AMP-style task environments, using character state, scene context, and task goals as a shared observation interface; persistent tracking preserves reference skills while task and style rewards support adaptation and composition. On perturbed parkour courses, HIL obtains the best skill accuracy (0.66) and lowest tracking error (0.31), but its completion rate is 0.74 versus 0.85 for warm-start AMP, indicating that its primary gain is the fidelity/diversity trade-off rather than peak task success.",
+        "innovations": [
+          "A unified goal-conditioned observation space is used in both motion-tracking and adversarial task modes, avoiding policy inputs that are available only during tracking, such as an explicit phase variable or a full future target pose.",
+          "Motion-tracking environments remain active throughout task adaptation, and rollouts from both modes update the same policy; this persistent reference constraint is used to reduce skill forgetting and AMP-style mode collapse.",
+          "For parkour, the discriminator is conditioned on a 10-step history of character states and local scene point clouds so that the style reward assesses both motion naturalness and scene suitability.",
+          "Perturbed State Initialization adds Gaussian noise to reference initial states to improve recovery from off-reference states and transitions between skills."
+        ],
+        "implementation": [
+          "The parkour dataset contains 19 YouTube reference clips totaling about 30 seconds and covering 15 skills. Motions are recovered with TRAM, ground orientation is refined with body-orientation cues, scenes are manually approximated with boxes, and a physics-based motion tracker is used to reduce collision, jitter, and sliding artifacts.",
+          "The parkour policy receives character state, the 60 nearest scene points, and a target location. State and goal MLP encoders and a PointNet produce tokens for a 2-layer, 2-head Transformer with latent dimension 256. The policy predicts desired joint positions with a fixed Gaussian action standard deviation of 0.055, and PD controllers convert them to joint torques.",
+          "Training is performed in Isaac Gym at 120 Hz simulation and 30 Hz policy control using PPO and GAE, with 4096 parallel environments on four NVIDIA V100 GPUs. The controller is first pretrained for 4 billion tracking samples, followed by 2 billion hybrid samples with half of the environments in tracking mode and half in adversarial task mode.",
+          "Tracking mode uses 0.5×tracking reward + 0.5×style reward, while adversarial task mode uses 0.5×task reward + 0.5×style reward. The critic additionally receives a binary training-mode indicator, which is not provided to the policy.",
+          "For parkour tracking, the target location is sampled from the reference root trajectory 1–2 seconds in the future. In task mode, it is sampled near an upcoming obstacle and perturbed with Gaussian noise reported as N(0, 0.2). Five-obstacle courses are evaluated with DTW-based skill accuracy and tracking error.",
+          "The heading-control experiment uses roughly 7 minutes of sword-and-shield motion-capture data and conditions the controller on target heading and facing directions; comparisons are reported against AMP, ASE, and MaskedMimic.",
+          "The paper does not specify the PSI noise scale, PD gains and torque limits, the number of random seeds, confidence intervals, or wall-clock training time."
+        ]
+      }
     }
   ]
 }
