@@ -1115,6 +1115,100 @@
           "The paper does not specify the PSI noise scale, PD gains and torque limits, the number of random seeds, confidence intervals, or wall-clock training time."
         ]
       }
+    },
+    {
+      "_comment": "PULSE 论文卡片。其通用性主要体现在可复用的低层运动潜空间，而非统一的多任务高层策略。",
+      "id": "pulse-universal-humanoid-motion-representations",
+      "_id_comment": "论文简称 PULSE 加标题关键词。",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "_categories_comment": "论文主要涉及物理人形运动控制、大规模动作模仿、潜空间控制和 VR 稀疏跟踪。",
+      "pdf": "https://arxiv.org/pdf/2310.04582",
+      "_pdf_comment": "arXiv PDF。",
+      "project": "https://zhengyiluo.github.io/PULSE/",
+      "_project_comment": "论文官方项目主页，包含视频和补充材料。",
+      "arxiv": "https://arxiv.org/abs/2310.04582",
+      "_arxiv_comment": "arXiv 论文页面。",
+      "year": "2024",
+      "_year_comment": "ICLR 2024 会议论文。",
+      "venue": "ICLR 2024",
+      "_venue_comment": "Published as a conference paper at ICLR 2024。",
+      "zh": {
+        "_comment": "中文论文卡片内容。",
+        "title": "用于物理控制的通用人形运动表征",
+        "authors": "Zhengyi Luo, Jinkun Cao, Josh Merel, Alexander Winkler, Jing Huang, Kris Kitani, Weipeng Xu",
+        "institutions": "Meta Reality Labs Research；Carnegie Mellon University",
+        "status": "全文精读完成",
+        "takeaway": "PULSE 不是一个统一的多任务控制策略，而是通过 PHC+ 在线蒸馏得到的共享低层潜在动作空间；每个下游任务仍需单独训练 PPO 高层策略，但可以在更结构化、偏向人类运动的潜空间中探索。",
+        "tags": [
+          "PULSE",
+          "PHC+",
+          "Online Distillation",
+          "Conditional VAE",
+          "Hierarchical RL",
+          "AMASS",
+          "PPO",
+          "Motion Prior"
+        ],
+        "mainContent": "论文研究如何将大规模、无结构的人体动作数据压缩成可被强化学习复用的物理运动表示。作者首先训练能够跟踪清理后 AMASS 动作的 PHC+ 模仿器，再通过编码器、解码器和本体状态条件先验进行在线动作蒸馏，形成 32 维连续概率潜空间。下游任务冻结先验和解码器，分别训练任务特化的 PPO 策略输出潜变量残差，并在速度控制、伸手、击打、复杂地形和 VR 控制器跟踪任务中验证该表示能够改善探索效率和动作自然度，但并未实现统一的零样本多任务控制策略。",
+        "innovations": [
+          "提出从预训练物理动作模仿器 PHC+ 进行直接在线蒸馏的方法，让学生策略在自身访问的状态分布上查询教师动作，从而将大规模人体运动技能压缩进连续潜空间。",
+          "使用依赖本体状态的可学习条件先验 R(z_t|s_t^p)，而不是固定的零均值标准高斯，使不同身体状态具有不同的合理潜动作分布。",
+          "在潜空间训练中加入相邻时刻编码均值的连续性正则，使潜变量轨迹更加平滑，便于下游强化学习进行局部探索。",
+          "在下游控制中采用以条件先验均值为中心的残差潜动作，即 z_t = mu_t^p + delta z_t；消融实验显示该设计对下游探索性能非常关键。",
+          "对 PHC 进行数据清理、渐进式 hard-negative 训练、网络加深和 SiLU 激活等改进，得到能够覆盖清理后大部分 AMASS 动作的 PHC+ 教师。"
+        ],
+        "implementation": [
+          "第一阶段使用清理后的 AMASS 数据训练 PHC+。PHC+ 接收当前本体状态和下一帧模仿目标，输出 23 个驱动关节的 69 维 PD 目标；训练奖励包含姿态与速度模仿奖励、AMP 判别器奖励和能耗惩罚。",
+          "第二阶段联合训练编码器 E、解码器 D 和条件先验 R。编码器输入当前本体状态 s_t^p 与完整模仿目标 s_t^{g-mimic}，输出 32 维对角高斯后验；条件先验只输入当前本体状态，输出对应的 32 维对角高斯先验。",
+          "学生解码器根据当前本体状态和采样潜变量输出 69 维关节 PD 目标。训练损失由 PHC+ 教师动作的均方误差、编码器后验与条件先验之间的 KL 散度，以及相邻潜变量均值的时间连续性正则构成。",
+          "PULSE 训练时由学生策略在物理环境中进行 rollout，再由冻结的 PHC+ 对学生实际访问的状态进行动作标注，属于类似 DAgger 的在线策略蒸馏方式。",
+          "第三阶段冻结条件先验 R 和解码器 D，并为 speed、reach、strike、terrain 和 VR tracking 等任务分别初始化新的 PPO actor 与 critic。下游 actor 输入本体状态和任务特定目标，输出 32 维潜变量残差，而不是直接输出关节动作。",
+          "下游完整潜变量由条件先验均值和任务策略残差相加得到：z_t^{final} = mu_t^p + delta z_t；冻结的解码器再将其转换成 69 维 PD 目标。普通下游训练与部署不再使用编码器 E 和 PHC+ 教师。",
+          "论文在 Isaac Gym 中以 60 Hz 运行物理仿真、以 30 Hz 运行策略。PULSE 潜变量维度为 32，原始关节动作维度为 69。",
+          "论文报告 PULSE 在 AMASS 测试集上的模仿成功率为 97.1%。在 VR tracking 中，PULSE 相比 ASE 和 CALM 明显更好且收敛更快，但最终跟踪精度没有超过专门从头训练的 Scratch 策略。",
+          "论文未验证真实人形机器人部署、跨身体形态泛化、统一多任务高层策略或零样本任务泛化；其 universal 主要指同一个低层潜空间和解码器可被多个任务特化策略复用。"
+        ]
+      },
+      "en": {
+        "_comment": "English paper card content.",
+        "title": "Universal Humanoid Motion Representations for Physics-Based Control",
+        "authors": "Zhengyi Luo, Jinkun Cao, Josh Merel, Alexander Winkler, Jing Huang, Kris Kitani, Weipeng Xu",
+        "institutions": "Meta Reality Labs Research; Carnegie Mellon University",
+        "status": "Full paper reviewed",
+        "takeaway": "PULSE is not a unified multitask controller; it is a reusable low-level latent action space distilled from PHC+, while each downstream task still requires a separately trained PPO policy that predicts residual latent actions.",
+        "tags": [
+          "PULSE",
+          "PHC+",
+          "Online Distillation",
+          "Conditional VAE",
+          "Hierarchical RL",
+          "AMASS",
+          "PPO",
+          "Motion Prior"
+        ],
+        "mainContent": "The paper studies how to compress large-scale and unstructured human motion data into a reusable physics-based action representation for humanoid control. The authors first train PHC+, a large-scale motion imitator, and then distill its control actions into a 32-dimensional probabilistic latent space using an encoder, a decoder, and a proprioception-conditioned prior. For each downstream task, the prior and decoder are frozen and a task-specific PPO policy is trained to output residual latent actions, improving exploration and motion naturalness on speed, reach, strike, terrain traversal, and VR tracking tasks, but not providing a unified zero-shot multitask policy.",
+        "innovations": [
+          "Introduces direct online distillation from a pretrained physics-based motion imitator, with the student rolling out in its own state distribution and the teacher annotating the visited states.",
+          "Uses a learned proprioception-conditioned prior R(z_t|s_t^p) instead of a fixed standard Gaussian prior, allowing different humanoid states to induce different distributions of plausible latent actions.",
+          "Adds temporal regularization between consecutive encoder means to produce a smoother latent geometry that is easier for downstream reinforcement learning to navigate.",
+          "Uses prior-centered residual latent actions for downstream control, where the task policy predicts an offset from the conditional prior mean; ablations show this design is critical for exploration.",
+          "Improves PHC through motion-data cleaning, progressive hard-negative training, deeper networks, and SiLU activations to construct the PHC+ teacher."
+        ],
+        "implementation": [
+          "PHC+ is first trained on a cleaned AMASS dataset. It receives proprioception and a next-frame imitation goal and outputs 69-dimensional PD targets for 23 actuated joints. Its reward combines pose and velocity imitation, an AMP discriminator reward, and an energy penalty.",
+          "The encoder E, decoder D, and conditional prior R are jointly trained during PULSE distillation. The encoder observes proprioception and the full imitation goal and predicts a 32-dimensional diagonal-Gaussian posterior, while the prior observes only proprioception and predicts a 32-dimensional diagonal-Gaussian prior.",
+          "The decoder maps proprioception and a sampled latent code to 69-dimensional PD targets. The training objective contains teacher-action mean squared error, KL divergence between the encoder posterior and conditional prior, and temporal regularization between consecutive encoder means.",
+          "The student performs physics rollouts and the frozen PHC+ teacher labels the states visited by the student, resulting in an online distillation procedure similar in spirit to DAgger.",
+          "For downstream tasks, R and D are frozen. Separate PPO actors and critics are initialized for speed, reach, strike, terrain traversal, and VR tracking. Each task actor observes proprioception and a task-specific goal and outputs a 32-dimensional residual latent action.",
+          "The final latent action is formed as z_t^{final} = mu_t^p + delta z_t, and the frozen decoder converts it into 69-dimensional PD targets. The encoder E and PHC+ teacher are not required during ordinary downstream training or deployment.",
+          "Simulation runs at 60 Hz in Isaac Gym and policies run at 30 Hz. The latent action dimension is 32, compared with a 69-dimensional joint PD target space.",
+          "PULSE achieves a 97.1% imitation success rate on the AMASS test set. It substantially outperforms ASE and CALM and converges faster for VR tracking, but does not exceed the final tracking accuracy of a task-specific policy trained from scratch.",
+          "The paper does not demonstrate real-humanoid deployment, morphology transfer, a unified multitask high-level policy, or zero-shot task generalization. Its universality primarily refers to reuse of the same low-level prior and decoder across separately trained task policies."
+        ]
+      }
     }
   ]
 }
