@@ -71,7 +71,7 @@ system identification, domain randomization, real-world finetuning
 
 推荐优先维护 `papers_extra.json`，网站启动时会自动读取其中的 `papers` 数组。网页本身只负责展示，不在浏览器里编辑或保存新增论文。
 
-如果使用另一个 AI agent 阅读和总结论文，推荐先把 `example.json` 交给它，让它按模板补全论文对象。agent 填好后，把生成结果中的 `papers` 数组追加到 `papers_extra.json` 即可。
+如果使用另一个 AI agent 阅读和总结论文，推荐把 `example.json` 与论文 PDF、arXiv 页面或项目主页一起交给它。agent 的最终回复应当只包含 `{"papers":[{...}]}` 形式的合法 JSON，不包含 Markdown 代码围栏、解释文字或以下划线开头的模板说明字段；生成结果可以直接追加到 `papers_extra.json`。
 
 长期维护有两种方式：
 
@@ -82,13 +82,14 @@ system identification, domain randomization, real-world finetuning
 
 1. `id` 必须稳定，建议用英文 slug；同 id 会覆盖已有论文。
 2. JSON 对象字段和 `app.js` 里的 `papers` 对象保持一致。
-3. `arxiv` 和 `project` 优先写外部链接。
+3. `arxiv`、`project` 和 `pdf` 可以留空；非空时只能填写以 `https://` 开头的纯 URL，禁止使用 `[文字](URL)` 形式的 Markdown 链接。
 4. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
 5. `categories` 使用上面的固定分类 id。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
-7. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
-8. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
-9. `example.json` 里的 `_comment`、`_id_comment` 等字段只是合法 JSON 注释，复制到 `papers_extra.json` 里不会影响页面读取，但正式维护时可以删除以保持简洁。
+7. `zh.title` 和 `en.title` 必须完全一致，均使用论文官方英文标题；中文正文可以保留 PPO、RL、VLA、Sim-to-Real 等必要英文缩写和专业术语。
+8. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
+9. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
+10. `example.json` 里所有以下划线开头的字段都只是给 agent 的说明，最终生成的论文对象不得包含这些字段。
 
 ```json
 {
@@ -102,7 +103,7 @@ system identification, domain randomization, real-world finetuning
       "year": "2026",
       "venue": "arXiv",
       "zh": {
-        "title": "中文或英文论文标题",
+        "title": "Official English paper title",
         "authors": "作者",
         "institutions": "机构 1；机构 2",
         "status": "摘要已整理",

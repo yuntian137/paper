@@ -1,12 +1,28 @@
 {
-  "_comment": "论文卡片填写模板。这个文件必须保持合法 JSON，所以注释都写在 _comment 字段里，不使用 // 或 /* */。",
-  "_workflow": "把这个文件交给论文阅读 agent，让它根据论文 PDF、arXiv 页面或摘要补全 papers 数组里的对象。填好后可以把 papers 数组追加到 papers_extra.json。",
+  "_comment": "这是给论文阅读 agent 的输入模板，不是最终卡片内容。所有以下划线开头的字段都只用于说明，最终输出时必须删除。",
+  "_workflow": "把本文件与论文 PDF、arXiv 页面或项目主页一起交给 agent。agent 阅读后只返回一个可直接追加到 papers_extra.json 的 JSON 对象。",
+  "_output_contract": [
+    "最终回复只能包含一个合法 JSON 对象，不要附加解释、Markdown 代码围栏或其他文字。",
+    "根对象只能包含 papers 一个字段，格式必须是 {\"papers\":[{...}]}，一次处理一篇论文时 papers 数组只能有一个对象。",
+    "最终论文对象不得包含任何以下划线开头的字段，例如 _comment、_id_comment 或 _categories_comment。",
+    "必须替换所有示例占位文本；资料缺失时使用空字符串或明确的待补充说明，不要保留 xxxx.xxxxx、Author 1 等占位符。",
+    "pdf、project 和 arxiv 可以在资料缺失时留空；非空时必须是以 https:// 开头的纯 URL，禁止输出 [文字](URL) 形式的 Markdown 链接。"
+  ],
+  "_reading_modes": {
+    "abstract_only": "只读取摘要或官方项目简介时，status 写摘要已整理 / Abstract summarized；mainContent 写 2-4 句，innovations 和 implementation 只记录摘要或官方页面明确说明的信息。",
+    "full_paper": "只有实际阅读论文正文后，status 才能写全文已精读 / Full paper reviewed；可以记录正文、附录和实验表格中能够明确核实的实现细节与局限。"
+  },
   "_important_rules": [
     "不要编造论文中没有说明的实验、实现细节或结论。",
-    "mainContent 默认基于摘要整理，写 2-4 句，覆盖研究问题、核心方法和主要结论。",
-    "innovations 和 implementation 只写论文中能确认的信息；不确定时写“待阅读全文补充”或“not specified in the paper”。",
+    "id 使用稳定的小写英文 slug，优先采用论文官方简称加标题关键词，不使用空格；同 id 会覆盖已有卡片。",
+    "title 必须使用论文官方英文标题；zh.title 与 en.title 必须是完全相同的字符串，不自行翻译标题。",
+    "中文正文以中文为主，但保留 PPO、RL、VLA、Sim-to-Real、模型名和数据集名等必要英文缩写与术语。",
+    "mainContent 根据实际阅读范围概括研究问题、核心方法、主要结果和关键限制；不要把作者未证明的主张写成事实。",
+    "innovations 要区分真正的新方法与对已有组件的系统整合；implementation 中的数字、网络结构、训练资源和评测结果必须能在论文中核实。",
     "institutions 填论文首页或官方页面明确列出的作者机构；查不到或不确定时留空字符串，不要猜测。",
-    "建议同时填写 zh 和 en，保证网页中英文切换稳定。",
+    "year 和 venue 优先使用已确认的正式发表信息；尚未正式发表时再使用 arXiv 首次公开年份和 arXiv 编号，不把最近修订年份当作发表年份。",
+    "categories 只能使用 available_categories 中的 id，并按论文的主要研究贡献选择；不要仅因正文顺带提到某主题就增加分类。",
+    "zh 和 en 必须事实一致；允许自然翻译，但不得增删实验数字、结论或限制。",
     "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。"
   ],
   "available_categories": [
@@ -53,29 +69,20 @@
   ],
   "papers": [
     {
-      "_comment": "复制这个对象来添加论文。id 必须填写且保持稳定；同 id 会覆盖已有论文。",
       "id": "paper-id-in-english-slug",
-      "_id_comment": "建议格式：论文简称或标题关键词的小写英文 slug，例如 dexndm、sitt-student-informed-teacher-training。",
       "categories": [
         "manipulation",
         "sim2real"
       ],
-      "_categories_comment": "只能使用 available_categories 里的 id；一篇论文可以属于多个分类。优先复用现有分类，不要随意新增页面主分类。",
       "pdf": "https://arxiv.org/pdf/xxxx.xxxxx",
-      "_pdf_comment": "外部 PDF 链接；没有就填空字符串，不要写本地 PDF 路径。",
-      "project": "https://example.com/project-page",
-      "_project_comment": "项目主页、代码主页或补充材料页面；没有就填空字符串。网页会优先把真正的项目页作为主按钮。",
+      "project": "",
       "arxiv": "https://arxiv.org/abs/xxxx.xxxxx",
-      "_arxiv_comment": "arXiv / OpenReview / 论文页面链接；没有就填空字符串。",
       "year": "2026",
-      "_year_comment": "论文年份，字符串即可。",
       "venue": "arXiv:xxxx.xxxxx",
-      "_venue_comment": "会议、期刊、workshop 或 arXiv 编号，例如 ICLR 2026、RSS 2025、arXiv:2601.00000。",
       "zh": {
-        "_comment": "中文展示内容。卡片会显示 title、institutions、takeaway、mainContent、tags；详情页还会显示 authors、status、innovations、implementation。",
-        "title": "论文标题",
-        "authors": "作者 1, 作者 2, 作者 3",
-        "institutions": "机构 1；机构 2",
+        "title": "Official English paper title",
+        "authors": "Official author list",
+        "institutions": "已确认的作者机构；无法确认时留空",
         "status": "摘要已整理",
         "takeaway": "一句话写清楚：这篇论文对我来说最该记住什么。",
         "tags": [
@@ -95,10 +102,9 @@
         ]
       },
       "en": {
-        "_comment": "English display content. Keep it semantically aligned with zh, but it does not need to be a word-for-word translation.",
-        "title": "Paper title",
-        "authors": "Author 1, Author 2, Author 3",
-        "institutions": "Institution 1; Institution 2",
+        "title": "Official English paper title",
+        "authors": "Official author list",
+        "institutions": "Confirmed author institutions; leave empty if unknown",
         "status": "Abstract summarized",
         "takeaway": "One sentence on how I should remember this paper.",
         "tags": [

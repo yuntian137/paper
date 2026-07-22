@@ -57,7 +57,7 @@
       "year": "2022",
       "venue": "NeurIPS 2022",
       "zh": {
-        "title": "MoCapAct: 面向仿真人形控制的多任务数据集",
+        "title": "MoCapAct: A Multi-Task Dataset for Simulated Humanoid Control",
         "authors": "Nolan Wagener, Andrey Kolobov, Felipe Vieira Frujeri, Ricky Loynd, Ching-An Cheng, Matthew Hausknecht",
         "institutions": "Georgia Institute of Technology; Microsoft Research",
         "status": "全文已精读",
@@ -343,7 +343,7 @@
       "year": "2024",
       "venue": "ECCV 2024",
       "zh": {
-        "title": "TRAM: 从野外视频恢复三维人体的全局轨迹与运动",
+        "title": "TRAM: Global Trajectory and Motion of 3D Humans from in-the-wild Videos",
         "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
         "institutions": "University of Pennsylvania; Archimedes, Athena RC",
         "status": "已精读",
@@ -375,7 +375,7 @@
         ]
       },
       "en": {
-        "title": "TRAM: Global Trajectory and Motion of 3D Humans from in-the-Wild Videos",
+        "title": "TRAM: Global Trajectory and Motion of 3D Humans from in-the-wild Videos",
         "authors": "Yufu Wang, Ziyun Wang, Lingjie Liu, Kostas Daniilidis",
         "institutions": "University of Pennsylvania; Archimedes, Athena RC",
         "status": "Fully read",
@@ -862,7 +862,7 @@
       "year": "2026",
       "venue": "arXiv:2512.03028v3",
       "zh": {
-        "title": "SMP：用于基于物理角色控制的可复用分数匹配运动先验",
+        "title": "SMP: Reusable Score-Matching Motion Priors for Physics-Based Character Control",
         "authors": "Yuxuan Mu, Ziyu Zhang, Yi Shi, Dun Yang, Minami Matsumoto, Kotaro Imamura, Guy Tevet, Chuan Guo, Michael Taylor, Chang Shu, Pengcheng Xi, Xue Bin Peng",
         "institutions": "Simon Fraser University; Sony Interactive Entertainment; Stanford University; Snap Inc.; National Research Council Canada; NVIDIA",
         "status": "已精读",
@@ -945,7 +945,7 @@
       "_venue_comment": "论文当前以 arXiv 预印本形式公开。",
       "zh": {
         "_comment": "中文展示内容。",
-        "title": "OmniXtreme：突破高动态人形机器人控制中的通用性壁垒",
+        "title": "OmniXtreme: Breaking the Generality Barrier in High-Dynamic Humanoid Control",
         "authors": "Yunshen Wang, Shaohang Zhu, Peiyuan Zhi, Yuhan Li, Jiaxin Li, Yong-Lu Li, Yuchen Xiao, Xingxing Wang, Baoxiong Jia, Siyuan Huang",
         "institutions": "北京通用人工智能研究院通用人工智能国家重点实验室；北京通用人工智能研究院与宇树科技具身智能及人形机器人联合实验室；上海交通大学；中国科学技术大学；宇树科技；华中科技大学；北京理工大学",
         "status": "全文已精读",
@@ -1052,7 +1052,7 @@
       "year": "2026",
       "venue": "ACM Transactions on Graphics (TOG)",
       "zh": {
-        "title": "HIL：面向动态运动控制的混合模仿学习",
+        "title": "HIL: Hybrid Imitation Learning for Dynamic Athletic Control",
         "authors": "Jiashun Wang, Yifeng Jiang, Haotian Zhang, Chen Tessler, Davis Rempe, Jessica Hodgins, Xue Bin Peng",
         "institutions": "卡内基梅隆大学；NVIDIA；西蒙弗雷泽大学",
         "status": "全文已精读（v2）",
@@ -1137,7 +1137,7 @@
       "_venue_comment": "Published as a conference paper at ICLR 2024。",
       "zh": {
         "_comment": "中文论文卡片内容。",
-        "title": "用于物理控制的通用人形运动表征",
+        "title": "Universal Humanoid Motion Representations for Physics-Based Control",
         "authors": "Zhengyi Luo, Jinkun Cao, Josh Merel, Alexander Winkler, Jing Huang, Kris Kitani, Weipeng Xu",
         "institutions": "Meta Reality Labs Research；Carnegie Mellon University",
         "status": "全文精读完成",
