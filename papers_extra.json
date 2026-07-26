@@ -1431,6 +1431,180 @@
           "Downstream reuse: the same frozen low-level controller is paired with different high-level policies for Reach, Speed, Steering, Location, and Strike. A new task generally requires retraining only its high-level policy. If the new task requires a primitive absent from the learned latent space, high-level training alone cannot create that missing skill; the motion corpus and low-level model must be expanded, retrained, or fine-tuned."
         ]
       }
+    },
+    {
+      "id": "bfm-zero-humanoid-control",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "real-robot-rl",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2511.04131",
+      "project": "https://lecar-lab.github.io/BFM-Zero/",
+      "arxiv": "https://arxiv.org/abs/2511.04131",
+      "year": "2025",
+      "venue": "arXiv:2511.04131",
+      "zh": {
+        "title": "BFM-Zero: A Promptable Behavioral Foundation Model for Humanoid Control Using Unsupervised Reinforcement Learning",
+        "authors": "Yitang Li, Zhengyi Luo, Tonghe Zhang, Cunxi Dai, Anssi Kanervisto, Andrea Tirinzoni, Haoyang Weng, Kris Kitani, Mateusz Guzek, Ahmed Touati, Alessandro Lazaric, Matteo Pirotta, Guanya Shi",
+        "institutions": "Carnegie Mellon University; Meta",
+        "status": "全文已精读",
+        "takeaway": "应把 BFM-Zero 记作一次将 FB-CPR 经大规模 off-policy 训练、历史非对称学习、域随机化和安全正则推到真实 Unitree G1 的系统性跨越，而不是新的 FB 理论。",
+        "tags": [
+          "Forward-Backward Representation",
+          "FB-CPR",
+          "Unsupervised RL",
+          "Off-Policy RL",
+          "Humanoid Control",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "论文研究如何通过一次无下游任务奖励的预训练，得到可由 reward、goal 和 motion 等多种数值 prompt 调用的真实人形机器人全身控制策略。方法以 FB-CPR 的 successor-measure 表示为理论骨架，将奖励、目标姿态和参考轨迹映射到共享的 256 维 latent space，并由同一个 latent-conditioned actor 执行。为实现真实 Unitree G1 部署，作者加入历史依赖的非对称 actor-critic、大规模并行 off-policy 训练、域随机化、观测噪声、随机推扰、mocap 条件判别器和辅助安全 critic。实验提供了较强的可行性展示，但缺少外部 SOTA 基线、关键组件独立消融、多次真机统计和形式化安全保证，因此更适合视为 first-of-kind systems demonstration，而非已经充分验证的通用基础模型。",
+        "innovations": [
+          "将此前主要用于仿真人形角色的 FB-CPR 扩展到真实 Unitree G1；核心增量是 POMDP、Sim-to-Real 和大规模训练改造，而不是新的 successor-measure 理论。",
+          "采用 history-based actor 与 privileged critics/F/B 的非对称训练，使部署策略只依赖实机可测的 proprioceptive history，同时利用仿真完整状态提高价值和表示学习质量。",
+          "将 FB task value、latent-conditioned mocap style critic 和关节限位、足滑、自碰撞等通用辅助 critic 合并到 actor 目标中，在任务广度、人类动作风格和物理可行性之间进行联合优化。",
+          "统一支持 zero-shot reward optimization、single-pose goal reaching 和 motion tracking，并通过 CEM 或 DIAL-MPC 式零阶搜索在不更新网络权重的情况下优化单个 latent 或 latent sequence。"
+        ],
+        "implementation": [
+          "Unitree G1 具有 29 DoF；actor 输出 29 维 PD controller targets。单步可部署观测为 64 维，包括相对 nominal pose 的关节位置、关节速度、root angular velocity 和 projected gravity。",
+          "历史长度 H=4，actor 输入历史维度为 436；训练 privileged state 为 463 维。Actor 只接收 observation-action history 和 latent，F、Q_D、Q_R 接收 history、privileged state、action 和 latent，B 与 discriminator 接收当前 observation 和 privileged state。",
+          "主训练动作数据为重定向到 G1 的 LAFAN1，共 40 条数分钟长的 action-free motion，总时长约 2.4 小时。Motion 被切成 10 秒片段，并依据当前策略 tracking EMD 进行优先采样。",
+          "Episode 长度为 500 个 50 Hz 控制步；仿真物理频率为 200 Hz。初始状态混合 mocap states 和随机跌倒姿态，fall initialization probability 为 0.3，以同时促进有意义动作探索和恢复能力。",
+          "训练使用 1024 个并行环境、batch size 1024、每个并行环境步 16 次更新、约 3M gradient steps、约 192M aggregate environment transitions、约 5M replay transitions 和 discount factor 0.98。",
+          "Latent dimension 为 256。主模型采用 6-block、2048 hidden dimension 的 residual MLP；actor 约 31.9M 参数，F 约 135.8M，Q_D 和 Q_R 各约 134.8M，discriminator 约 2.9M，B 约 0.2M，总计约 440.5M 参数且不含 target networks。",
+          "每次更新从 replay 采样 transition，并从 mocap 采样长度 8 的 motion segments；B 对 segment states 编码并求平均，再将 motion latent 归一到半径 sqrt(d)，用于训练 latent-conditioned GAN discriminator。",
+          "F 和 B 通过 successor-measure Bellman consistency、真实下一状态对齐、B 的正交化和 F^T z 的标量 Bellman consistency 联合训练。Actor 最大化 F^T z + 0.05 Q_D + 0.02 Q_R。",
+          "域随机化包括 COM offset、link mass、friction、default joint position 和随机 push；同时对关节位置、关节速度、projected gravity 和 root angular velocity 加噪声。辅助 signed rewards 包括 DoF limit、action rate、self-contact、feet orientation、ankle roll 和 feet slip。",
+          "Reward prompt 使用约 400000 个状态样本估计 z_r = mean(B(s_i) r(s_i))；goal prompt 使用 B(s_goal)；tracking prompt 对未来参考状态窗口的 B embedding 求和，实机 look-ahead 为 3。",
+          "仿真结果中，BFM-Zero 在 Isaac DR 上的平均 tracking error、reward return 和 pose error 分别为 1.1015、221.9 和 1.1387；迁移到 MuJoCo 后各指标变化均小于 7%。AMASS OOD pose error 为 1.4735，但不同数据集任务难度不同，不能直接将差值解释为纯 OOD 退化。",
+          "真机定性展示包括风格化行走、舞蹈、目标姿态到达、reward 组合、受推踢和拖倒后的恢复。论文未报告真机 tracking error、成功率、跌倒率、扰动力、恢复时间、控制延迟或多次试验置信区间。",
+          "Few-shot 单姿态实验在仿真中为 torso 增加 4 kg 负载并执行 20 次 CEM 迭代；zero-shot latent 在真机 5 秒内失稳碰撞，优化后的 latent 保持单腿站立超过 15 秒。Trajectory adaptation 使用 2048 particles 和 6 次迭代，在改变摩擦的仿真跳跃任务上将 tracking error 降低约 29.1%。",
+          "正文与附录存在复现歧义：discriminator reward 分别写为 D/(1-D) 和 log D-log(1-D)，Algorithm 1 的 critic target action 与正文不一致，Eq. B.1 中 Sigma_Bbar 未定义，latent sampling distribution、target-network update、PD gains、CEM population 和训练硬件也未说明。"
+        ]
+      },
+      "en": {
+        "title": "BFM-Zero: A Promptable Behavioral Foundation Model for Humanoid Control Using Unsupervised Reinforcement Learning",
+        "authors": "Yitang Li, Zhengyi Luo, Tonghe Zhang, Cunxi Dai, Anssi Kanervisto, Andrea Tirinzoni, Haoyang Weng, Kris Kitani, Mateusz Guzek, Ahmed Touati, Alessandro Lazaric, Matteo Pirotta, Guanya Shi",
+        "institutions": "Carnegie Mellon University; Meta",
+        "status": "Full paper reviewed",
+        "takeaway": "BFM-Zero should be remembered as a systems-level transition that makes FB-CPR deployable on a real Unitree G1 through large-scale off-policy training, history-based asymmetric learning, domain randomization, and safety regularization, rather than as a new FB theory.",
+        "tags": [
+          "Forward-Backward Representation",
+          "FB-CPR",
+          "Unsupervised RL",
+          "Off-Policy RL",
+          "Humanoid Control",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "The paper studies how a single pre-training process without downstream task rewards can produce a real-humanoid whole-body controller promptable by numerical rewards, goals, and motions. Its theoretical backbone is the successor-measure representation of FB-CPR, which maps reward functions, goal poses, and reference trajectories into a shared 256-dimensional latent space executed by one latent-conditioned actor. To enable deployment on a real Unitree G1, the authors add a history-dependent asymmetric actor-critic, massively parallel off-policy training, domain randomization, observation noise, perturbations, a motion-conditioned discriminator, and an auxiliary safety critic. The experiments provide a compelling feasibility demonstration, but the absence of external state-of-the-art baselines, isolated component ablations, repeated quantitative hardware trials, and formal safety guarantees makes the work better characterized as a first-of-kind systems demonstration than a fully validated general-purpose foundation model.",
+        "innovations": [
+          "Extends FB-CPR, previously demonstrated mainly on simulated humanoid characters, to a real Unitree G1; the main contribution is the POMDP, Sim-to-Real, and large-scale training adaptation rather than a new successor-measure theory.",
+          "Uses a history-based actor with privileged critics and F/B representations, allowing the deployed policy to rely only on measurable proprioceptive history while exploiting full simulator state for more accurate value and representation learning.",
+          "Combines the FB task value, a latent-conditioned motion-capture style critic, and a universal auxiliary critic for joint limits, foot slipping, self-contact, and related constraints in one actor objective, balancing task coverage, human-like behavior, and physical feasibility.",
+          "Supports zero-shot reward optimization, single-pose goal reaching, and motion tracking through one latent interface, and uses CEM or DIAL-MPC-style zeroth-order search to adapt a latent or latent sequence without updating network weights."
+        ],
+        "implementation": [
+          "The Unitree G1 has 29 DoF, and the actor outputs 29-dimensional PD controller targets. The deployable 64-dimensional observation contains joint positions relative to a nominal pose, joint velocities, root angular velocity, and projected gravity.",
+          "The history length is H=4, giving a 436-dimensional actor history input, while the privileged training state has 463 dimensions. The actor receives only observation-action history and the latent; F, Q_D, and Q_R receive history, privileged state, action, and latent; B and the discriminator receive the current observation and privileged state.",
+          "The main motion dataset is LAFAN1 retargeted to G1, containing 40 action-free motions lasting several minutes each and approximately 2.4 hours in total. Motions are split into 10-second segments and prioritized using the current policy's tracking Earth Mover's Distance.",
+          "Episodes last 500 control steps at 50 Hz, while simulation runs at 200 Hz. Initial states mix motion-capture states with randomly generated falling poses, using a fall-initialization probability of 0.3 to promote both meaningful motion exploration and recovery.",
+          "Training uses 1024 parallel environments, a batch size of 1024, 16 updates per parallel environment step, approximately 3M gradient steps, approximately 192M aggregate environment transitions, a replay buffer of about 5M transitions, and a discount factor of 0.98.",
+          "The latent dimension is 256. The main model uses a six-block residual MLP with 2048 hidden units; the actor has about 31.9M parameters, F about 135.8M, Q_D and Q_R about 134.8M each, the discriminator about 2.9M, and B about 0.2M, for approximately 440.5M parameters excluding target networks.",
+          "Each update samples transitions from replay and length-eight motion segments from the motion dataset. B encodes and averages the segment states, and the resulting motion latent is normalized to radius sqrt(d) before training the latent-conditioned GAN discriminator.",
+          "F and B are jointly trained using successor-measure Bellman consistency, alignment with the true next state, backward-feature orthogonalization, and scalar Bellman consistency of F^T z. The actor maximizes F^T z + 0.05 Q_D + 0.02 Q_R.",
+          "Domain randomization covers center-of-mass offsets, link masses, friction, default joint positions, and random pushes, while noise is added to joint positions, joint velocities, projected gravity, and root angular velocity. Signed auxiliary rewards cover DoF limits, action rate, self-contact, foot orientation, ankle roll, and foot slipping.",
+          "Reward prompts use approximately 400000 states to estimate z_r = mean(B(s_i) r(s_i)); goal prompts use B(s_goal); tracking prompts sum B embeddings over a future reference-state window, with a real-robot look-ahead of three frames.",
+          "In simulation, BFM-Zero obtains an average tracking error of 1.1015, reward return of 221.9, and pose error of 1.1387 in Isaac with domain randomization; all metrics change by less than 7% when transferred to MuJoCo. The AMASS out-of-distribution pose error is 1.4735, although differences in task difficulty prevent interpreting this as a pure OOD degradation rate.",
+          "Real-robot demonstrations qualitatively include styled walking, dancing, goal-pose reaching, reward composition, and recovery after pushes, kicks, and being pulled down. The paper does not report real-robot tracking errors, success rates, fall rates, disturbance magnitudes, recovery times, control latency, or confidence intervals over repeated trials.",
+          "For few-shot single-pose adaptation, the torso mass is increased by 4 kg in simulation and the latent is optimized for 20 CEM iterations. The zero-shot latent destabilizes and collides within five seconds on hardware, whereas the optimized latent maintains single-leg balance for more than 15 seconds. Trajectory adaptation uses 2048 particles and six iterations, reducing tracking error by approximately 29.1% for a simulated leaping task under changed friction.",
+          "The main text and appendix contain reproducibility ambiguities: the discriminator reward is written both as D/(1-D) and as log D-log(1-D), the critic target action in Algorithm 1 differs from the main text, Sigma_Bbar in Eq. B.1 is undefined, and the latent sampling distribution, target-network update, PD gains, CEM population, and training hardware are not specified."
+        ]
+      }
+    },
+    {
+      "id": "metamotivo-fb-cpr",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2504.11054",
+      "project": "https://metamotivo.metademolab.com/",
+      "arxiv": "https://arxiv.org/abs/2504.11054",
+      "year": "2025",
+      "venue": "ICLR 2025",
+      "zh": {
+        "title": "Zero-Shot Whole-Body Humanoid Control via Behavioral Foundation Models",
+        "authors": "Andrea Tirinzoni, Ahmed Touati, Jesse Farebrother, Mateusz Guzek, Anssi Kanervisto, Yingchen Xu, Alessandro Lazaric, Matteo Pirotta",
+        "institutions": "FAIR at Meta；Mila；McGill University；University College London (UCL)",
+        "status": "全文已精读",
+        "takeaway": "最值得记住的是：FB-CPR 用潜变量条件判别器把无动作 MoCap 轨迹对齐到 FB 的统一行为潜空间，使同一个人形策略能够通过奖励、目标姿态或参考动作进行零样本调用，但能力仍受 MoCap 覆盖范围和固定仿真动力学约束。",
+        "tags": [
+          "FB-CPR",
+          "Forward-Backward Representations",
+          "Zero-Shot RL",
+          "Humanoid Control",
+          "Behavioral Foundation Model",
+          "AMASS"
+        ],
+        "mainContent": "论文研究如何从无奖励、无动作标签的人体运动数据中预训练一个可被多种任务提示调用的全身人形控制器。作者提出 FB-CPR：在 Forward-Backward 表征的零样本策略学习目标上，加入潜变量条件化的行为分布匹配，将示范轨迹、状态目标、奖励函数和策略统一到同一个 B 表征空间。基于 SMPL 人形和 AMASS 数据训练的 META MOTIVO 可在不进行下游梯度更新或规划的情况下处理奖励优化、目标姿态到达和运动跟踪；基础模型在七项归一化指标上的平均得分为任务专用上界的 73.4%。论文未提供 FB-CPR 的收敛、闭环稳定性或真实机器人保证，并明确指出模型仅使用本体状态，在远离 MoCap 分布的地面动作、跌倒、站立、导航和物体交互任务上仍有限。",
+        "innovations": [
+          "核心算法创新是条件策略正则化：匹配策略与动作数据在联合空间 p(s,z) 中的分布，而不是只匹配无条件状态边缘分布，从而要求每个潜策略 π_z 对齐到由同一 z 编码的具体行为。",
+          "使用 ER_FB(τ)=Avg B(s) 直接把无动作轨迹编码进 FB 的任务空间，使 B 同时承担状态表示、轨迹编码、目标编码和奖励投影基底，避免额外学习一个与策略空间分离的轨迹编码器。",
+          "actor 同时最大化通用 FB 价值 F(s,a,z)^T z 和判别器辅助价值 Q_D(s,a,z)，在人体行为先验与对未见奖励的零样本优化能力之间取得折中。",
+          "采用动作轨迹编码、在线状态目标和超球面随机方向组成的混合潜变量分布，使模型容量同时覆盖动作复现、目标到达和更广泛的潜在任务。",
+          "FB、ER_FB、GAN 密度比估计和离策略 TD 学习本身并非本文分别提出；本文的贡献主要在于将这些组件条件化整合，并将其规模化到高维全身人形控制。"
+        ],
+        "implementation": [
+          "预训练输入包括无动作标签的 AMASS 状态轨迹和可在线交互的 MuJoCo 环境；输出包括条件策略 π(a|s,z)、forward 表征 F、backward 表征 B，以及仅在训练中使用的条件判别器 D 和辅助 critic Q_D。",
+          "FB 分支近似后继测度 M^{π_z}(ds'|s,a)≈F(s,a,z)^T B(s')ρ(ds')；CPR 分支使用判别器奖励 r_D(s,z)=log(D(s,z)/(1-D(s,z)))，最终 actor 最小化 -E[F(s,a,z)^T z+αQ_D(s,a,z)]。",
+          "潜变量维度 d=256；动作轨迹片段长度为 8；潜变量采样比例为 60% 动作轨迹编码、20% 在线状态目标、20% 超球面随机方向；折扣因子 γ=0.98，CPR 正则系数 α=0.01，潜变量重标记概率为 0.8。",
+          "SMPL 人形包含 24 个刚体和 23 个受控关节；状态为 358 维本体观测，动作为 69 维归一化 PD 目标；MuJoCo 仿真频率为 450 Hz，策略控制频率为 30 Hz。",
+          "AMASS 训练集包含 8,902 条动作、3,144,570 个状态步、约 29 小时；测试集包含 990 条动作、337,062 个状态步、约 3 小时。数据只有身体位置、旋转和有限差分估计的速度，不提供动作标签。",
+          "训练使用 50 个并行环境、30M 环境步、3M 梯度步、容量为 5M 的 replay buffer 和 batch size 1024；初始状态由 20% 随机跌落状态和 80% MoCap 状态组成。",
+          "部署时，目标姿态使用 z_g=B(g)；运动跟踪使用未来长度为 8 的滑动窗口编码；奖励任务使用 100,000 个 replay 状态进行指数加权投影 z_r∝E[exp(10r(s))B(s)r(s)]，不再更新策略参数。",
+          "基础 FB-CPR 的平均 reward return 为 151.68，goal proximity/success 为 0.68/0.48，测试动作 tracking EMD/success 为 1.39/0.83。人体评价中，83.5% 的奖励任务比较和 69.1% 的目标任务比较认为 FB-CPR 比单任务 TD3 更自然。",
+          "将总模型规模从约 25M 扩展到 288M 参数后，reward 提升到 179.94，goal proximity/success 提升到 0.82/0.66，测试 tracking EMD 降至 1.13；论文未说明相应硬件配置、训练 wall-clock 或能耗。",
+          "为稳定训练，论文额外使用 B 正交正则、Fz TD 正则、双 F/双 Q ensemble、target network、Polyak 更新、WGAN 梯度惩罚、潜变量归一化和动作采样优先级；这些属于防塌缩和数值稳定化设计，不是 FB-CPR 的核心概念流程。"
+        ]
+      },
+      "en": {
+        "title": "Zero-Shot Whole-Body Humanoid Control via Behavioral Foundation Models",
+        "authors": "Andrea Tirinzoni, Ahmed Touati, Jesse Farebrother, Mateusz Guzek, Anssi Kanervisto, Yingchen Xu, Alessandro Lazaric, Matteo Pirotta",
+        "institutions": "FAIR at Meta; Mila; McGill University; University College London (UCL)",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea to remember is that FB-CPR uses a latent-conditioned discriminator to align action-free MoCap trajectories with a shared FB behavioral latent space, allowing one humanoid policy to be prompted zero-shot by rewards, target poses, or reference motions, while remaining limited by MoCap coverage and the fixed simulated dynamics.",
+        "tags": [
+          "FB-CPR",
+          "Forward-Backward Representations",
+          "Zero-Shot RL",
+          "Humanoid Control",
+          "Behavioral Foundation Model",
+          "AMASS"
+        ],
+        "mainContent": "The paper studies how to pretrain a whole-body humanoid controller from reward-free, action-free human motion data so that it can respond to several forms of downstream task prompts. It introduces FB-CPR, which augments zero-shot Forward-Backward policy learning with latent-conditioned behavioral distribution matching and represents demonstrations, state goals, reward functions, and policies in the same B representation space. META MOTIVO, trained with an SMPL humanoid and AMASS, performs reward optimization, pose reaching, and motion tracking without downstream gradient updates or planning; the base model averages 73.4% of task-specific upper-bound performance across seven normalized metrics. The paper provides no convergence, closed-loop stability, or real-robot guarantee, and explicitly reports limitations for proprioception-only control, behaviors far from the MoCap distribution, ground motions, falling, standing, navigation, and object interaction.",
+        "innovations": [
+          "The main algorithmic novelty is conditional policy regularization: it matches policy and motion-data distributions in the joint p(s,z) space rather than matching only unconditional state marginals, encouraging each latent policy π_z to align with the specific behavior encoded by the same z.",
+          "ER_FB(τ)=Avg B(s) directly embeds action-free trajectories into the FB task space, allowing B to serve simultaneously as a state representation, trajectory encoder, goal encoder, and reward-projection basis without a separate trajectory encoder.",
+          "The actor jointly maximizes the universal FB value F(s,a,z)^T z and the discriminator-derived auxiliary value Q_D(s,a,z), trading off human behavioral bias against zero-shot optimization of unseen rewards.",
+          "A mixture of trajectory embeddings, online state goals, and uniformly sampled hypersphere directions allocates model capacity to motion reproduction, goal reaching, and broader latent-task coverage.",
+          "FB, ER_FB, GAN density-ratio estimation, and off-policy TD learning are not individually introduced by this paper; the contribution is their conditional integration and scaling to high-dimensional whole-body humanoid control."
+        ],
+        "implementation": [
+          "Pretraining consumes action-free AMASS state trajectories and online interaction with a MuJoCo environment. It produces the conditional policy π(a|s,z), forward representation F, backward representation B, and the training-only conditional discriminator D and auxiliary critic Q_D.",
+          "The FB branch approximates the successor measure as M^{π_z}(ds'|s,a)≈F(s,a,z)^T B(s')ρ(ds'). The CPR branch uses r_D(s,z)=log(D(s,z)/(1-D(s,z))), and the final actor minimizes -E[F(s,a,z)^T z+αQ_D(s,a,z)].",
+          "The latent dimension is d=256, demonstration subsequences have length 8, and latent sampling uses 60% motion embeddings, 20% online state goals, and 20% uniform hypersphere directions. The discount is γ=0.98, the CPR coefficient is α=0.01, and the latent relabeling probability is 0.8.",
+          "The SMPL humanoid contains 24 rigid bodies and 23 actuated joints. Its proprioceptive state is 358-dimensional and its action is a 69-dimensional normalized PD target. MuJoCo runs at 450 Hz while the policy runs at 30 Hz.",
+          "The AMASS training split contains 8,902 motions, 3,144,570 state steps, and about 29 hours of motion. The test split contains 990 motions, 337,062 state steps, and about 3 hours. The data provides body positions, rotations, and finite-difference velocity estimates, but no action labels.",
+          "Training uses 50 parallel environments, 30M environment steps, 3M gradient steps, a 5M-capacity replay buffer, and batch size 1024. Initial states are sampled from a mixture of 20% random falling states and 80% MoCap states.",
+          "At deployment, pose reaching uses z_g=B(g), motion tracking uses a future sliding window of length 8, and reward prompting evaluates 100,000 replay states using the weighted projection z_r∝E[exp(10r(s))B(s)r(s)]. No policy parameters are updated downstream.",
+          "The base FB-CPR model obtains an average reward return of 151.68, goal proximity/success of 0.68/0.48, and test-motion tracking EMD/success of 1.39/0.83. In human evaluation, FB-CPR is judged more natural than task-specific TD3 in 83.5% of reward-task comparisons and 69.1% of goal-task comparisons.",
+          "Scaling the total model size from roughly 25M to 288M parameters improves reward to 179.94, goal proximity/success to 0.82/0.66, and test tracking EMD to 1.13. The paper does not report the corresponding hardware, training wall-clock time, or energy use.",
+          "Training is additionally stabilized with B orthonormality regularization, an Fz TD regularizer, twin F/Q ensembles, target networks, Polyak updates, a WGAN gradient penalty, latent normalization, and motion-sampling prioritization. These are anti-collapse and numerical-stability mechanisms rather than the conceptual core of FB-CPR."
+        ]
+      }
     }
   ]
 }
