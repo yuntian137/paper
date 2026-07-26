@@ -73,6 +73,8 @@ system identification, domain randomization, real-world finetuning
 
 如果使用另一个 AI agent 阅读和总结论文，推荐把 `example.json` 与论文 PDF、arXiv 页面或项目主页一起交给它。agent 的最终回复应当只包含 `{"papers":[{...}]}` 形式的合法 JSON，不包含 Markdown 代码围栏、解释文字或以下划线开头的模板说明字段；生成结果可以直接追加到 `papers_extra.json`。
 
+每次向 `papers_extra.json` 追加或更新论文后，需要同时更新 `site_meta.json` 中的 `lastUpdated.iso`、`lastUpdated.zh` 和 `lastUpdated.en`，否则网页上的“最近更新”日期不会变化。
+
 长期维护有两种方式：
 
 1. 少量稳定内置论文：在 `app.js` 的 `papers` 数组里新增一个对象。
