@@ -693,6 +693,7 @@ body.is-detail-collapsed .paper-detail {
 .detail-section li {
   color: #34383b;
   line-height: 1.72;
+  overflow-wrap: anywhere;
 }
 
 .detail-section ul {
@@ -700,13 +701,6 @@ body.is-detail-collapsed .paper-detail {
   gap: 8px;
   margin: 0;
   padding-left: 20px;
-}
-
-.math-line {
-  display: inline-block;
-  max-width: 100%;
-  overflow-x: auto;
-  vertical-align: middle;
 }
 
 .prompt-modal[hidden] {

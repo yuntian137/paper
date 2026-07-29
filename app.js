@@ -90,123 +90,1475 @@ const uiText = {
 const siteMetaPath = "site_meta.json";
 const siteMeta = {
   lastUpdated: {
-    iso: "2026-07-01",
-    zh: "2026-07-01",
-    en: "Jul 1, 2026",
+    iso: "2026-07-29",
+    zh: "2026-07-29",
+    en: "Jul 29, 2026",
   },
 };
 
 const readingPrompts = {
-  zh: `你是一位资深的智能控制与运动规划专家，同时也是顶级期刊审稿人。请基于我上传的论文，生成一份博士生级别的论文精读报告，帮助我深入理解论文的理论、方法、实验与局限。
+  zh: `你是一位资深的智能控制、机器人学习与运动规划专家，同时也是顶级机器人/机器学习期刊审稿人。请基于我上传的论文及其可用附录，生成一份博士生级别的论文精读报告，帮助我从“系统全局—模块机制—数学优化—训练部署—实验验证—方法局限”六个层次真正理解论文。
 
-要求：
+你的任务不是按照论文目录逐段摘要，而是重建论文完整的因果链：
 
-- 分析必须优先基于论文原文。
-- 不要无依据猜测；若论文未说明，请明确写“论文未说明”，再给出合理推测并标注“推测”。
-- 面向控制、机器人、强化学习方向研究生。
-- 公式使用标准 LaTeX 渲染，不要放在代码块里。
-- 对关键算法要说明输入、输出、优化目标、训练流程和部署流程。
-- 如果方法基于前人工作，请先解释前人方法，再说明本文改进在哪里。
-- 回答要分段清晰、信息密度高、便于做笔记。
+> 研究问题是什么
+> → 现有方法为什么失败
+> → 本文提出了哪些模块
+> → 每个模块解决什么问题
+> → 数据如何在模块之间流动
+> → 每个目标函数优化哪些参数
+> → 各模块如何训练
+> → 部署时实际保留哪些模块
+> → 实验是否真正验证了作者的主张
 
-请严格按照以下结构回答：
+目标读者是控制、机器人、强化学习及生成式运动方向的研究生。报告应兼顾数学严谨性、系统理解和审稿式批判。
 
-问题1：研究问题
-- 核心问题：
-- 应用背景与价值：
-- 现有方法：
-- 局限性：
-- 小结：
+# 一、阅读与证据规则
 
-问题2：核心贡献
-- 主要思路：
-- 方法框架：
-- 核心创新：
-- 直觉解释：
-- 小结：
+## 1. 信息来源优先级
 
-问题3：算法与理论（重点）
-- 方法来源：
-- 整体流程：
-- 模块拆解：
-- 关键公式与解释：
-- 创新点分析：
-- 理论保证：
-- 小结：
+信息来源按照以下优先级使用：
 
-问题4：实验分析
-- 实验设置：
-- 数据集：
-- 对比方法：
-- 结果分析：
-- 失败案例：
-- 是否充分验证：
-- 小结：
+1. 论文正文；
+2. 论文附录、补充材料和算法框；
+3. 作者官方项目主页或代码；
+4. 被引用的前人论文；
+5. 其他外部资料。
 
-问题5：批判性分析
-- 假设是否合理：
-- 泛化能力：
-- 可扩展性：
-- 计算复杂度与实时性：
-- 潜在改进方向：
-- 小结：
+分析必须优先基于论文原文。如果使用正文之外的资料，必须明确标记来源，不能把外部资料中的信息写成本文内容。
 
-最后用 1-2 段总结这篇论文最值得记住的 takeaway。`,
-  en: `You are a senior expert in intelligent control and motion planning, and also a top-tier journal reviewer. Based on the paper I provide, generate a PhD-level close reading report that helps me deeply understand the paper's theory, method, experiments, and limitations.
+如果只获得摘要或论文内容不完整，应在报告开头明确说明材料覆盖范围，以及哪些结论无法可靠判断。
 
-Requirements:
+## 2. 证据状态
 
-- The analysis must be grounded first in the original paper.
-- Do not make unsupported guesses. If the paper does not state something, explicitly write "not specified in the paper", then provide a reasonable inference marked as "inference".
-- Write for a graduate student in control, robotics, and reinforcement learning.
-- Use standard LaTeX rendering for formulas. Do not put formulas in code blocks.
-- For key algorithms, explain inputs, outputs, optimization objectives, training pipeline, and deployment pipeline.
-- If the method builds on prior work, first explain the prior method, then explain what this paper changes.
-- Keep the response clearly structured, information-dense, and easy to turn into notes.
+对关键事实、解释和判断使用以下证据类别：
 
-Please strictly follow this structure:
+* **[论文明确报告]**：正文、附录、公式、算法、表格或图注中明确出现。
+* **[由原文直接推导]**：论文没有直接写出，但可以由其公式、定义或算法步骤直接推出；需要给出简短推导依据。
+* **[审稿判断]**：对实验充分性、创新程度、假设合理性或方法局限的评价。
+* **[推测]**：无法从论文直接确定的实现解释或潜在原因，必须说明依据和置信度。
+* **[论文未说明]**：在现有材料中没有找到，不能用领域惯例自动补全。
 
-Question 1: Research Problem
-- Core problem:
-- Application background and value:
-- Existing methods:
-- Limitations:
-- Summary:
+对于影响理解的重要缺失信息，采用以下格式：
 
-Question 2: Core Contributions
-- Main idea:
-- Method framework:
-- Core innovations:
-- Intuitive explanation:
-- Summary:
+> **论文未说明：** 缺失的具体信息。
+> **论文中可依据的线索：** 可以用于判断的相关内容。
+> **推测（低/中/高置信度）：** 合理解释；若线索不足，写“无法负责任地推测”。
+> **验证方式：** 需要检查代码、补充材料或增加什么实验。
 
-Question 3: Algorithm and Theory (focus)
-- Method origin:
-- Overall pipeline:
-- Module breakdown:
-- Key formulas and explanations:
-- Innovation analysis:
-- Theoretical guarantees:
-- Summary:
+严格区分：
 
-Question 4: Experimental Analysis
-- Experimental setup:
-- Datasets:
-- Baselines:
-- Result analysis:
-- Failure cases:
-- Whether the validation is sufficient:
-- Summary:
+* “论文没有验证”与“方法不具备该能力”；
+* “作者声称性能更好”与“实验充分证明性能更好”；
+* “损失函数鼓励某种性质”与“理论保证该性质”；
+* “实验中没有失败”与“系统不存在失败”；
+* “经验上运行稳定”与“闭环系统具有形式化稳定性保证”。
 
-Question 5: Critical Analysis
-- Are the assumptions reasonable:
-- Generalization:
-- Scalability:
-- Computational complexity and real-time performance:
-- Potential improvement directions:
-- Summary:
+## 3. 原文定位
 
-Finally, summarize the most important takeaway of this paper in 1-2 paragraphs.`,
+核心方法、模块输入输出、关键公式、训练步骤、实验数字、超参数、消融结论和作者承认的局限，应尽可能在句末标注原文位置：
+
+> （§3.2，Eq. (4)，Fig. 2，Table 3，p. 6）
+
+根据实际存在的项目保留对应字段。若没有印刷页码，可以写“PDF 第 N 页”。不得猜测章节、页码或公式编号；无法确认时写“定位未确认”。
+
+## 4. 缩写与术语
+
+任何重要缩写第一次出现前，必须先在术语表中解释。正文第一次使用时仍写成：
+
+> 中文名称（English Full Name，缩写）
+
+不能直接使用未定义的 iFSQ、CoLA、VQ、AMP、RFC、CVAE、ELBO 等缩写。
+
+术语解释不能只展开英文全称，还必须说明：
+
+* 它在本文系统中是什么；
+* 位于哪个模块；
+* 输入和输出是什么；
+* 是本文提出、修改自前人工作，还是直接复用。
+
+若论文没有给出缩写全称，不得根据名称自行扩写。
+
+## 5. 数学与表达规范
+
+* 公式使用标准 LaTeX，不放在代码块中。
+* 向量、矩阵、随机变量和标量应尽量区分。
+* 关键变量需要说明物理意义、维度、坐标系、时间索引和数据来源。
+* 每个二级标题先用一句话直接给出结论，再展开解释。
+* 精确映射和对比优先使用表格；机制和因果关系使用完整段落解释。
+* 禁止只写“编码器提取特征”“规划器生成动作”“策略输出控制量”等缺少接口和优化关系的描述。
+* 不使用没有证据支撑的“显著”“高效”“鲁棒”“通用”“SOTA”“理论保证”等词。复述作者观点时写“作者声称”。
+
+默认总篇幅约为 8,000–14,000 中文字，其中问题3“算法与理论”应占全文至少 35%。如果论文信息不足，不需要机械凑字数。
+
+# 问题0：术语地图与系统全景
+
+这一部分必须先建立完整的整体架构，再进入研究问题和公式细节。不能过度简写。
+
+## 0.1 材料覆盖情况与论文卡片
+
+说明：
+
+* 论文标题、作者、年份、发表平台；
+* 当前阅读了正文、附录、补充材料、项目主页或代码中的哪些内容；
+* 论文主要属于控制、强化学习、模仿学习、运动生成、运动规划、重定向或系统集成中的哪类工作；
+* 论文解决的是完整系统还是其中一个局部环节。
+
+## 0.2 术语与缩写表
+
+在正文使用缩写前，先输出：
+
+| 缩写/名称   | 英文全称 | 中文含义 | 在本文中的具体作用      | 所属模块 | 来源         | 原文位置 |
+| ------- | ---- | ---- | -------------- | ---- | ---------- | ---- |
+| 例如 iFSQ |      |      | 它处理什么信息、产生什么结果 | M?   | 本文提出/修改/复用 |      |
+
+至少覆盖所有理解系统架构所必需的论文自定义名词、模型名称、损失名称和算法缩写。
+
+## 0.3 一句话定义与任务接口
+
+首先用一句话回答：
+
+> 本文将什么输入，通过什么核心机制，转换成什么输出，以解决什么问题？
+
+随后给出任务接口表：
+
+| 项目          | 内容                            |
+| ----------- | ----------------------------- |
+| 原始数据或任务输入   |                               |
+| 训练监督、奖励或目标  |                               |
+| 部署时在线可获得的输入 |                               |
+| 关键中间表示      |                               |
+| 最终模型输出      |                               |
+| 最终物理控制量     | 关节位置、残差位置、速度、力矩、轨迹、latent 或其他 |
+| 系统作用边界      | 上游生成、重定向、规划、低层控制或完整系统         |
+
+## 0.4 核心矛盾与解决主线
+
+用“原因—后果—设计”的方式说明：
+
+> 现有方法中的具体瓶颈
+> → 为什么会导致失败
+> → 本文提出哪个机制解决它
+> → 预期改善哪个指标或能力
+
+不要在这里堆积模块名称。先用普通语言解释，再给出技术名称。
+
+## 0.5 全局模块架构
+
+为所有核心模块分配固定编号，例如 M1、M2、M3。后文必须始终沿用相同编号和名称。
+
+先分别写出三条主线。
+
+### 训练数据流
+
+> 原始数据
+> → M1：预处理或重定向
+> → M2：表征学习
+> → M3：规划、生成或策略学习
+> → M4：低层控制
+> → 最终模型或策略
+
+每个箭头说明传递的对象，例如状态、轨迹、token、latent、参考姿态、动作或奖励。
+
+### 优化流
+
+说明每个损失函数或奖励更新哪些模块，例如：
+
+> (L_{\\mathrm{rec}}\\rightarrow{\\text{Encoder},\\text{Decoder}})
+> (L_{\\mathrm{policy}}\\rightarrow{\\text{Actor}})
+
+明确联合训练、交替训练、分阶段训练、冻结、微调和 stop-gradient 的关系。
+
+### 部署控制流
+
+> 在线传感器或用户命令
+> → 状态估计
+> → 高层生成或规划
+> → 低层策略
+> → 动作目标
+> → PD/力矩控制器
+> → 机器人
+> → 状态反馈
+
+论文不包含的模块不要自行补入；若属于实际部署所必需但论文未说明，应明确指出。
+
+随后给出模块总表：
+
+| 编号 | 模块 | 为什么需要 | 输入 | 输出 | 是否学习 | 训练时使用 | 部署时使用 | 来源         |
+| -- | -- | ----- | -- | -- | ---- | ----- | ----- | ---------- |
+| M1 |    |       |    |    |      |       |       | 本文提出/修改/复用 |
+
+## 0.6 训练与部署对照
+
+| 对比项                            | 训练阶段 | 部署阶段 |
+| ------------------------------ | ---- | ---- |
+| 可用信息                           |      |      |
+| 特权信息或真值状态                      |      |      |
+| 是否使用未来参考                       |      |      |
+| Teacher/critic/discriminator   |      |      |
+| Encoder/decoder/planner/policy |      |      |
+| 最终输入                           |      |      |
+| 最终输出                           |      |      |
+| 被丢弃的模块                         |      |      |
+
+重点解释：训练期间使用的 teacher、判别器、未来轨迹、真实状态、特权 critic 或数据清洗模块，部署时是否仍然存在。
+
+## 0.7 30秒通俗解释
+
+用一段不超过300字、尽量少用缩写的文字，向刚接触该论文的人说明：
+
+* 系统从哪里得到输入；
+* 中间依次做了什么；
+* 最终如何产生机器人动作或任务结果；
+* 本文真正新增加的是哪一步。
+
+# 问题1：研究问题
+
+## 核心问题
+
+* 正式定义论文解决的任务。
+* 给出系统输入、期望输出、优化目标和评价标准。
+* 说明它是跟踪、生成、规划、控制、重定向、loco-manipulation，还是分层系统问题。
+* 如果适用，给出马尔可夫决策过程或部分可观测马尔可夫决策过程中的状态、观测、动作、命令、奖励和终止条件。
+* 明确本文的系统边界：解决上游数据、运动生成、高层规划、低层控制还是完整链路。
+
+## 应用背景与价值
+
+* 说明该问题在机器人控制或运动学习中的实际意义。
+* 解释为什么传统工程方案或已有学习方法无法直接满足需求。
+* 区分学术价值、算法价值和工程部署价值。
+
+## 现有方法
+
+按照方法类别而不是简单罗列论文名称进行介绍。对每类方法说明：
+
+* 基本思想；
+* 输入和输出；
+* 优化方式；
+* 优势；
+* 在本文任务中的失败点。
+
+如果本文建立在某项前人工作上，应先用最小必要篇幅解释前人方法，再说明本文如何继承。
+
+## 局限性
+
+这里指“现有方法的局限”，不是本文的局限。需要给出完整因果链：
+
+> 现有设计或假设
+> → 引发的优化、表示或控制问题
+> → 在实验或部署中的具体后果
+> → 本文对应的解决模块
+
+## 小结
+
+固定回答：
+
+1. 本文真正试图解决的核心矛盾；
+2. 支撑这一问题重要性的最强证据；
+3. 当前问题定义中最大的假设或边界。
+
+# 问题2：核心贡献
+
+## 主要思路
+
+分别用两种方式概括：
+
+1. 一段通俗直觉；
+2. 一段技术描述。
+
+两段都要围绕“为什么这样设计”，不能只是列出模块名称。
+
+## 方法框架
+
+结合问题0中的模块编号，说明创新位于系统的哪个位置。此处只解释贡献在整体架构中的位置，不重复问题3的详细训练步骤和公式。
+
+## 核心创新
+
+输出“贡献账本”：
+
+| 作者声称的贡献 | 依赖或继承的前人方法 | 本文真正新增或修改的部分 | 类型                           | 对应实验 | 证据位置 |
+| ------- | ---------- | ------------ | ---------------------------- | ---- | ---- |
+|         |            |              | 新算法/训练策略/系统集成/数据规模/部署方法/实验发现 |      |      |
+
+必须区分：
+
+* 全新提出的算法；
+* 对已有方法的局部修改；
+* 多个现有模块的新组合；
+* 数据或算力规模带来的提升；
+* 工程实现与系统集成；
+* 新的实验结论。
+
+不能把整个 pipeline 都默认视为本文创新。
+
+## 直觉解释
+
+对每个主要创新回答：
+
+* 原方法为什么不够；
+* 新机制改变了什么；
+* 它为什么可能有效；
+* 它改善的是表示能力、优化稳定性、探索、动力学可执行性、泛化还是部署可观测性；
+* 该直觉是作者解释、公式推导还是审稿人理解。
+
+## 小结
+
+固定回答：
+
+1. 本文最实质的新增内容；
+2. 哪项贡献主要属于系统整合而不是基础算法创新；
+3. 哪项贡献得到了最直接的实验支持。
+
+# 问题3：算法与理论（重点）
+
+## 方法来源
+
+对每个关键模块说明：
+
+* 来自哪项前人工作或常规技术；
+* 前人方法原本解决什么问题；
+* 前人方法的输入、输出和优化目标；
+* 本文直接复用了什么；
+* 本文修改了什么；
+* 修改后解决了什么新问题。
+
+如果没有阅读被引论文原文，只能写“根据本文对该工作的描述”，不能补充未经确认的实现细节。
+
+## 整体流程
+
+### 1. 符号、坐标系与时间定义
+
+在适用时说明：
+
+* world、base/root、heading、body、joint、end-effector 坐标系；
+* 位置、姿态、速度在哪个坐标系表达；
+* 旋转表示、四元数顺序和是否移除全局 yaw；
+* (t)、历史窗口、未来窗口、phase 和 planning horizon 的含义；
+* 方法是否因果，是否使用未来帧；
+* 数据频率、策略频率、规划频率、仿真频率和执行器频率。
+
+### 2. 分阶段训练流程
+
+输出：
+
+| 阶段 | 输入数据 | 初始化方式 | 前向模块 | Loss/Reward | 更新参数 | 冻结参数 | 阶段产物 | 如何传给下一阶段 |
+| -- | ---- | ----- | ---- | ----------- | ---- | ---- | ---- | -------- |
+
+必须明确：
+
+* 从头训练、resume、微调还是蒸馏；
+* encoder、decoder、prior、planner、actor、critic 是否联合训练；
+* teacher/student 是否同时训练；
+* 阶段之间传递的是权重、数据集、latent、轨迹还是策略；
+* 哪些信息仅训练时可用。
+
+随后用编号步骤给出训练伪流程，包括：
+
+1. 数据采样；
+2. 前向计算；
+3. 目标或奖励计算；
+4. 参数更新；
+5. 冻结或切换阶段；
+6. 最终保存哪些模型。
+
+### 3. 参数更新矩阵
+
+| Loss/Reward | Encoder                 | Decoder | Planner | Actor | Critic | Discriminator | 其他模块 |
+| ----------- | ----------------------- | ------- | ------- | ----- | ------ | ------------- | ---- |
+|             | 更新/冻结/stop-gradient/不参与 |         |         |       |        |               |      |
+
+若论文没有明确梯度流或冻结关系，应标记“论文未说明”，不能默认联合训练。
+
+### 4. 部署流程
+
+输出：
+
+| 顺序 | 在线输入 | 执行模块 | 输出 | 调用频率 | 是否依赖未来/真值/特权信息 |
+| -- | ---- | ---- | -- | ---- | -------------- |
+| 1  |      |      |    |      |                |
+
+随后用编号步骤说明完整部署过程，包括：
+
+* 传感器或任务命令从哪里进入；
+* 状态估计如何得到策略观测；
+* 高层与低层模块的调用顺序；
+* 网络输出的物理语义；
+* 动作如何转化为关节位置、残差、速度或力矩；
+* 是否经过 PD、执行器模型、滤波、限幅或安全层；
+* 哪些训练模块在部署时被丢弃；
+* 是否依赖 mocap、全局定位、相机、已知地形或未来参考。
+
+## 模块拆解
+
+对问题0中的每个核心模块，使用相同“模块卡片”分析：
+
+| 字段      | 内容                     |
+| ------- | ---------------------- |
+| 模块编号与名称 | 必须与问题0一致               |
+| 为什么需要   | 上游存在什么具体问题             |
+| 输入      | 符号、物理意义、来源、维度、坐标系、时间范围 |
+| 输出      | 数据语义、维度、去向和控制含义        |
+| 内部计算    | 网络、优化器、求解器、运动学或动力学模型   |
+| 可学习参数   | 哪些参数被更新                |
+| 优化信号    | Loss、Reward、监督标签或无优化   |
+| 更新方式    | 联合、交替、分阶段、冻结、微调或蒸馏     |
+| 训练/部署状态 | 训练专用、离线预处理或在线保留        |
+| 必要性     | 去掉后预计发生什么              |
+| 验证证据    | 消融、理论依据或仅机制推断          |
+| 原文位置    | 章节、公式、图表或算法            |
+
+不能只描述模块“做了什么”，还要解释它解决前一阶段留下的什么问题，以及结果如何被下一模块使用。
+
+### 领域专项检查
+
+仅在论文涉及相应领域时回答：
+
+* **强化学习：** actor/critic 观测差异、动作分布、奖励、折扣、GAE、termination、reset、curriculum、特权信息和训练算法。
+* **机器人控制：** 状态估计、坐标系、动作语义、控制频率、PD增益、执行器模型、接触约束、安全机制。
+* **模仿学习：** reference 来源、重定向、phase、teacher/student、行为克隆、DAgger、对抗模仿及部署时参考是否可得。
+* **latent/生成模型：** encoder、posterior、prior、decoder、token、量化、codebook、FSQ、diffusion、conditioning、采样过程及部署时 latent 来源。
+* **运动规划：** 规划空间、horizon、目标函数、约束、求解器、重规划频率和低层跟踪接口。
+* **sim-to-real：** 动力学随机化、执行器建模、时延、噪声、系统辨识、真机数据回流及仿真—真机接口一致性。
+
+## 关键公式与解释
+
+先给出总目标函数，再解释各子目标之间的关系。每个关键公式使用统一“公式卡片”。
+
+### 公式卡片
+
+1. **原公式与编号：** 使用 LaTeX 写出。
+2. **所属模块：** 对应 M1、M2 等。
+3. **它要解决的问题：** 没有该公式时会出现什么具体困难。
+4. **符号解释：** 每个变量的意义、维度、坐标系、时间索引和数据来源。
+5. **数学类型：** 最小化目标、最大化目标、约束、奖励、正则项、概率模型还是部署控制律。
+6. **优化对象：** 哪些变量是参数，哪些是常量或监督信号。
+7. **每一项的作用：** 分别鼓励或抑制什么行为。
+8. **梯度与更新关系：** 梯度流向哪些模块，是否存在冻结或 stop-gradient。
+9. **为什么采用该形式：** 来自何种概率假设、控制原理、距离度量或优化考虑。
+10. **超参数影响：** 权重增大、趋近于零或极端取值时会发生什么。
+11. **与前人公式的区别：** 本文修改了哪一项。
+12. **训练/部署关系：** 仅用于训练，还是部署时也要在线计算。
+13. **验证情况：** 是否有消融证明该项必要；没有则明确写“论文没有独立验证”。
+
+解释必须遵循以下因果链：
+
+> 原问题
+> → 为什么需要该公式
+> → 公式计算什么
+> → 优化哪些参数
+> → 如何影响系统行为
+> → 实验是否支持这一作用
+
+不能只做符号翻译。
+
+## 创新点分析
+
+从机制而不是命名出发，分析：
+
+* 新机制改变了表示空间、优化景观、数据分布还是控制接口；
+* 性能提升是否可能来自更大数据、更大模型、更多训练预算或额外特权信息；
+* 各创新之间是否相互依赖；
+* 是否存在“去掉一个模块后其他模块也无法工作”的耦合；
+* 消融能否隔离每项创新的独立贡献。
+
+## 理论保证
+
+将理论内容分为：
+
+1. 正式定理、命题或引理；
+2. 可由公式直接推出的性质；
+3. 作者提供的优化直觉；
+4. 仅由实验观察支持的经验现象。
+
+若存在正式理论结果，输出：
+
+| 理论结果 | 前提假设 | 保证对象 | 保证内容 | 证明位置 | 适用边界 |
+| ---- | ---- | ---- | ---- | ---- | ---- |
+
+对于控制论文，特别检查是否提供：
+
+* Lyapunov稳定性；
+* 输入到状态稳定性；
+* 递归可行性；
+* 约束满足；
+* 跟踪误差界；
+* 收敛性或最优性保证。
+
+如果没有，应明确写：
+
+> **论文未提供形式化理论保证。** 损失函数、奖励设计以及仿真或真机成功只能作为优化直觉和经验性证据，不能视为闭环稳定性、收敛性或全局最优性的证明。
+
+## 小结
+
+固定回答：
+
+1. 整套算法究竟优化了什么；
+2. 训练后真正保留下来的模型是什么；
+3. 部署时输入如何变成最终动作；
+4. 当前最大的不确定实现细节是什么。
+
+# 问题4：实验分析
+
+## 实验设置
+
+使用表格整理：
+
+* 仿真器和机器人平台；
+* 自由度、执行器及控制接口；
+* 环境数量、训练步数和训练时长；
+* 策略、规划、仿真和控制频率；
+* 网络结构、参数量和计算硬件；
+* 随机种子和统计方式；
+* 真机试验次数、安全措施和人工干预。
+
+论文没有报告的项目保留并标记“论文未说明”。
+
+## 数据集
+
+说明：
+
+* 数据来源、规模、片段数和时长；
+* 数据预处理、清洗和重定向流程；
+* 训练、验证和测试划分；
+* 是否存在片段重复或数据泄漏风险；
+* ID与OOD测试如何定义；
+* 被过滤的失败样本是否会改变任务难度。
+
+## 对比方法
+
+对每个主要基线说明：
+
+* 方法类别和基本机制；
+* 输入和输出；
+* 是否使用相同观测、动作空间和特权信息；
+* 数据量、网络规模、训练步数和计算预算是否匹配；
+* 是否由作者重新实现；
+* 调参是否公平。
+
+## 结果分析
+
+不能只抄表格数字。需要建立“主张—证据”矩阵：
+
+| 核心主张 | 对应实验/表图 | 指标和提升 | 控制变量 | 统计证据 | 支持强度 | 尚未回答的问题 |
+| ---- | ------- | ----- | ---- | ---- | ---- | ------- |
+
+支持强度统一分为：
+
+* **强：** 公平基线、关键消融、多随机种子和跨设置实验均支持；
+* **中：** 主要结果支持，但缺少部分统计、消融或跨设置验证；
+* **弱：** 主要依赖单一环境、定性视频、单次运行或不匹配基线；
+* **无法判断：** 关键信息没有报告。
+
+分析指标是否真正对应论文声称解决的问题，并区分统计提升和实际工程意义。
+
+## 失败案例
+
+严格区分：
+
+1. 作者明确报告的失败案例；
+2. 可以从表格、曲线或视频观察到的性能退化；
+3. 审稿人预测的潜在失效模式。
+
+对真实失败案例说明触发条件、具体表现、作者解释和证据位置。
+
+如果论文没有报告，写：
+
+> **论文未提供明确失败案例或失败率统计，因此无法判断方法的最坏情况表现。**
+
+预测的潜在失效模式必须标记为[推测]，并给出可证伪的压力测试。
+
+## 是否充分验证
+
+逐项检查：
+
+* 每个核心贡献是否有独立消融；
+* 是否控制模型规模、数据量和训练预算；
+* 是否报告均值、方差或置信区间；
+* 是否验证超参数敏感性；
+* 是否验证未见运动、任务、地形、物体或机器人形态；
+* 是否验证扰动、延迟、噪声、摩擦变化和长时域稳定性；
+* 真机结果是否报告试验次数、成功判据和失败次数；
+* 实时性是否包括完整链路，而不只是网络前向时间。
+
+最后给出总体结论：
+
+> 充分 / 部分充分 / 不充分 / 无法判断
+
+并列出决定该结论的三项最关键证据。
+
+## 可复现性清单
+
+| 项目                           | 论文提供的信息 | 完整程度        | 出处 | 缺失信息的影响 |
+| ---------------------------- | ------- | ----------- | -- | ------- |
+| 数据与预处理                       |         | 明确/部分明确/未说明 |    |         |
+| 观测、动作与坐标系                    |         |             |    |         |
+| 网络结构                         |         |             |    |         |
+| Loss/Reward及权重               |         |             |    |         |
+| Reset/Termination/Curriculum |         |             |    |         |
+| 优化器与训练超参数                    |         |             |    |         |
+| 仿真与控制频率                      |         |             |    |         |
+| PD与执行器模型                     |         |             |    |         |
+| Domain Randomization         |         |             |    |         |
+| 硬件、训练时间与随机种子                 |         |             |    |         |
+| 部署传感器与推理延迟                   |         |             |    |         |
+
+## 小结
+
+固定回答：
+
+1. 最有说服力的实验结果；
+2. 最薄弱或最不公平的实验环节；
+3. 论文尚未验证的最重要能力。
+
+# 问题5：批判性分析
+
+分析时分开说明：
+
+1. 作者主动承认的限制；
+2. 从实验结果直接观察到的限制；
+3. 审稿人推断的潜在风险。
+
+## 假设是否合理
+
+检查是否依赖：
+
+* 精确动力学模型；
+* 已知地形或物体状态；
+* 全局定位；
+* mocap或高质量参考运动；
+* 准确phase或未来轨迹；
+* 特定初始状态；
+* 特权信息；
+* 人工筛选数据；
+* 单一机器人形态。
+
+说明这些假设在仿真、实验室真机和开放环境中的合理性是否不同。
+
+## 泛化能力
+
+分别评价：
+
+* 同分布新样本；
+* 未见运动；
+* 未见任务；
+* 未见地形；
+* 未见物体；
+* 扰动与传感器噪声；
+* 长时域执行；
+* 跨机器人形态；
+* 仿真到真实。
+
+不能笼统写“泛化良好”。
+
+## 可扩展性
+
+分析：
+
+* 数据规模增长时是否可扩展；
+* 动作库、任务数、token数或规划长度增长时的复杂度；
+* 是否需要为每个任务重新训练；
+* 是否依赖昂贵的数据清洗、重定向或真机采集；
+* 是否容易扩展到更多自由度、手部操作和多接触任务。
+
+## 计算复杂度与实时性
+
+分别分析：
+
+* 训练计算量；
+* 推理计算量；
+* 时间复杂度与空间复杂度；
+* 模型参数量和显存需求；
+* 生成或规划步骤数；
+* 完整在线链路延迟；
+* 是否满足论文声称的控制频率。
+
+若论文只报告网络前向时间，不能据此直接认定完整系统实时。
+
+## 潜在改进方向
+
+每项改进必须与前面发现的局限一一对应，并采用以下格式：
+
+> **现有局限**
+> → **可能原因**
+> → **具体改进机制**
+> → **需要增加的实验**
+> → **判断改进有效的指标**
+
+不要只写“增加数据”“改进网络”“提高泛化性”等泛泛建议。
+
+至少给出：
+
+* 一个算法层面的改进；
+* 一个训练或数据层面的改进；
+* 一个控制与真机部署层面的改进；
+* 一个能够证伪论文核心假设的关键实验。
+
+## 小结
+
+固定回答：
+
+1. 方法最可靠的适用范围；
+2. 最可能失效的场景；
+3. 最值得优先解决的局限。
+
+# 最终 Takeaway
+
+最后使用1–2段完成总结，必须同时回答：
+
+1. 用一句闭环流程概括本文：输入经过哪些关键环节变成最终输出；
+2. 本文真正解决了什么，而不是作者笼统声称解决了什么；
+3. 最值得迁移到其他研究中的核心思想是什么；
+4. 如果只复现一个机制，最应该复现什么；
+5. 如果只质疑一个结论，最应该质疑什么；
+6. 最重要的适用边界或复现风险是什么。
+
+Takeaway不得只是重复贡献列表，长度控制在400字以内。
+
+# 输出前自检
+
+在提交报告前检查：
+
+* 是否仍有未解释的缩写；
+* 问题0和问题3中的模块编号是否一致；
+* 是否分别写清训练流、优化流和部署流；
+* 每个核心模块是否都有输入、输出、优化方式和使用阶段；
+* 每个关键公式是否解释了“为什么需要”和“优化谁”；
+* 是否把训练专用信息误写成部署输入；
+* 是否把前人模块误写成本创新；
+* 每项核心贡献是否对应至少一个实验；
+* 是否区分论文事实、直接推导、审稿判断和推测；
+* 是否把经验结果错误描述为理论保证。`,
+  en: `You are a senior expert in intelligent control, robot learning, and motion planning, as well as a reviewer for top-tier robotics and machine-learning journals. Based on the paper I upload and any available appendices, produce a PhD-level close-reading report that helps me understand the work at six levels: system-wide structure, module mechanisms, mathematical optimization, training and deployment, experimental validation, and methodological limitations.
+
+Your task is not to summarize the paper section by section. Reconstruct its complete causal chain:
+
+> What research problem is being solved?
+> → Why do existing methods fail?
+> → What modules does this paper introduce?
+> → What problem does each module solve?
+> → How does data flow between modules?
+> → Which parameters does each objective optimize?
+> → How is each module trained?
+> → Which modules remain at deployment time?
+> → Do the experiments actually validate the authors' claims?
+
+The target audience is graduate students in control, robotics, reinforcement learning, and generative motion. The report must combine mathematical rigor, system-level understanding, and reviewer-style criticism.
+
+# I. Reading and Evidence Rules
+
+## 1. Source Priority
+
+Use information sources in the following order:
+
+1. Main paper;
+2. Appendices, supplementary material, and algorithm boxes;
+3. Official project page or code repository;
+4. Cited prior papers;
+5. Other external sources.
+
+The analysis must be grounded primarily in the paper itself. If you use any source beyond the main paper, explicitly identify that source and do not present external information as content reported by this paper.
+
+If only the abstract or an incomplete version of the paper is available, state the coverage of the available material at the beginning of the report and identify which conclusions cannot be assessed reliably.
+
+## 2. Evidence Status
+
+Label important facts, explanations, and judgments using the following categories:
+
+* **[Explicitly reported in the paper]**: stated in the main text, appendix, equations, algorithms, tables, or figure captions.
+* **[Directly derived from the paper]**: not stated verbatim, but follows directly from the paper's equations, definitions, or algorithm steps; provide a short derivation.
+* **[Reviewer judgment]**: an evaluation of experimental sufficiency, novelty, assumptions, or limitations.
+* **[Speculation]**: an implementation interpretation or potential explanation that cannot be determined directly from the paper; state the basis and confidence level.
+* **[Not specified in the paper]**: not found in the available material and must not be filled in automatically using field conventions.
+
+For important missing information, use the following format:
+
+> **Not specified in the paper:** The exact missing information.
+> **Clues available in the paper:** Relevant evidence that may inform an assessment.
+> **Speculation (low/medium/high confidence):** A plausible explanation; if evidence is insufficient, write "No responsible speculation is possible."
+> **How to verify:** What code, supplementary material, or additional experiment must be checked.
+
+Strictly distinguish:
+
+* "The paper does not validate this capability" from "the method does not possess this capability";
+* "The authors claim better performance" from "the experiments sufficiently prove better performance";
+* "The loss encourages a property" from "the method theoretically guarantees that property";
+* "No failure occurred in the reported experiments" from "the system has no failure modes";
+* "The system ran stably in experiments" from "the closed-loop system has a formal stability guarantee."
+
+## 3. Source Locations
+
+Whenever possible, end claims about core methods, module inputs and outputs, key equations, training steps, experimental numbers, hyperparameters, ablation conclusions, and author-acknowledged limitations with their locations in the source:
+
+> (§3.2, Eq. (4), Fig. 2, Table 3, p. 6)
+
+Retain only fields that actually exist. If the paper has no printed page numbers, use "PDF page N." Never guess section, page, equation, figure, or table numbers; write "location not confirmed" when necessary.
+
+## 4. Abbreviations and Terminology
+
+Before using any important abbreviation, define it in the terminology table. At first use in the main text, still write:
+
+> Full English Name (abbreviation)
+
+Do not use undefined abbreviations such as iFSQ, CoLA, VQ, AMP, RFC, CVAE, or ELBO.
+
+A terminology entry must do more than expand the abbreviation. It must explain:
+
+* What the term denotes in this paper's system;
+* Which module it belongs to;
+* Its inputs and outputs;
+* Whether it is newly proposed, modified from prior work, or directly reused.
+
+If the paper does not provide the full form of an abbreviation, do not invent one based on its name.
+
+## 5. Mathematical and Writing Conventions
+
+* Use standard LaTeX for equations and do not place equations in code blocks.
+* Distinguish vectors, matrices, random variables, and scalars whenever possible.
+* For every key variable, explain its physical meaning, dimensionality, coordinate frame, time index, and data source.
+* Begin every second-level heading with one sentence that states the conclusion directly, then elaborate.
+* Prefer tables for exact mappings and comparisons; use complete prose for mechanisms and causal relationships.
+* Do not write vague statements such as "the encoder extracts features," "the planner generates actions," or "the policy outputs controls" without specifying interfaces and optimization relationships.
+* Do not use unsupported terms such as "significant," "efficient," "robust," "general," "state of the art," or "theoretically guaranteed." When restating a claim, write "the authors claim."
+
+The default total length should be approximately 8,000–14,000 Chinese-character equivalents, with Question 3, "Algorithm and Theory," occupying at least 35% of the report. Do not pad the report when the available paper information is insufficient.
+
+# Question 0: Terminology Map and System Overview
+
+Establish the complete architecture before discussing the research problem or equation details. Do not over-compress this section.
+
+## 0.1 Material Coverage and Paper Card
+
+Report:
+
+* Paper title, authors, year, and publication venue;
+* Which parts of the main paper, appendix, supplementary material, project page, and code were examined;
+* Whether the work primarily concerns control, reinforcement learning, imitation learning, motion generation, motion planning, retargeting, or system integration;
+* Whether it solves an end-to-end system or only one local stage.
+
+## 0.2 Terminology and Abbreviation Table
+
+Before using abbreviations in the report, provide:
+
+| Abbreviation/name | Full English name | Meaning | Concrete role in this paper | Module | Origin | Source location |
+| --- | --- | --- | --- | --- | --- | --- |
+| Example: iFSQ | | | What it processes and produces | M? | Proposed/modified/reused | |
+
+Cover at least every paper-specific term, model name, loss name, and algorithm abbreviation necessary to understand the system architecture.
+
+## 0.3 One-Sentence Definition and Task Interface
+
+First answer in one sentence:
+
+> What input does the paper transform, through what core mechanism, into what output, in order to solve what problem?
+
+Then provide:
+
+| Item | Content |
+| --- | --- |
+| Raw data or task input | |
+| Training supervision, reward, or objective | |
+| Inputs available online at deployment | |
+| Key intermediate representations | |
+| Final model output | |
+| Final physical control quantity | Joint position, residual position, velocity, torque, trajectory, latent, or another quantity |
+| System boundary | Upstream generation, retargeting, planning, low-level control, or complete system |
+
+## 0.4 Core Tension and Solution Path
+
+Explain the main logic as cause, consequence, and design:
+
+> Concrete bottleneck in existing methods
+> → Why it causes failure
+> → Which mechanism this paper introduces to address it
+> → Which metric or capability should improve
+
+Explain this first in plain language, then name the technical mechanism. Do not merely list module names.
+
+## 0.5 Global Module Architecture
+
+Assign every core module a fixed identifier such as M1, M2, and M3. Reuse exactly the same identifiers and names throughout the rest of the report.
+
+First describe three distinct flows.
+
+### Training Data Flow
+
+> Raw data
+> → M1: preprocessing or retargeting
+> → M2: representation learning
+> → M3: planning, generation, or policy learning
+> → M4: low-level control
+> → Final model or policy
+
+For every arrow, name the transferred object, such as state, trajectory, token, latent, reference pose, action, or reward.
+
+### Optimization Flow
+
+State which modules each loss or reward updates, for example:
+
+> (L_{\\mathrm{rec}}\\rightarrow{\\text{Encoder},\\text{Decoder}})
+> (L_{\\mathrm{policy}}\\rightarrow{\\text{Actor}})
+
+Explicitly describe joint training, alternating training, staged training, freezing, fine-tuning, and stop-gradient relationships.
+
+### Deployment Control Flow
+
+> Online sensors or user command
+> → State estimation
+> → High-level generation or planning
+> → Low-level policy
+> → Action target
+> → PD/torque controller
+> → Robot
+> → State feedback
+
+Do not add modules that are absent from the paper. If a module is necessary for real deployment but not explained, identify it explicitly as missing information.
+
+Then provide the module inventory:
+
+| ID | Module | Why it is needed | Input | Output | Learned? | Used during training? | Used during deployment? | Origin |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| M1 | | | | | | | | Proposed/modified/reused |
+
+## 0.6 Training-versus-Deployment Comparison
+
+| Comparison item | Training | Deployment |
+| --- | --- | --- |
+| Available information | | |
+| Privileged information or ground-truth state | | |
+| Use of future references | | |
+| Teacher/critic/discriminator | | |
+| Encoder/decoder/planner/policy | | |
+| Final input | | |
+| Final output | | |
+| Discarded modules | | |
+
+Explain especially whether teachers, discriminators, future trajectories, ground-truth states, privileged critics, and data-cleaning modules used during training remain at deployment.
+
+## 0.7 Thirty-Second Plain-Language Explanation
+
+In no more than 300 words and with as few abbreviations as possible, explain:
+
+* Where the system gets its input;
+* What happens in sequence;
+* How the final robot action or task result is produced;
+* Which step is genuinely new in this paper.
+
+# Question 1: Research Problem
+
+## Core Problem
+
+* Formally define the task.
+* State the system input, desired output, optimization objective, and evaluation criteria.
+* Identify whether this is tracking, generation, planning, control, retargeting, loco-manipulation, or a hierarchical system problem.
+* When applicable, define the state, observation, action, command, reward, and termination conditions of the Markov decision process or partially observable Markov decision process.
+* State the system boundary: upstream data, motion generation, high-level planning, low-level control, or the complete chain.
+
+## Application Background and Value
+
+* Explain the practical importance of this problem in robot control or motion learning.
+* Explain why conventional engineering approaches or existing learning methods do not directly meet the requirements.
+* Distinguish scientific value, algorithmic value, and engineering/deployment value.
+
+## Existing Methods
+
+Organize existing work by methodological category rather than listing papers. For each category, explain:
+
+* Basic idea;
+* Input and output;
+* Optimization method;
+* Strengths;
+* Failure point on this paper's task.
+
+If this paper builds on a specific prior method, explain only the minimum background necessary and then state how the present paper inherits from it.
+
+## Limitations
+
+This subsection concerns limitations of existing methods, not limitations of the present paper. Give the complete causal chain:
+
+> Existing design or assumption
+> → Resulting optimization, representation, or control problem
+> → Concrete experimental or deployment consequence
+> → Corresponding module introduced by this paper
+
+## Summary
+
+Answer exactly:
+
+1. The core tension the paper is actually trying to resolve;
+2. The strongest evidence that this problem matters;
+3. The largest assumption or boundary in the current problem formulation.
+
+# Question 2: Core Contributions
+
+## Main Idea
+
+Summarize it in two ways:
+
+1. One paragraph of plain-language intuition;
+2. One paragraph of technical description.
+
+Both must focus on why the design was chosen rather than merely listing modules.
+
+## Method Framework
+
+Using the module identifiers from Question 0, locate each innovation within the overall system. Explain only where the contribution sits in the architecture; do not repeat the detailed equations or training steps from Question 3.
+
+## Core Innovations
+
+Provide a contribution ledger:
+
+| Claimed contribution | Prior method inherited or required | What is genuinely added or changed | Type | Corresponding experiment | Evidence location |
+| --- | --- | --- | --- | --- | --- |
+| | | | New algorithm/training strategy/system integration/data scale/deployment method/experimental finding | | |
+
+Distinguish:
+
+* A genuinely new algorithm;
+* A local modification to an existing method;
+* A new composition of existing modules;
+* Gains attributable to data or compute scale;
+* Engineering implementation and system integration;
+* A new experimental finding.
+
+Do not assume that the entire pipeline is novel.
+
+## Intuitive Explanation
+
+For each major innovation, answer:
+
+* Why was the original method insufficient?
+* What does the new mechanism change?
+* Why might it work?
+* Does it improve representation capacity, optimization stability, exploration, dynamic feasibility, generalization, or deployment-time observability?
+* Is this intuition stated by the authors, derived from equations, or a reviewer interpretation?
+
+## Summary
+
+Answer exactly:
+
+1. The paper's most substantive new content;
+2. Which contribution is primarily system integration rather than foundational algorithmic innovation;
+3. Which contribution receives the most direct experimental support.
+
+# Question 3: Algorithm and Theory (Main Focus)
+
+## Method Origins
+
+For every key module, explain:
+
+* Which prior work or standard technique it comes from;
+* What problem the prior method originally solved;
+* The prior method's inputs, outputs, and optimization objective;
+* What this paper reuses directly;
+* What this paper modifies;
+* What new problem the modification addresses.
+
+If you have not read the cited paper itself, write "according to this paper's description of the cited work" and do not add unverified implementation details.
+
+## Overall Procedure
+
+### 1. Symbols, Coordinate Frames, and Time
+
+When applicable, explain:
+
+* World, base/root, heading, body, joint, and end-effector coordinate frames;
+* The coordinate frames in which positions, orientations, and velocities are expressed;
+* Rotation representation, quaternion ordering, and whether global yaw is removed;
+* The meanings of \\(t\\), history window, future window, phase, and planning horizon;
+* Whether the method is causal and whether it uses future frames;
+* Data, policy, planning, simulation, and actuator frequencies.
+
+### 2. Staged Training Procedure
+
+Provide:
+
+| Stage | Input data | Initialization | Forward modules | Loss/reward | Updated parameters | Frozen parameters | Stage output | Transfer to next stage |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+Explicitly state:
+
+* Whether training starts from scratch, resumes, fine-tunes, or distills;
+* Whether encoder, decoder, prior, planner, actor, and critic are trained jointly;
+* Whether teacher and student are trained simultaneously;
+* Whether stages pass weights, datasets, latents, trajectories, or policies;
+* Which information is available only during training.
+
+Then give a numbered pseudo-procedure covering:
+
+1. Data sampling;
+2. Forward computation;
+3. Target or reward computation;
+4. Parameter updates;
+5. Freezing or stage transitions;
+6. Which models are saved at the end.
+
+### 3. Parameter-Update Matrix
+
+| Loss/reward | Encoder | Decoder | Planner | Actor | Critic | Discriminator | Other modules |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| | Updated/frozen/stop-gradient/not involved | | | | | | |
+
+If gradient flow or freezing is not stated, mark it "not specified in the paper"; do not assume joint training.
+
+### 4. Deployment Procedure
+
+Provide:
+
+| Order | Online input | Executed module | Output | Invocation frequency | Depends on future/ground-truth/privileged information? |
+| --- | --- | --- | --- | --- | --- |
+| 1 | | | | | |
+
+Then give a numbered description of the complete deployment process, including:
+
+* Where sensor input or task commands enter;
+* How state estimation produces policy observations;
+* The invocation order of high- and low-level modules;
+* The physical meaning of the network output;
+* How actions become joint positions, residuals, velocities, or torques;
+* Whether PD control, actuator models, filtering, clipping, or a safety layer is used;
+* Which training-only modules are discarded;
+* Whether the system depends on motion capture, global localization, cameras, known terrain, or future references.
+
+## Module Breakdown
+
+For every core module defined in Question 0, use the same module-card format:
+
+| Field | Content |
+| --- | --- |
+| Module ID and name | Must match Question 0 |
+| Why needed | The concrete upstream problem |
+| Input | Symbols, physical meaning, source, dimension, coordinate frame, and temporal range |
+| Output | Data semantics, dimension, destination, and control meaning |
+| Internal computation | Network, optimizer, solver, kinematics, or dynamics model |
+| Learnable parameters | Which parameters are updated |
+| Optimization signal | Loss, reward, supervision, or no optimization |
+| Update method | Joint, alternating, staged, frozen, fine-tuned, or distilled |
+| Training/deployment status | Training-only, offline preprocessing, or retained online |
+| Necessity | What is expected to happen if removed |
+| Validation evidence | Ablation, theoretical rationale, or mechanism-only inference |
+| Source location | Section, equation, figure, table, or algorithm |
+
+Do not merely describe what a module does. Explain what problem left by the preceding stage it solves and how the next module uses its output.
+
+### Domain-Specific Checks
+
+Answer only the categories relevant to the paper:
+
+* **Reinforcement learning:** actor/critic observation differences, action distribution, reward, discount factor, generalized advantage estimation, termination, reset, curriculum, privileged information, and training algorithm.
+* **Robot control:** state estimation, coordinate frames, action semantics, control frequency, PD gains, actuator model, contact constraints, and safety mechanisms.
+* **Imitation learning:** reference source, retargeting, phase, teacher/student, behavior cloning, dataset aggregation, adversarial imitation, and whether the reference is available at deployment.
+* **Latent/generative models:** encoder, posterior, prior, decoder, token, quantization, codebook, finite scalar quantization, diffusion, conditioning, sampling procedure, and deployment-time latent source.
+* **Motion planning:** planning space, horizon, objective, constraints, solver, replanning frequency, and low-level tracking interface.
+* **Simulation to reality:** dynamics randomization, actuator modeling, delay, noise, system identification, real-data feedback, and simulation-to-real interface consistency.
+
+## Key Equations and Explanations
+
+Present the total objective first, then explain how its sub-objectives relate. Use the following uniform equation card for every key equation.
+
+### Equation Card
+
+1. **Original equation and number:** Typeset it in LaTeX.
+2. **Module:** Corresponding M1, M2, and so on.
+3. **Problem addressed:** What concrete difficulty would arise without it?
+4. **Symbols:** Meaning, dimension, coordinate frame, time index, and data source of every variable.
+5. **Mathematical type:** Minimization, maximization, constraint, reward, regularizer, probabilistic model, or deployment control law.
+6. **Optimization variables:** Which quantities are parameters, constants, or supervision signals?
+7. **Role of every term:** What behavior does each term encourage or suppress?
+8. **Gradient and update relationships:** Which modules receive gradients? Is anything frozen or stop-gradient?
+9. **Why this form:** Which probabilistic assumption, control principle, distance measure, or optimization consideration motivates it?
+10. **Hyperparameter effects:** What happens when a weight increases, approaches zero, or takes an extreme value?
+11. **Difference from prior equations:** Which term is changed by this paper?
+12. **Training/deployment relationship:** Is it training-only or also evaluated online?
+13. **Validation:** Does an ablation establish its necessity? If not, explicitly write "the paper does not validate this term independently."
+
+Every explanation must follow this causal chain:
+
+> Original problem
+> → Why this equation is needed
+> → What the equation computes
+> → Which parameters it optimizes
+> → How it affects system behavior
+> → Whether experiments support that effect
+
+Do not merely translate symbols into prose.
+
+## Innovation Analysis
+
+Analyze mechanisms rather than names:
+
+* Does the new mechanism change the representation space, optimization landscape, data distribution, or control interface?
+* Could performance gains come from more data, a larger model, more training compute, or extra privileged information?
+* Do the innovations depend on one another?
+* Is there coupling such that removing one module prevents other modules from functioning?
+* Can the ablations isolate each innovation's independent contribution?
+
+## Theoretical Guarantees
+
+Separate theoretical content into:
+
+1. Formal theorems, propositions, or lemmas;
+2. Properties directly derivable from equations;
+3. Optimization intuitions offered by the authors;
+4. Empirical phenomena supported only by experiments.
+
+If formal results exist, provide:
+
+| Theoretical result | Assumptions | Guaranteed object | Guarantee | Proof location | Applicability boundary |
+| --- | --- | --- | --- | --- | --- |
+
+For control papers, specifically check for:
+
+* Lyapunov stability;
+* Input-to-state stability;
+* Recursive feasibility;
+* Constraint satisfaction;
+* Tracking-error bounds;
+* Convergence or optimality guarantees.
+
+If none are provided, explicitly write:
+
+> **The paper provides no formal theoretical guarantee.** Losses, reward design, and successful simulation or real-robot experiments provide optimization intuition and empirical evidence only; they are not proofs of closed-loop stability, convergence, or global optimality.
+
+## Summary
+
+Answer exactly:
+
+1. What the complete algorithm actually optimizes;
+2. Which trained models are ultimately retained;
+3. How deployment inputs become final actions;
+4. The largest remaining uncertainty about implementation.
+
+# Question 4: Experimental Analysis
+
+## Experimental Setup
+
+Use a table to organize:
+
+* Simulator and robot platform;
+* Degrees of freedom, actuators, and control interface;
+* Number of environments, training steps, and training duration;
+* Policy, planning, simulation, and control frequencies;
+* Network architecture, parameter count, and compute hardware;
+* Random seeds and statistical reporting;
+* Number of real-robot trials, safety measures, and human interventions.
+
+Retain every item not reported and mark it "not specified in the paper."
+
+## Dataset
+
+Explain:
+
+* Data sources, scale, number of clips, and duration;
+* Preprocessing, cleaning, and retargeting;
+* Training, validation, and test splits;
+* Risks of clip duplication or data leakage;
+* How in-distribution and out-of-distribution tests are defined;
+* Whether filtering failed samples changes task difficulty.
+
+## Baselines
+
+For every major baseline, explain:
+
+* Method category and basic mechanism;
+* Input and output;
+* Whether observations, action space, and privileged information are matched;
+* Whether data quantity, model size, training steps, and compute budget are matched;
+* Whether the authors reimplemented it;
+* Whether tuning is fair.
+
+## Result Analysis
+
+Do not merely copy table values. Construct a claim-evidence matrix:
+
+| Core claim | Experiment/table/figure | Metric and improvement | Controlled variables | Statistical evidence | Support strength | Open question |
+| --- | --- | --- | --- | --- | --- | --- |
+
+Use the following support-strength scale:
+
+* **Strong:** fair baselines, key ablations, multiple random seeds, and cross-setting experiments all support the claim;
+* **Moderate:** main results support it, but some statistics, ablations, or cross-setting validation are missing;
+* **Weak:** evidence mainly comes from one environment, qualitative video, a single run, or mismatched baselines;
+* **Cannot determine:** essential information is not reported.
+
+Assess whether each metric actually corresponds to the problem the paper claims to solve, and distinguish statistical improvement from practical engineering significance.
+
+## Failure Cases
+
+Strictly separate:
+
+1. Failures explicitly reported by the authors;
+2. Performance degradation visible in tables, curves, or videos;
+3. Potential failure modes predicted by the reviewer.
+
+For observed failures, state the trigger, concrete behavior, authors' explanation, and source location.
+
+If none are reported, write:
+
+> **The paper provides no explicit failure cases or failure-rate statistics, so worst-case behavior cannot be assessed.**
+
+Every predicted failure mode must be labeled [Speculation] and paired with a falsifiable stress test.
+
+## Sufficiency of Validation
+
+Check each item:
+
+* Does every core contribution have an independent ablation?
+* Are model size, data amount, and training budget controlled?
+* Are means, variances, or confidence intervals reported?
+* Is hyperparameter sensitivity tested?
+* Are unseen motions, tasks, terrains, objects, or robot morphologies tested?
+* Are perturbations, delay, noise, friction variation, and long-horizon stability tested?
+* Do real-robot results report trial count, success criteria, and failure count?
+* Does real-time evaluation include the entire pipeline rather than network forward-pass time alone?
+
+Give one overall verdict:
+
+> Sufficient / Partially sufficient / Insufficient / Cannot determine
+
+List the three most important pieces of evidence determining that verdict.
+
+## Reproducibility Checklist
+
+| Item | Information provided | Completeness | Source | Impact of missing information |
+| --- | --- | --- | --- | --- |
+| Data and preprocessing | | Clear/partially clear/not specified | | |
+| Observations, actions, and coordinate frames | | | | |
+| Network architecture | | | | |
+| Losses/rewards and weights | | | | |
+| Reset/termination/curriculum | | | | |
+| Optimizer and training hyperparameters | | | | |
+| Simulation and control frequencies | | | | |
+| PD control and actuator model | | | | |
+| Domain randomization | | | | |
+| Hardware, training time, and random seeds | | | | |
+| Deployment sensors and inference latency | | | | |
+
+## Summary
+
+Answer exactly:
+
+1. The most convincing experimental result;
+2. The weakest or least fair experimental component;
+3. The most important capability that remains unvalidated.
+
+# Question 5: Critical Analysis
+
+Analyze separately:
+
+1. Limitations explicitly acknowledged by the authors;
+2. Limitations directly visible in experimental results;
+3. Potential risks inferred by the reviewer.
+
+## Are the Assumptions Reasonable?
+
+Check whether the method depends on:
+
+* An accurate dynamics model;
+* Known terrain or object state;
+* Global localization;
+* Motion capture or high-quality reference motion;
+* Accurate phase or future trajectories;
+* A particular initial state;
+* Privileged information;
+* Manually filtered data;
+* A single robot morphology.
+
+Explain how the reasonableness of each assumption differs across simulation, laboratory hardware, and open-world deployment.
+
+## Generalization
+
+Evaluate separately:
+
+* New in-distribution samples;
+* Unseen motions;
+* Unseen tasks;
+* Unseen terrain;
+* Unseen objects;
+* Perturbations and sensor noise;
+* Long-horizon execution;
+* Cross-morphology transfer;
+* Simulation-to-real transfer.
+
+Do not write a blanket statement such as "generalizes well."
+
+## Scalability
+
+Analyze:
+
+* Whether the method scales as the dataset grows;
+* Complexity as the motion library, task count, token count, or planning horizon increases;
+* Whether every new task requires retraining;
+* Dependence on expensive data cleaning, retargeting, or real-robot collection;
+* Ease of extension to more degrees of freedom, dexterous hands, and multi-contact tasks.
+
+## Computational Complexity and Real-Time Performance
+
+Analyze separately:
+
+* Training compute;
+* Inference compute;
+* Time and space complexity;
+* Parameter count and memory requirements;
+* Number of generation or planning steps;
+* End-to-end online latency;
+* Whether the claimed control frequency is met.
+
+If the paper reports only network forward-pass time, do not conclude that the complete system is real-time.
+
+## Potential Improvements
+
+Every proposed improvement must correspond to a previously identified limitation and use this format:
+
+> **Current limitation**
+> → **Possible cause**
+> → **Concrete improvement mechanism**
+> → **Required additional experiment**
+> → **Metric indicating success**
+
+Do not offer vague suggestions such as "add data," "improve the network," or "increase generalization."
+
+Include at least:
+
+* One algorithm-level improvement;
+* One training- or data-level improvement;
+* One control- and real-deployment-level improvement;
+* One critical experiment capable of falsifying the paper's core assumption.
+
+## Summary
+
+Answer exactly:
+
+1. The method's most reliable scope of application;
+2. The scenario in which it is most likely to fail;
+3. The limitation that should be addressed first.
+
+# Final Takeaway
+
+Conclude in one or two paragraphs and answer all of the following:
+
+1. Summarize the closed-loop process in one sentence: which key stages transform the input into the final output?
+2. What does the paper actually solve, as opposed to what the authors claim in broad terms?
+3. Which core idea is most transferable to other research?
+4. If only one mechanism were reproduced, which should it be?
+5. If only one conclusion were challenged, which should it be?
+6. What is the most important applicability boundary or reproducibility risk?
+
+The Takeaway must not merely repeat the contribution list and should remain under 400 English words.
+
+# Pre-Submission Self-Check
+
+Before submitting the report, verify:
+
+* No abbreviation remains unexplained;
+* Module identifiers are consistent between Questions 0 and 3;
+* Training flow, optimization flow, and deployment flow are all stated separately;
+* Every core module has its inputs, outputs, optimization method, and usage stage specified;
+* Every key equation explains both why it is needed and what it optimizes;
+* Training-only information is not incorrectly presented as a deployment input;
+* Prior-work modules are not misrepresented as original contributions;
+* Every core contribution maps to at least one experiment;
+* Paper facts, direct derivations, reviewer judgments, and speculation are distinguished;
+* Empirical results are not misrepresented as theoretical guarantees.`,
 };
 
 const categories = [
@@ -4626,15 +5978,13 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function isLikelyFormula(value) {
-  const text = String(value).trim();
-  return !text.includes("$") && /\\[a-zA-Z]+|[a-zA-Z]_\{?|\^\{?/.test(text);
-}
-
 function renderText(value) {
   const text = String(value).trim();
-  const escaped = escapeHtml(text);
-  return isLikelyFormula(text) ? `<span class="math-line">\\(${escaped}\\)</span>` : escaped;
+  // MathJax handles explicitly delimited inline or display formulas. Inferring
+  // formulas from underscores or carets misclassifies technical prose such as
+  // "Q_D receives privileged state" and turns the whole paragraph into one
+  // non-wrapping math expression.
+  return escapeHtml(text);
 }
 
 function listItems(items) {
