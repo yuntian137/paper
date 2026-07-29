@@ -1040,7 +1040,6 @@
       }
     },
     {
-      "_comment": "基于 arXiv v2 全文整理；创新表述按系统整合贡献克制描述。",
       "id": "hil-dynamic-athletic-control",
       "categories": [
         "locomotion",
@@ -1049,70 +1048,78 @@
       "pdf": "https://arxiv.org/pdf/2505.12619",
       "project": "https://jiashunwang.github.io/HIL",
       "arxiv": "https://arxiv.org/abs/2505.12619",
-      "year": "2026",
-      "venue": "ACM Transactions on Graphics (TOG)",
+      "year": "2025",
+      "venue": "arXiv:2505.12619",
       "zh": {
         "title": "HIL: Hybrid Imitation Learning for Dynamic Athletic Control",
         "authors": "Jiashun Wang, Yifeng Jiang, Haotian Zhang, Chen Tessler, Davis Rempe, Jessica Hodgins, Xue Bin Peng",
-        "institutions": "卡内基梅隆大学；NVIDIA；西蒙弗雷泽大学",
-        "status": "全文已精读（v2）",
-        "takeaway": "把 HIL 记成“统一目标条件接口下的 AMP + 持续运动跟踪 rehearsal”：新意主要在共享观测、适应阶段持续防遗忘以及场景条件判别器，而不是新的强化学习优化算法。",
+        "institutions": "Carnegie Mellon University；NVIDIA；Simon Fraser University",
+        "status": "全文已精读（依据正文与附录，并按上传模板更新）",
+        "takeaway": "HIL 最根本的训练逻辑是两阶段：先训练一个 goal-conditioned motion tracking policy，再保留 tracking 环境并加入 AMP 任务环境，两组 rollout 混合更新同一个 actor；它的主要价值是用持续 tracking 防止 AMP 适应阶段遗忘技能和发生 mode collapse，而不是提出新的 RL 优化算法。",
         "tags": [
-          "Hybrid Imitation Learning",
           "Motion Tracking",
-          "Adversarial Imitation Learning",
+          "AMP",
           "Goal-Conditioned RL",
+          "Multi-Task RL",
           "PPO",
           "Parkour",
           "Physics-Based Character Control"
         ],
-        "mainContent": "本文针对物理仿真人体控制中“逐帧运动跟踪保真但难适应新场景、对抗模仿可适应但易模式坍缩”的矛盾，提出 HIL：在统一目标条件观测空间下，用并行环境共同训练同一个策略的运动跟踪模式和 AMP 风格任务模式。跑酷策略以身体状态、局部场景点云和目标位置为输入，持续跟踪分支负责保留参考技能，任务奖励与风格奖励负责场景适应和技能组合。扰动跑酷评测中，HIL 获得最高技能准确率 0.66 和最低跟踪误差 0.31，但任务完成率为 0.74，低于 AMP warm start 的 0.85，说明其主要优势是技能多样性与动作保真度，而非最高纯任务成功率。",
+        "mainContent": "本文解决逐帧 motion tracking 难以超出参考轨迹、AMP 虽然能够适应任务却容易 mode collapse 的矛盾。训练本质上分为两个阶段：第一阶段先训练一个类似 DeepMimic 的 goal-conditioned motion tracking policy，使其掌握各个单项技能；第二阶段从该策略继续训练，将一半并行环境保留为 tracking mode，另一半设置为 task + AMP mode，两组 rollout 共同更新同一个 actor。持续 tracking 相当于 reference rehearsal，用于保留复杂技能；task reward 和 style reward 则允许策略适应新障碍并组合技能。HIL 在跑酷实验中获得更高的技能准确率和更低的跟踪误差，但任务完成率低于 AMP warm start，说明其主要优势是技能覆盖、自然度和适应性之间的折中。",
         "innovations": [
-          "构造统一的目标条件观测空间：运动跟踪与对抗任务模式都以角色状态和任务/场景条件作为策略输入，不再依赖只在跟踪阶段可用的显式相位或完整未来目标姿态。",
-          "在任务适应阶段持续并行保留运动跟踪环境，并用两类 rollout 共同更新同一个策略；该持续参考约束用于减轻技能遗忘和 AMP 的模式坍缩。",
-          "为跑酷任务使用场景条件判别器，将连续 10 步角色状态与局部场景点云共同输入判别器，使风格奖励同时衡量动作自然性和动作与当前障碍的匹配程度。",
-          "采用 Perturbed State Initialization，在参考初始状态上加入高斯扰动，以提高偏离参考轨迹后的恢复能力，并改善不同技能之间的过渡。"
+          "论文的核心贡献是一个两阶段混合训练范式，而不是新的 PPO 或对抗学习算法：第一阶段训练 motion tracking policy，第二阶段在 AMP 任务适应过程中持续保留 motion tracking 环境，使参考技能不断向共享 actor 提供监督，减轻遗忘和模式坍缩。",
+          "为 tracking mode 和 adversarial task mode 设计统一的 goal-conditioned observation。策略在两种模式下都接收角色状态和任务条件，而不依赖只在参考轨迹中存在的显式 phase 或完整 future target pose，因此两组环境能够真正共享同一个 actor。",
+          "在第二阶段使用并行多任务环境：一半环境执行逐帧 motion tracking，另一半环境执行 task reward + AMP style reward，来自两类环境的 PPO 样本被混合用于更新同一个策略。",
+          "跑酷任务中的 discriminator 同时观察过去 10 步角色状态和局部场景点云，使其不仅判断动作是否接近参考运动分布，也判断动作是否适合当前障碍几何。",
+          "使用 Perturbed State Initialization 对参考初始状态加入高斯扰动，扩大 tracking policy 的恢复范围，并缓解前一个技能终止状态与后一个技能起始状态不匹配造成的过渡困难。"
         ],
         "implementation": [
-          "跑酷数据包含 19 个来自 YouTube 的参考片段，总计约 30 秒、覆盖 15 种技能；作者使用 TRAM 恢复人体运动，通过身体朝向线索修正地面方向，人工用盒体标注场景，并用物理运动跟踪器修正碰撞、抖动和滑动。",
-          "跑酷策略输入角色状态、最近 60 个场景点和目标位置；状态与目标由 MLP 编码，点云由 PointNet 编码，再送入 2 层、2 头、隐空间维度 256 的 Transformer。策略输出高斯分布下的目标关节位置，固定动作标准差为 0.055，并由 PD 控制器转换为关节力矩。",
-          "训练在 Isaac Gym 中进行，仿真频率为 120 Hz、策略频率为 30 Hz，采用 PPO 和 GAE；使用 4096 个并行环境和 4 张 NVIDIA V100。先用 40 亿样本进行运动跟踪预训练，再用 20 亿样本进行混合训练，其中一半环境运行运动跟踪，另一半运行对抗模仿任务。",
-          "运动跟踪模式使用 0.5×跟踪奖励 + 0.5×风格奖励；对抗任务模式使用 0.5×任务奖励 + 0.5×风格奖励。评论家额外接收二值训练模式标识，策略不接收该标识。",
-          "跑酷跟踪模式的目标位置从参考轨迹未来 1–2 秒的根部位置采样；任务模式的目标位置在后续障碍附近采样，并加入论文记为 N(0, 0.2) 的高斯扰动。评估使用五障碍序列，并以 DTW 计算技能准确率与跟踪误差。",
-          "方向控制实验使用约 7 分钟的剑盾动作捕捉数据，并以目标行进方向和身体朝向作为条件；论文还报告了与 AMP、ASE 和 MaskedMimic 的比较。",
-          "论文未说明 PSI 的噪声尺度、PD 增益与力矩上限、随机种子数量、置信区间以及实际 wall-clock 训练时间。"
+          "数据准备：作者从 YouTube 收集 19 个跑酷视频片段，总计约 30 秒、覆盖 15 种技能；先使用 TRAM 恢复人体运动，人工用盒体近似障碍场景，再使用 physics-based motion tracker 修正碰撞、抖动和滑动。修正后的运动用于计算 tracking reward、执行 PSI 初始化，并作为 AMP discriminator 的正样本。",
+          "第一阶段——Motion Tracking Pretraining：使用约 40 亿个样本训练一个 goal-conditioned tracking policy。跑酷策略输入当前角色状态 \\(s_t\\)、局部场景点云 \\(c_t\\) 和目标位置 \\(l_t\\)，其中 tracking 阶段的 \\(l_t\\) 从参考轨迹未来 1–2 秒的 root position 中采样。策略通过逐帧位置、旋转、线速度、角速度和 root height 跟踪奖励学习各个独立技能；论文未明确说明该预训练阶段是否已经同时启用 style reward。",
+          "第二阶段——Hybrid Training：从第一阶段得到的 actor 权重继续训练约 20 亿个样本。4096 个并行环境中，一半运行 motion tracking mode，另一半运行 adversarial imitation learning mode；它们不是分别训练两个策略，而是产生两类 rollout 后共同更新同一个 actor。",
+          "第二阶段的 tracking 环境仍然读取参考运动并计算 \\(0.5r_t^{\\mathrm{track}}+0.5r_t^{\\mathrm{style}}\\)，作用是持续 rehearsal，防止 actor 在任务适应过程中遗忘复杂动作。adversarial task 环境不进行逐帧参考跟踪，而计算 \\(0.5r_t^{\\mathrm{task}}+0.5r_t^{\\mathrm{style}}\\)，其中 task reward 鼓励接近和穿越目标障碍，style reward 由 AMP discriminator 提供。",
+          "Actor 在两种模式下使用完全相同的输入接口，并且不接收 tracking/task mode 标识。Critic 额外接收二值模式变量 \\(k_t\\)，用于区分两种不同的奖励和 return 分布；该变量不输入 actor，以避免策略显式分裂成 tracking policy 和 task policy。",
+          "Discriminator 的正样本来自修正后的参考运动，负样本来自 policy rollout。跑酷 discriminator 输入连续 10 步的 root 速度、关节旋转与速度、末端位置以及局部场景点云，并输出 style reward；场景条件用于约束不同障碍应匹配不同的动作技能。",
+          "策略网络使用状态 MLP、目标 MLP 和 PointNet 编码输入，再送入 2 层、2 头、latent dimension 为 256 的 Transformer。策略输出固定标准差为 0.055 的高斯动作分布，动作表示目标关节位置，并通过 PD 控制器转换为关节力矩。",
+          "训练使用 Isaac Gym、PPO 和 GAE，仿真频率为 120 Hz，策略频率为 30 Hz，使用 4096 个并行环境和 4 张 NVIDIA V100。tracking 与 task/style reward 在第二阶段的权重均为 0.5。",
+          "部署时不再存在两组环境或两种模式，只保留训练完成的 actor 和 PD controller。Actor 根据当前角色状态、局部点云和外部目标位置输出目标关节位置；部署不需要参考运动、tracking reward、discriminator、critic、PSI 或模式变量。",
+          "实验中 HIL 的 skill accuracy 为 0.66、tracking error 为 0.31、task completion 为 0.74；AMP warm start 的 task completion 为 0.85，但 skill accuracy 和 tracking quality 更差。因此 HIL 的结果应理解为用部分纯任务性能换取更好的技能覆盖和参考动作保真度。"
         ]
       },
       "en": {
         "title": "HIL: Hybrid Imitation Learning for Dynamic Athletic Control",
         "authors": "Jiashun Wang, Yifeng Jiang, Haotian Zhang, Chen Tessler, Davis Rempe, Jessica Hodgins, Xue Bin Peng",
         "institutions": "Carnegie Mellon University; NVIDIA; Simon Fraser University",
-        "status": "Full paper reviewed (v2)",
-        "takeaway": "Remember HIL as AMP plus persistent motion-tracking rehearsal under a unified goal-conditioned interface: the contribution is mainly the shared observation design, continual anti-forgetting signal, and scene-conditioned discriminator rather than a new RL optimizer.",
+        "status": "Full paper reviewed",
+        "takeaway": "The essential HIL pipeline is two-stage training: first learn a goal-conditioned motion-tracking policy, then retain tracking environments while adding AMP task environments, with both rollout groups jointly updating one actor; its main value is persistent tracking rehearsal that reduces skill forgetting and AMP mode collapse, rather than a new RL optimizer.",
         "tags": [
-          "Hybrid Imitation Learning",
           "Motion Tracking",
-          "Adversarial Imitation Learning",
+          "AMP",
           "Goal-Conditioned RL",
+          "Multi-Task RL",
           "PPO",
           "Parkour",
           "Physics-Based Character Control"
         ],
-        "mainContent": "The paper addresses the tension between precise but inflexible frame-wise tracking and adaptable but mode-collapsing adversarial imitation. HIL trains one goal-conditioned policy in parallel motion-tracking and AMP-style task environments, using character state, scene context, and task goals as a shared observation interface; persistent tracking preserves reference skills while task and style rewards support adaptation and composition. On perturbed parkour courses, HIL obtains the best skill accuracy (0.66) and lowest tracking error (0.31), but its completion rate is 0.74 versus 0.85 for warm-start AMP, indicating that its primary gain is the fidelity/diversity trade-off rather than peak task success.",
+        "mainContent": "The paper addresses the tension between frame-wise motion tracking, which is accurate but restricted to reference trajectories, and AMP, which is adaptable but susceptible to mode collapse. Training consists of two stages: a goal-conditioned motion-tracking policy is first trained to master individual skills, and the resulting policy is then further trained with half of the parallel environments retaining tracking and the other half performing task-conditioned AMP, while both groups update the same actor. Persistent tracking acts as reference rehearsal that preserves complex skills, whereas task and style rewards enable obstacle adaptation and skill composition. HIL improves skill accuracy and tracking quality, but does not outperform warm-start AMP in task completion, indicating that its main benefit is a better fidelity, diversity, and adaptability trade-off.",
         "innovations": [
-          "A unified goal-conditioned observation space is used in both motion-tracking and adversarial task modes, avoiding policy inputs that are available only during tracking, such as an explicit phase variable or a full future target pose.",
-          "Motion-tracking environments remain active throughout task adaptation, and rollouts from both modes update the same policy; this persistent reference constraint is used to reduce skill forgetting and AMP-style mode collapse.",
-          "For parkour, the discriminator is conditioned on a 10-step history of character states and local scene point clouds so that the style reward assesses both motion naturalness and scene suitability.",
-          "Perturbed State Initialization adds Gaussian noise to reference initial states to improve recovery from off-reference states and transitions between skills."
+          "The core contribution is a two-stage hybrid training recipe rather than a new PPO or adversarial-learning algorithm: after motion-tracking pretraining, reference tracking remains active throughout AMP-based task adaptation, continuously supervising the shared actor and reducing forgetting and mode collapse.",
+          "A unified goal-conditioned observation space is used in both tracking and adversarial task modes. The policy receives character state and task conditions in both modes instead of relying on tracking-only inputs such as an explicit phase variable or a full future target pose.",
+          "During the second stage, half of the parallel environments perform frame-wise motion tracking and half perform task-conditioned AMP. Rollouts from both groups are combined to update one shared policy rather than separate tracking and task policies.",
+          "For parkour, the discriminator observes a 10-step history of character states together with local scene point clouds, allowing the style reward to evaluate both motion naturalness and compatibility with the current obstacle geometry.",
+          "Perturbed State Initialization adds Gaussian noise to reference initial states to enlarge the tracking policy's recovery region and improve transitions when the ending state of one skill does not match the nominal starting state of another."
         ],
         "implementation": [
-          "The parkour dataset contains 19 YouTube reference clips totaling about 30 seconds and covering 15 skills. Motions are recovered with TRAM, ground orientation is refined with body-orientation cues, scenes are manually approximated with boxes, and a physics-based motion tracker is used to reduce collision, jitter, and sliding artifacts.",
-          "The parkour policy receives character state, the 60 nearest scene points, and a target location. State and goal MLP encoders and a PointNet produce tokens for a 2-layer, 2-head Transformer with latent dimension 256. The policy predicts desired joint positions with a fixed Gaussian action standard deviation of 0.055, and PD controllers convert them to joint torques.",
-          "Training is performed in Isaac Gym at 120 Hz simulation and 30 Hz policy control using PPO and GAE, with 4096 parallel environments on four NVIDIA V100 GPUs. The controller is first pretrained for 4 billion tracking samples, followed by 2 billion hybrid samples with half of the environments in tracking mode and half in adversarial task mode.",
-          "Tracking mode uses 0.5×tracking reward + 0.5×style reward, while adversarial task mode uses 0.5×task reward + 0.5×style reward. The critic additionally receives a binary training-mode indicator, which is not provided to the policy.",
-          "For parkour tracking, the target location is sampled from the reference root trajectory 1–2 seconds in the future. In task mode, it is sampled near an upcoming obstacle and perturbed with Gaussian noise reported as N(0, 0.2). Five-obstacle courses are evaluated with DTW-based skill accuracy and tracking error.",
-          "The heading-control experiment uses roughly 7 minutes of sword-and-shield motion-capture data and conditions the controller on target heading and facing directions; comparisons are reported against AMP, ASE, and MaskedMimic.",
-          "The paper does not specify the PSI noise scale, PD gains and torque limits, the number of random seeds, confidence intervals, or wall-clock training time."
+          "Data preparation: the authors collect 19 YouTube parkour clips totaling roughly 30 seconds and covering 15 skills. TRAM is used to recover human motion, obstacle scenes are manually approximated with boxes, and a physics-based motion tracker refines collisions, jitter, and sliding. The refined motions are used for tracking rewards, PSI initialization, and positive discriminator samples.",
+          "Stage 1 — Motion Tracking Pretraining: approximately 4 billion samples are used to train a goal-conditioned tracking policy. For parkour, the policy receives character state \\(s_t\\), local scene point cloud \\(c_t\\), and target location \\(l_t\\), where the tracking target is sampled from the reference root position 1–2 seconds in the future. Frame-wise position, rotation, velocity, angular-velocity, and root-height rewards teach individual skills. The paper does not clearly state whether the style reward is already enabled during this pretraining stage.",
+          "Stage 2 — Hybrid Training: training continues from the Stage-1 actor for approximately 2 billion samples. Of 4096 parallel environments, half run motion tracking and half run adversarial imitation tasks. These environments do not train separate policies; their rollouts jointly update the same actor.",
+          "In Stage 2, tracking environments retain access to reference motions and use \\(0.5r_t^{\\mathrm{track}}+0.5r_t^{\\mathrm{style}}\\). This branch serves as persistent rehearsal that prevents the actor from forgetting complex skills during adaptation. Adversarial task environments do not perform frame-wise tracking and instead use \\(0.5r_t^{\\mathrm{task}}+0.5r_t^{\\mathrm{style}}\\), where the task reward encourages obstacle traversal and the style reward is produced by the AMP discriminator.",
+          "The actor uses the same observation interface in both modes and does not receive a tracking/task mode indicator. The critic additionally receives a binary variable \\(k_t\\) to distinguish the two reward and return distributions; the indicator is withheld from the actor to discourage an explicit split into separate tracking and task policies.",
+          "The discriminator is trained with refined reference transitions as positive samples and policy-generated transitions as negative samples. For parkour, it observes 10 consecutive steps of root velocity, joint rotations and velocities, end-effector positions, and local scene point clouds.",
+          "The policy uses state and target MLP encoders and a PointNet, followed by a 2-layer, 2-head Transformer with latent dimension 256. It outputs a Gaussian distribution over desired joint positions with fixed standard deviation 0.055, and PD controllers convert desired positions into torques.",
+          "Training uses Isaac Gym, PPO, and GAE at 120 Hz simulation and 30 Hz policy control, with 4096 parallel environments on four NVIDIA V100 GPUs. During hybrid training, both the tracking/task term and the style term have weight 0.5.",
+          "At deployment, the environment split and both training modes disappear. Only the trained actor and PD controllers are retained: current character state, local point cloud, and an externally supplied target location are mapped to desired joint positions. Reference motions, tracking rewards, the discriminator, critic, PSI, and the mode indicator are not required.",
+          "HIL reports a skill accuracy of 0.66, tracking error of 0.31, and task completion of 0.74. Warm-start AMP reaches a higher task completion of 0.85 but has worse skill coverage and tracking quality, so HIL should be interpreted as trading some pure task performance for better diversity and reference-motion fidelity."
         ]
       }
     },
@@ -1603,6 +1610,87 @@
           "The base FB-CPR model obtains an average reward return of 151.68, goal proximity/success of 0.68/0.48, and test-motion tracking EMD/success of 1.39/0.83. In human evaluation, FB-CPR is judged more natural than task-specific TD3 in 83.5% of reward-task comparisons and 69.1% of goal-task comparisons.",
           "Scaling the total model size from roughly 25M to 288M parameters improves reward to 179.94, goal proximity/success to 0.82/0.66, and test tracking EMD to 1.13. The paper does not report the corresponding hardware, training wall-clock time, or energy use.",
           "Training is additionally stabilized with B orthonormality regularization, an Fz TD regularizer, twin F/Q ensembles, target networks, Polyak updates, a WGAN gradient penalty, latent normalization, and motion-sampling prioritization. These are anti-collapse and numerical-stability mechanisms rather than the conceptual core of FB-CPR."
+        ]
+      }
+    },
+    {
+      "id": "heracles-general-humanoid-control",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.27756",
+      "project": "https://heracles-humanoid-control.github.io/",
+      "arxiv": "https://arxiv.org/abs/2603.27756",
+      "year": "2026",
+      "venue": "arXiv:2603.27756",
+      "zh": {
+        "title": "Heracles: Bridging Precise Tracking and Generative Synthesis for General Humanoid Control",
+        "authors": "Zelin Tao, Zeran Su, Peiran Liu, Jingkai Sun, Wenqiang Que, Jiahao Ma, Jialin Yu, Jiahang Cao, Pihai Sun, Hao Liang, Gang Han, Wen Zhao, Zhiyuan Xu, Jian Tang, Qiang Zhang, Yijie Guo",
+        "institutions": "X-Humanoid（北京人形机器人创新中心有限公司）",
+        "status": "全文已精读",
+        "takeaway": "最该记住的是：与其要求低层 Tracker 在严重失配后仍僵硬追逐原参考，不如先用以真实状态为条件的生成式中间件在线重写短期参考轨迹，再让 Tracker 负责高频物理执行。",
+        "tags": [
+          "Humanoid Motion Tracking",
+          "State-Conditioned Flow Matching",
+          "Residual Trajectory",
+          "iFSQ",
+          "PPO",
+          "Fall Recovery",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "Heracles 针对通用 humanoid motion tracker 在严重扰动或与参考轨迹大幅偏离后仍僵硬追踪原参考、从而产生非拟人失稳的问题，在高层原始运动命令与低层 physics tracker 之间加入以机器人实时状态为条件的生成式中间件。中间件以当前构型为静态基线，在 residual space 中用 conditional Flow Matching 生成覆盖 0.2 s 的 8 个关键帧（首帧为当前状态锚点）：接近参考时近似 identity map，偏离较大时则将原参考改写为恢复轨迹，随后由基于 iFSQ 的 PPO Tracker 执行。Unitree G1 的 MuJoCo sim-to-sim 测试覆盖 101 条未见序列，Heracles 的 completion rate 为 90.6%，跌倒/恢复子集为 90.0%；论文还展示了 walk、run、kick、360° kick、HOI 以及三种倒地初态的真机结果。需要注意，全部训练均在单一 G1 平台的平地仿真中完成，定量对比主要来自 sim-to-sim，真机证据以定性展示和少量恢复试验为主。",
+        "innovations": [
+          "系统层面的核心创新是把 state-conditioned generative middleware 插入“原始运动参考—低层物理跟踪器”之间，使参考轨迹本身能随实时物理状态闭环变化，并避免显式 tracking/recovery 模式切换。",
+          "采用以当前 generator-space 构型为锚点的 geometric residual parameterization：\\(\\tau_{t,k}=p_t+r_{t,k}\\)。模型生成的是各关键帧相对当前构型的变化量，而不是绝对姿态；近参考时残差趋小，严重偏离时残差可编码协调的恢复过渡。",
+          "在现有 Flow Matching 与 Transformer 基础上组合了首 token inpainting、directional warm start 和固定时域 receding-horizon replanning，以较少 ODE 步数生成连续、朝向目标的短期恢复轨迹。",
+          "生成器训练加入仅扰动起始状态的 asymmetric noisy-state augmentation，以及由姿态相关 Jacobian 近似 \\(\\mathrm{diag}(J^\\top J)\\) 得到的 kinematics-aware loss weighting；消融实验表明二者对部署鲁棒性和几何敏感关节的学习均有明显作用。",
+          "低层 Tracker 的系统性改进包括 iFSQ 离散运动表示、共享 token 的 reconstruction/action 双解码头，以及带平滑难度传播的 adaptive motion sampling。Flow Matching、AdaLN Transformer、PPO 和 iFSQ 本身并非本文从零提出，创新主要体现在面向通用人形跟踪与恢复的表示、训练设计和层级整合。"
+        ],
+        "implementation": [
+          "整体训练不是把生成器与 Tracker 端到端联合反向传播。Physics Tracker 在 IsaacLab 中用 asymmetric actor-critic PPO 训练；其 motion encoder、iFSQ quantizer、reconstruction decoder 与 action decoder 在 Tracker 内共享编码路径并联合优化。之后，Flow Matching trajectory generator 使用同一运动语料构造的轨迹对离线训练。",
+          "生成器训练目标：先以当前构型为基线构造并归一化真实 residual \\(x_0\\)，采样同形状高斯噪声 \\(x_1\\sim\\mathcal N(0,I)\\)，再随机采样 Flow 坐标 \\(s\\) 并构造 \\(x_s=(1-s)x_0+s x_1\\)。AdaLN Transformer 接收 \\((x_s,s,[p_t,m_t])\\)，学习速度目标 \\(x_1-x_0\\)；也就是程序在推理时按预设 schedule 改变 \\(s\\)，网络负责预测每一步 residual 张量应该如何移动。",
+          "生成器为 6 个 attention blocks、4 个 heads、hidden dimension 512 的 AdaLN Transformer，共 22.9 M 参数；输出覆盖 0.2 s 固定规划时域的 \\(K=8\\) 个均匀关键帧，其中首帧锚定当前状态。论文训练 38D 与 35D 两种状态表示：38D 包含 29D 关节位置、3D root position 和 6D root orientation，可修正全局位置漂移但需要全局定位；35D 去掉 root position，可仅依赖关节编码器与 IMU 部署，但将全局平移交给外部参考源。",
+          "生成器数据来自 LAFAN1、100STYLE、SnapMoGen、AMASS 和自有 MoCap。每个训练样本从运动段起点提取未来固定时域的 8 个关键帧，以受噪声扰动的起始状态和运动段终点 reference command 作为条件；Jacobian 权重在数据构建时用可微 FK 预计算并缓存。",
+          "部署时先构造 \\(r_k^{\\mathrm{init}}=\\frac{k}{K-1}(m_t-p_t)\\)，在 \\(s=0.9\\) 将其与高斯噪声混合，然后由程序自动执行 5 个 Euler steps，把 \\(s\\) 从 0.9 积分到 0。每步对首 residual token 施加 inpainting，使最终首帧锚定当前构型；8 个关键帧随后用 joint-position cubic spline 与 root-orientation SLERP 稠密化。",
+          "生成式中间件每 2 个控制步重规划一次，即 0.04 s / 25 Hz；Physics Tracker 在 50 Hz 执行稠密参考。Tracker 使用 10 帧 proprioceptive history 与 10 帧 future reference window，经 iFSQ motion token 和 action decoder 输出 29D target joint positions，底层 PD 在 200 Hz 产生关节力矩。",
+          "Tracker 训练使用 16,384 个 IsaacLab 并行环境和单张 NVIDIA A100 80 GB，仿真频率 200 Hz、策略频率 50 Hz，并随机化摩擦、质心偏置、参考命令和外部推扰。测试在 MuJoCo 中使用 101 条 held-out motion sequences；官方项目页截至 2026-07-29 仍将代码标为 Coming Soon。"
+        ]
+      },
+      "en": {
+        "title": "Heracles: Bridging Precise Tracking and Generative Synthesis for General Humanoid Control",
+        "authors": "Zelin Tao, Zeran Su, Peiran Liu, Jingkai Sun, Wenqiang Que, Jiahao Ma, Jialin Yu, Jiahang Cao, Pihai Sun, Hao Liang, Gang Han, Wen Zhao, Zhiyuan Xu, Jian Tang, Qiang Zhang, Yijie Guo",
+        "institutions": "X-Humanoid (Beijing Innovation Center of Humanoid Robotics Co., Ltd.)",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea is to stop asking a low-level tracker to rigidly chase an infeasible reference after a severe state deviation: first rewrite a short-horizon reference online with a state-conditioned generative middleware, then let the tracker handle high-frequency physical execution.",
+        "tags": [
+          "Humanoid Motion Tracking",
+          "State-Conditioned Flow Matching",
+          "Residual Trajectory",
+          "iFSQ",
+          "PPO",
+          "Fall Recovery",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "Heracles addresses the brittle, non-anthropomorphic failures of general humanoid motion trackers that continue to chase the original reference after severe perturbations or large state-reference deviations. It inserts a real-time state-conditioned generative middleware between the original high-level motion command and the low-level physics tracker; in a residual space, conditional Flow Matching generates eight keyframes spanning 0.2 s, with the first keyframe anchored to the current state, approximating an identity map near the reference manifold and rewriting the reference into a recovery trajectory under large deviations, which an iFSQ-based PPO tracker then executes. On 101 unseen Unitree G1 sequences in MuJoCo sim-to-sim evaluation, Heracles reaches a 90.6% completion rate and 90.0% on the fall-and-recovery subset; the paper also shows hardware tracking of walking, running, kicks, a 360-degree kick, HOI, and recovery from three fallen configurations. Training is confined to one G1 morphology on flat simulated ground, quantitative comparisons are primarily sim-to-sim, and the hardware evidence is mostly qualitative with a small number of recovery trials.",
+        "innovations": [
+          "The main system-level contribution is a state-conditioned generative middleware between the original reference and the low-level physics tracker, allowing the reference itself to adapt in closed loop to the robot's physical state without an explicit tracking-versus-recovery mode switch.",
+          "A geometric residual parameterization anchored at the current generator-space configuration, \\(\\tau_{t,k}=p_t+r_{t,k}\\), makes the generator predict changes relative to the present configuration rather than absolute poses. Residuals remain small near nominal tracking but can encode coordinated recovery transitions under severe deviations.",
+          "On top of existing Flow Matching and Transformer components, the method combines first-token inpainting, a directional warm start, and fixed-horizon receding-horizon replanning to produce continuous, target-directed recovery trajectories with few ODE steps.",
+          "Generator training adds asymmetric noisy-state augmentation and a pose-dependent kinematics-aware loss weight based on an approximation of \\(\\mathrm{diag}(J^\\top J)\\). Ablations show that both substantially affect deployment robustness and learning of geometrically sensitive joints.",
+          "The low-level tracker is strengthened with an iFSQ discrete motion representation, reconstruction and action heads sharing the same token, and adaptive motion sampling with smoothed difficulty propagation. Flow Matching, AdaLN Transformers, PPO, and iFSQ are existing ingredients; the contribution is primarily their task-specific representation, training design, and hierarchical integration."
+        ],
+        "implementation": [
+          "The generator and tracker are not trained through a single end-to-end objective. The physics tracker is trained in IsaacLab with asymmetric actor-critic PPO; its motion encoder, iFSQ quantizer, reconstruction decoder, and action decoder share an encoding path and are jointly optimized inside the tracker. The Flow Matching trajectory generator is then trained offline on trajectory tuples extracted from the same motion corpus.",
+          "For generator training, a normalized ground-truth residual is used as \\(x_0\\), same-shaped Gaussian noise \\(x_1\\sim\\mathcal N(0,I)\\) is sampled, and a random flow coordinate \\(s\\) yields \\(x_s=(1-s)x_0+s x_1\\). The AdaLN Transformer receives \\((x_s,s,[p_t,m_t])\\) and regresses the velocity target \\(x_1-x_0\\): at inference the program advances the prescribed schedule for \\(s\\), while the network predicts how the residual tensor should move at each step.",
+          "The generator is a 22.9 M-parameter AdaLN Transformer with six attention blocks, four heads, and hidden dimension 512. It predicts \\(K=8\\) uniformly spaced keyframes over a fixed 0.2 s horizon, with the first keyframe anchored to the current state. Two state representations are trained: 38D with 29D joint positions, 3D root position, and 6D root orientation, which can correct global drift but requires global localization; and 35D without root position, which can use joint encoders and an IMU only but delegates global translation to the external reference source.",
+          "Generator data come from LAFAN1, 100STYLE, SnapMoGen, AMASS, and proprietary MoCap. Each tuple extracts eight keyframes over a fixed future window, conditions on a noisy start state and the segment-end reference command, and uses Jacobian weights precomputed and cached through differentiable forward kinematics.",
+          "At deployment, the solver forms \\(r_k^{\\mathrm{init}}=\\frac{k}{K-1}(m_t-p_t)\\), mixes it with Gaussian noise at \\(s=0.9\\), and automatically performs five Euler steps from \\(s=0.9\\) to 0. First-token inpainting anchors the final first residual to the current configuration; joint-position cubic splines and root-orientation SLERP then densify the eight keyframes.",
+          "The middleware replans every two control steps, or 0.04 s / 25 Hz, while the physics tracker executes the dense reference at 50 Hz. The tracker uses a 10-frame proprioceptive history and a 10-frame future reference window, then outputs 29D target joint positions through the iFSQ motion token and action decoder; a low-level PD controller runs at 200 Hz.",
+          "Tracker training uses 16,384 parallel IsaacLab environments on one NVIDIA A100 80 GB GPU, with 200 Hz simulation and 50 Hz policy control, plus randomization of friction, center-of-mass offsets, reference commands, and external pushes. Evaluation uses 101 held-out motion sequences in MuJoCo; the official project page still marked the code as Coming Soon on 2026-07-29."
         ]
       }
     }
