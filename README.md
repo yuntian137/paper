@@ -92,6 +92,7 @@ system identification, domain randomization, real-world finetuning
 8. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
 9. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
 10. `example.json` 里所有以下划线开头的字段都只是给 agent 的说明，最终生成的论文对象不得包含这些字段。
+11. 正文中的 LaTeX 必须显式定界：JSON 字符串中的行内公式写作 `\\(...\\)`，独立公式写作 `\\[...\\]`；普通文字不要放进数学模式。
 
 ```json
 {
