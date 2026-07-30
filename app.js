@@ -90,9 +90,9 @@ const uiText = {
 const siteMetaPath = "site_meta.json";
 const siteMeta = {
   lastUpdated: {
-    iso: "2026-07-29",
-    zh: "2026-07-29",
-    en: "Jul 29, 2026",
+    iso: "2026-07-30",
+    zh: "2026-07-30",
+    en: "Jul 30, 2026",
   },
 };
 
@@ -181,13 +181,25 @@ const readingPrompts = {
 
 ## 5. 数学与表达规范
 
-* 公式使用标准 LaTeX，不放在代码块中。
-* 向量、矩阵、随机变量和标量应尽量区分。
-* 关键变量需要说明物理意义、维度、坐标系、时间索引和数据来源。
+* 最终报告使用标准 Markdown。行内公式只使用单美元符号定界，例如 $E=mc^2$；行间公式只使用独占一行的双美元符号定界。
+* 禁止使用 \\(...\\) 或 \\[...\\]，禁止把公式放入代码块，也禁止留下没有数学定界符的裸 LaTeX。
+* 向量和矩阵统一使用粗体，例如 $\\mathbf{x}$、$\\mathbf{R}$；希腊字母向量可使用 $\\boldsymbol{\\theta}$。标量通常使用普通斜体，并在符号表中说明例外。
+* 公式不仅要排版正确，还要在数学含义上成立。转写或推导后，检查等号两侧的维度、求和或期望的作用域、下标和时间索引、优化方向、概率归一化以及变量依赖关系。
+* 关键变量需要说明物理意义、维度、坐标系、时间索引和数据来源；同一符号在正文、公式、表格、训练流程和部署流程中的定义必须一致。
+* 若原论文公式疑似存在排版错误或定义冲突，先忠实给出原式并标记问题，再单独给出修正版或可能解释；不得静默改写成看似正确的公式。
+* Markdown 表格单元格只使用行内公式。公式中的集合分隔、条件符号或绝对值若会与表格竖线冲突，使用 \\vert、\\mid 等 LaTeX 命令；复杂行间公式移到表格之外。
 * 每个二级标题先用一句话直接给出结论，再展开解释。
 * 精确映射和对比优先使用表格；机制和因果关系使用完整段落解释。
 * 禁止只写“编码器提取特征”“规划器生成动作”“策略输出控制量”等缺少接口和优化关系的描述。
 * 不使用没有证据支撑的“显著”“高效”“鲁棒”“通用”“SOTA”“理论保证”等词。复述作者观点时写“作者声称”。
+
+## 6. 交付与渲染验收
+
+* 最终交付物必须是一个可直接预览的 .md 文件；不要用包裹全文的 Markdown 代码围栏，也不要用 HTML、PDF 或 Word 文件替代。
+* 写作前确认当前 Markdown 渲染器同时支持表格和以单/双美元符号定界的 LaTeX。若不支持数学公式，先说明限制和拟采用的兼容写法，再继续生成；不得直接交付已知无法正常预览的文件。
+* 生成后必须实际打开 Markdown 预览，而不只是检查源文本。逐项检查：是否出现裸露 LaTeX、未闭合或错配的美元符号、错误进入数学模式的货币符号、溢出或错位的表格、跳级或重复的标题，以及未渲染的公式。
+* 发现问题后先修复，再重新预览，直到上述检查全部通过。未实际完成预览时，不得声称“已检查预览”。
+* 最终回复只交付该 Markdown 文件，并用一句简短说明告知文件名和预览检查结果；不要在回复中重复粘贴整篇报告。
 
 默认总篇幅约为 8,000–14,000 中文字，其中问题3“算法与理论”应占全文至少 35%。如果论文信息不足，不需要机械凑字数。
 
@@ -264,8 +276,8 @@ const readingPrompts = {
 
 说明每个损失函数或奖励更新哪些模块，例如：
 
-> (L_{\\mathrm{rec}}\\rightarrow{\\text{Encoder},\\text{Decoder}})
-> (L_{\\mathrm{policy}}\\rightarrow{\\text{Actor}})
+> $L_{\\mathrm{rec}} \\rightarrow \\{\\text{Encoder}, \\text{Decoder}\\}$
+> $L_{\\mathrm{policy}} \\rightarrow \\{\\text{Actor}\\}$
 
 明确联合训练、交替训练、分阶段训练、冻结、微调和 stop-gradient 的关系。
 
@@ -827,7 +839,11 @@ Takeaway不得只是重复贡献列表，长度控制在400字以内。
 * 是否把前人模块误写成本创新；
 * 每项核心贡献是否对应至少一个实验；
 * 是否区分论文事实、直接推导、审稿判断和推测；
-* 是否把经验结果错误描述为理论保证。`,
+* 是否把经验结果错误描述为理论保证；
+* 最终交付物是否只有一个可直接预览的 .md 文件；
+* 所有公式是否只使用单/双美元符号定界，且没有 \\(...\\)、\\[...\\]、裸露 LaTeX 或未闭合分隔符；
+* 向量和矩阵是否统一使用粗体，公式的数学含义、变量定义和上下文是否一致；
+* 是否已实际打开 Markdown 预览，并修复公式渲染、表格对齐和标题层级问题。`,
   en: `You are a senior expert in intelligent control, robot learning, and motion planning, as well as a reviewer for top-tier robotics and machine-learning journals. Based on the paper I upload and any available appendices, produce a PhD-level close-reading report that helps me understand the work at six levels: system-wide structure, module mechanisms, mathematical optimization, training and deployment, experimental validation, and methodological limitations.
 
 Your task is not to summarize the paper section by section. Reconstruct its complete causal chain:
@@ -912,13 +928,25 @@ If the paper does not provide the full form of an abbreviation, do not invent on
 
 ## 5. Mathematical and Writing Conventions
 
-* Use standard LaTeX for equations and do not place equations in code blocks.
-* Distinguish vectors, matrices, random variables, and scalars whenever possible.
-* For every key variable, explain its physical meaning, dimensionality, coordinate frame, time index, and data source.
+* Write the final report in standard Markdown. Delimit inline mathematics only with single dollar signs, for example $E=mc^2$, and delimit display mathematics only with double dollar signs placed on their own lines.
+* Do not use \\(...\\) or \\[...\\], do not place equations in code blocks, and do not leave raw LaTeX without math delimiters.
+* Typeset vectors and matrices consistently in bold, for example $\\mathbf{x}$ and $\\mathbf{R}$; use $\\boldsymbol{\\theta}$ when a Greek symbol is a vector. Scalars should normally remain italic, with any exception defined in the notation table.
+* Equations must be mathematically meaningful, not merely syntactically valid. After transcribing or deriving an equation, check dimensions on both sides, the scope of sums and expectations, subscripts and time indices, optimization direction, probability normalization, and variable dependencies.
+* For every key variable, explain its physical meaning, dimensionality, coordinate frame, time index, and data source. Its definition must remain consistent across prose, equations, tables, training flow, and deployment flow.
+* If an equation in the paper appears typographically malformed or conflicts with the paper's definitions, first reproduce it faithfully and flag the issue; provide a corrected form or plausible interpretation separately instead of silently repairing it.
+* Use inline mathematics only inside Markdown tables. If a set separator, conditioning bar, or absolute-value bar would conflict with a table delimiter, use LaTeX commands such as \\vert or \\mid; place complex display equations outside the table.
 * Begin every second-level heading with one sentence that states the conclusion directly, then elaborate.
 * Prefer tables for exact mappings and comparisons; use complete prose for mechanisms and causal relationships.
 * Do not write vague statements such as "the encoder extracts features," "the planner generates actions," or "the policy outputs controls" without specifying interfaces and optimization relationships.
 * Do not use unsupported terms such as "significant," "efficient," "robust," "general," "state of the art," or "theoretically guaranteed." When restating a claim, write "the authors claim."
+
+## 6. Delivery and Rendering Validation
+
+* The final deliverable must be one directly previewable .md file. Do not wrap the entire report in a Markdown code fence or substitute HTML, PDF, or Word output.
+* Before writing, confirm that the current Markdown renderer supports both tables and LaTeX delimited by single or double dollar signs. If mathematical rendering is unsupported, explain the limitation and the compatible notation you propose before continuing; do not deliver a file known to render incorrectly.
+* After generation, open the actual Markdown preview rather than checking only the source text. Inspect for raw LaTeX, unclosed or mismatched dollar signs, currency symbols accidentally entering math mode, overflowing or misaligned tables, skipped or duplicated heading levels, and unrendered equations.
+* If any issue is found, fix it and preview the file again until every check passes. Do not claim that preview validation was completed unless it was actually performed.
+* In the final response, deliver only that Markdown file and one short sentence giving its filename and preview-validation result; do not paste the full report again.
 
 The default total length should be approximately 8,000–14,000 Chinese-character equivalents, with Question 3, "Algorithm and Theory," occupying at least 35% of the report. Do not pad the report when the available paper information is insufficient.
 
@@ -995,8 +1023,8 @@ For every arrow, name the transferred object, such as state, trajectory, token, 
 
 State which modules each loss or reward updates, for example:
 
-> (L_{\\mathrm{rec}}\\rightarrow{\\text{Encoder},\\text{Decoder}})
-> (L_{\\mathrm{policy}}\\rightarrow{\\text{Actor}})
+> $L_{\\mathrm{rec}} \\rightarrow \\{\\text{Encoder}, \\text{Decoder}\\}$
+> $L_{\\mathrm{policy}} \\rightarrow \\{\\text{Actor}\\}$
 
 Explicitly describe joint training, alternating training, staged training, freezing, fine-tuning, and stop-gradient relationships.
 
@@ -1164,7 +1192,7 @@ When applicable, explain:
 * World, base/root, heading, body, joint, and end-effector coordinate frames;
 * The coordinate frames in which positions, orientations, and velocities are expressed;
 * Rotation representation, quaternion ordering, and whether global yaw is removed;
-* The meanings of \\(t\\), history window, future window, phase, and planning horizon;
+* The meanings of $t$, history window, future window, phase, and planning horizon;
 * Whether the method is causal and whether it uses future frames;
 * Data, policy, planning, simulation, and actuator frequencies.
 
@@ -1558,7 +1586,11 @@ Before submitting the report, verify:
 * Prior-work modules are not misrepresented as original contributions;
 * Every core contribution maps to at least one experiment;
 * Paper facts, direct derivations, reviewer judgments, and speculation are distinguished;
-* Empirical results are not misrepresented as theoretical guarantees.`,
+* Empirical results are not misrepresented as theoretical guarantees;
+* The deliverable consists of exactly one directly previewable .md file;
+* Every equation uses only single or double dollar-sign delimiters, with no \\(...\\), \\[...\\], raw LaTeX, or unclosed delimiters;
+* Vectors and matrices are consistently bold, and each equation's mathematical meaning, variable definitions, and context are mutually consistent;
+* The actual Markdown preview has been opened and all equation-rendering, table-alignment, and heading-hierarchy issues have been fixed.`,
 };
 
 const categories = [
