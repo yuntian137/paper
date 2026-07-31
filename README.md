@@ -67,6 +67,12 @@ system identification, domain randomization, real-world finetuning
 
 如果新增页面主分类，需要同时更新 `categories` 数组和论文对象里的 `categories` 字段。一般情况下优先新增关键词，不要轻易新增左侧主分类。
 
+## 使用精读 Prompt
+
+页面右上角的“精读 Prompt”主要面向能读写本地文件的 Codex。把 Prompt 与论文 PDF 一起交给 Codex 后，它会生成实际的 Markdown 报告文件，并从论文中选取少量真正有解释价值的原图，裁剪后保存到报告旁的 assets 目录，再通过相对路径嵌入文档。最终应打开 Markdown 预览，确认公式和图片均能正常显示。
+
+默认只截取方法 pipeline、核心模块、训练/部署关系和关键实验等高信息密度图片，不截大段正文或装饰性图片，也不会生成或重绘论文中不存在的内容。若用户另行指定报告路径或图片要求，以用户指令为准。
+
 ## 添加一篇论文
 
 推荐优先维护 `papers_extra.json`，网站启动时会自动读取其中的 `papers` 数组。网页本身只负责展示，不在浏览器里编辑或保存新增论文。
@@ -92,7 +98,7 @@ system identification, domain randomization, real-world finetuning
 8. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
 9. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
 10. `example.json` 里所有以下划线开头的字段都只是给 agent 的说明，最终生成的论文对象不得包含这些字段。
-11. 论文卡片 JSON 中的 LaTeX 必须显式定界：JSON 字符串中的行内公式写作 `\\(...\\)`，独立公式写作 `\\[...\\]`；普通文字不要放进数学模式。这里约束的是写入 `papers_extra.json` 的卡片字段，不是“精读 Prompt”生成的独立 Markdown 报告；后者统一使用 `$...$` 和 `$$...$$`。
+11. LaTeX 必须显式定界：JSON 字符串和“精读 Prompt”生成的报告都使用 `\\(...\\)` 表示行内公式、`\\[...\\]` 表示独立公式；普通文字不要放进数学模式。这样既兼容本站 MathJax，也兼容 ChatGPT 官方网页；不要使用 `$...$` 或 `$$...$$`，它们在 ChatGPT 网页中可能显示为原始文本。
 
 ```json
 {

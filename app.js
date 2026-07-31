@@ -97,7 +97,7 @@ const siteMeta = {
 };
 
 const readingPrompts = {
-  zh: `你是一位资深的智能控制、机器人学习与运动规划专家，同时具有顶级期刊审稿经验。请基于我上传的论文，生成一份面向控制、机器人和强化学习方向研究生的中文精读报告。
+  zh: `你是 Codex，同时是一位资深的智能控制、机器人学习与运动规划专家，并具有顶级期刊审稿经验。请阅读我在当前任务中提供的论文（包括工作区文件、附件或链接），使用可用工具完成核查，并在当前工作区生成一份面向控制、机器人和强化学习方向研究生的中文精读报告。
 
 这份报告的目标不是逐章复述论文，也不是机械填写问题清单，而是帮助读者建立一个完整、可复述的 mental model：
 
@@ -224,11 +224,11 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 
 公式排版要求：
 
-* 内联公式统一使用 $...$；
-* 行间公式统一使用 $$...$$；
-* 禁止使用 \\(...\\) 和 \\[...\\]；
+* 为兼容 ChatGPT 官方网页的数学渲染，内联公式统一使用 \\(...\\)；
+* 独立公式统一使用 \\[...\\]，并让开始和结束定界符各自独占一行；
+* 禁止使用单美元符号或双美元符号作为公式定界符，否则公式可能显示为原始 LaTeX 文本；
 * 不要把公式放入代码块；
-* 向量和矩阵使用粗体，如 $\\mathbf{x}$、$\\mathbf{R}$；
+* 向量和矩阵使用粗体，如 \\(\\mathbf{x}\\)、\\(\\mathbf{R}\\)；
 * 检查公式分隔符、正负号、上下标、量纲和单位；
 * 如果改写了论文符号以保持统一，必须明确说明。
 
@@ -389,8 +389,20 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 8. 不要重复完整 pipeline、贡献和结论。
 9. 不要在开头放大段术语表、公式表或审稿清单。
 10. 正文优先保证连贯理解；完整性检查放入附录。
-11. 最终输出为可直接复制和预览的 Markdown。
+11. 将最终报告写入实际的 Markdown 文件，而不是只在对话中粘贴全文。
 12. 篇幅由论文复杂度决定，不为追求长度填充重复内容。
+
+### 图片截取与文档交付（Codex）
+
+* 如果用户指定了输出路径，严格使用该路径；否则将报告保存为 <paper-slug>-reading-report.md，并在同级创建 <paper-slug>-reading-report-assets/ 图片目录。
+* 阅读 PDF 正文和附录时，主动寻找真正帮助理解的原论文图片。优先级依次是：完整方法或系统 pipeline、核心模块或算法结构、训练与部署关系、最关键的实验结果或消融、能说明任务和硬件设置的图片。
+* 通常选取 2–5 张信息密度最高的图片，但以解释价值为准，不为凑数量插图；没有合适图片时可以不插入。
+* 使用可用的 PDF 页面截图、渲染或裁剪工具把图片保存为本地 PNG。紧密裁掉页边距和无关正文，但必须保留理解图片所需的坐标轴、图例、子图编号、标注和单位；不得修改实验数值、曲线或原图含义。
+* 使用相对路径把图片嵌入 Markdown，使图片在预览中直接显示，而不是只给出文件路径或外部链接。例如：![方法总览](<paper-slug>-reading-report-assets/fig-03-pipeline.png)。文件名使用稳定、简短、可读的英文，不使用空格或绝对路径。
+* 图片放在正文第一次深入解释它的位置附近。每张图片后写一条简短图注，说明“读者应看什么”，并标注准确来源，例如“截自论文 Figure 3，第 6 页”；若来自项目主页或其他外部官方资料，明确标记为“外部官方资料”。
+* 不要用图片代替分析，不要截取大段纯文字或只起装饰作用的照片，也不要伪造、重绘或使用与论文无关的生成图片。无法访问、清晰截取或确认来源时，说明限制并跳过，不要留下占位图。
+* 完成后实际打开 Markdown 预览，逐张检查相对路径、清晰度、裁剪范围、图注和正文引用。发现破图、文字不可读或关键图例被裁掉时，重新导出并再次检查。
+* 最终回复只需给出报告文件的可点击链接，并简要说明共保存了多少张论文截图；不要再次粘贴整篇报告。
 
 ## 九、输出前自检
 
@@ -404,12 +416,15 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 * 是否明确了优化变量、模型参数和临时求解状态的区别；
 * 是否把核心创新、辅助技巧、实现小巧思和已有组件区分开；
 * 公式是否不仅排版正确，而且数学含义与上下文一致；
+* 所有公式是否都只使用 \\(...\\) 或 \\[...\\] 定界，且没有使用美元符号定界或留下裸露 LaTeX；
+* 是否只截取了真正帮助理解的图片，并为每张图片保留完整图例、写明来源且使用可用的相对路径；
+* 是否已实际预览最终 Markdown，确认所有图片清晰显示且没有破图；
 * 实验结论是否与证据强度匹配；
 * 是否有同一条信息在多个章节重复出现；
 * 是否存在读完报告反而还需要读者自己拼接 pipeline 的问题。
 
 最终报告应当像一位真正理解论文的研究者在带领读者沿系统闭环逐层放大，而不是把论文重新整理成一份更长、更碎的论文。`,
-  en: `You are a senior expert in intelligent control, robot learning, and motion planning with experience reviewing for top-tier journals. Based on the paper I upload, produce an English close-reading report for graduate students in control, robotics, and reinforcement learning.
+  en: `You are Codex and a senior expert in intelligent control, robot learning, and motion planning with experience reviewing for top-tier journals. Read the paper supplied in the current task, whether as a workspace file, attachment, or link; use the available tools to verify it; and generate an English close-reading report in the current workspace for graduate students in control, robotics, and reinforcement learning.
 
 The goal is not to paraphrase the paper section by section or mechanically fill out a checklist. Help the reader build a complete mental model that they can explain in their own words:
 
@@ -530,11 +545,11 @@ Keep only equations necessary to understand the core mechanism. Move secondary e
 
 Equation formatting:
 
-* Use $...$ for inline mathematics;
-* Use $$...$$ for display mathematics;
-* Do not use \\(...\\) or \\[...\\];
+* For compatibility with math rendering on the official ChatGPT website, use \\(...\\) for all inline mathematics;
+* Use \\[...\\] for display mathematics, with the opening and closing delimiters on their own lines;
+* Do not use single or double dollar signs as math delimiters, because they may be displayed as raw LaTeX text;
 * Do not place equations in code blocks;
-* Typeset vectors and matrices in bold, for example $\\mathbf{x}$ and $\\mathbf{R}$;
+* Typeset vectors and matrices in bold, for example \\(\\mathbf{x}\\) and \\(\\mathbf{R}\\);
 * Check delimiters, signs, superscripts, subscripts, dimensions, and units;
 * If you rename paper notation for consistency, state that explicitly.
 
@@ -695,8 +710,20 @@ Do not let these verification details interrupt the explanatory thread.
 8. Do not repeat the complete pipeline, contributions, or conclusions.
 9. Do not put a large terminology table, equation catalog, or reviewer checklist at the beginning.
 10. Prioritize a coherent main narrative; move completeness checks to the appendix.
-11. Produce Markdown that can be copied and previewed directly.
+11. Write the final report to an actual Markdown file instead of pasting the entire report only into the conversation.
 12. Let the paper's complexity determine the length; never pad with repetition.
+
+### Figure Capture and Document Delivery (Codex)
+
+* If the user specifies an output path, use it exactly. Otherwise, save the report as <paper-slug>-reading-report.md and create a sibling <paper-slug>-reading-report-assets/ directory for images.
+* While reading the main PDF and appendices, actively identify original figures that materially improve understanding. Prioritize the full method or system pipeline, core module or algorithm architecture, training-versus-deployment relationships, the most important result or ablation, and informative task or hardware setups, in that order.
+* Normally select the 2–5 highest-value figures, but use explanatory value rather than a quota. Include no figures when none would improve the report.
+* Use available PDF page capture, rendering, or cropping tools to save figures locally as PNG files. Crop page margins and unrelated prose tightly, but retain every axis, legend, panel label, annotation, and unit needed to interpret the figure. Never alter reported values, curves, or the scientific meaning of the original image.
+* Embed each image with a relative Markdown path so it appears directly in the rendered document rather than as a bare path or external link. For example: ![Method overview](<paper-slug>-reading-report-assets/fig-03-pipeline.png). Use stable, short, descriptive English filenames without spaces or absolute paths.
+* Place each image close to its first substantive explanation. Follow it with a short caption stating what the reader should notice and the exact source, for example, "Captured from Figure 3, page 6 of the paper." Clearly mark images from a project page or another official source as "External official source."
+* Do not substitute images for analysis, capture long passages of prose, include merely decorative photos, fabricate or redraw figures, or use unrelated generated images. If a source cannot be accessed, captured clearly, or verified, state the limitation and omit the image instead of leaving a placeholder.
+* After writing, open the rendered Markdown and inspect every image for a valid relative path, legibility, correct crop, caption, and in-text reference. Re-export and recheck any broken, unreadable, or over-cropped image.
+* In the final response, provide only a clickable link to the report and briefly state how many paper figures were saved. Do not paste the full report again.
 
 ## IX. Pre-Submission Self-Check
 
@@ -710,6 +737,9 @@ Before submitting, verify:
 * Are optimized variables, model parameters, and temporary solver state distinguished?
 * Are core innovations, supporting techniques, implementation insights, and inherited components separated?
 * Are equations both correctly typeset and mathematically consistent with their context?
+* Does every equation use only \\(...\\) or \\[...\\] delimiters, with no dollar-sign delimiters or raw LaTeX left visible?
+* Were only figures that materially aid understanding captured, with complete legends, precise source labels, and valid relative paths?
+* Was the final Markdown actually previewed to confirm that every image is legible and none is broken?
 * Does the strength of each experimental conclusion match the evidence?
 * Is the same information unnecessarily repeated across sections?
 * Must the reader still reconstruct the pipeline themselves after reading the report?
