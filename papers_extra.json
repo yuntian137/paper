@@ -1693,6 +1693,173 @@
           "Tracker training uses 16,384 parallel IsaacLab environments on one NVIDIA A100 80 GB GPU, with 200 Hz simulation and 50 Hz policy control, plus randomization of friction, center-of-mass offsets, reference commands, and external pushes. Evaluation uses 101 held-out motion sequences in MuJoCo; the official project page still marked the code as Coming Soon on 2026-07-29."
         ]
       }
+    },
+    {
+      "id": "maskedmimic",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2409.14393",
+      "project": "https://research.nvidia.com/labs/par/maskedmimic/",
+      "arxiv": "https://arxiv.org/abs/2409.14393",
+      "year": "2024",
+      "venue": "ACM Transactions on Graphics (Proc. SIGGRAPH Asia 2024)",
+      "zh": {
+        "title": "MaskedMimic: Unified Physics-Based Character Control Through Masked Motion Inpainting",
+        "authors": "Chen Tessler, Yunrong Guo, Ofir Nabati, Gal Chechik, Xue Bin Peng",
+        "institutions": "NVIDIA；Bar-Ilan University；Simon Fraser University",
+        "status": "全文已精读",
+        "takeaway": "最值得记住的是：MaskedMimic 通过“全约束物理教师 + 结构化掩码 + 条件 VAE 在线蒸馏”，把 PULSE 中需要为每个任务训练的高层策略合并进目标条件先验，使同一个低层物理控制器可直接接受稀疏关节、文本和物体目标。",
+        "tags": [
+          "Physics-Based Character Control",
+          "Motion Inpainting",
+          "DAgger",
+          "Conditional VAE",
+          "Transformer",
+          "AMASS"
+        ],
+        "mainContent": "论文将物理角色控制统一表述为从部分、多模态运动描述进行闭环 motion inpainting：策略根据当前物理状态、稀疏未来关节目标、文本、物体和地形信息输出 69 维 PD 关节目标，而不是离线补全整段姿态。方法先通过 RL 训练读取完整未来运动的全约束教师，再通过 DAgger 式在线行为克隆和带可学习条件先验的 VAE，将教师蒸馏为只读取 mask 后目标的 MaskedMimic。统一模型在 AMASS 测试运动上达到 99.2% 全身跟踪成功率和 35.1 mm MPJPE，在 VR 稀疏跟踪上达到 98.1% 成功率和 58.1 mm 全身 MPJPE，并无需针对路径、转向、到达或坐下任务再次训练策略。其边界是部分关节条件训练实际只覆盖左右踝、骨盆、头和左右手六处，复杂任务仍需人工 goal-engineering/FSM，文本长时推理、主动落脚规划、动态物体和真实机器人迁移均未解决。",
+        "innovations": [
+          "系统级地将全身跟踪、VR 稀疏跟踪、关键帧补间、路径控制、文本控制和静态物体交互统一为同一个物理运动补全接口；RL motion tracking、DAgger、VAE 和 Transformer 等单独组件并非本文首创。",
+          "设计跨时间保持一致的结构化掩码：近期目标的关节可见模式以 98% 概率沿用，加入完全遮挡的 time gap，并随机隐藏文本、物体和远期目标，避免模型通过多帧可见关节的并集泄露完整运动。",
+          "采用特权后验与目标条件先验的残差 C-VAE：后验读取未遮挡的完整未来运动以确定当前训练样本的具体 latent，先验只读取部署时可用的部分目标，并通过 KL 对齐学习从欠约束输入预测可执行动作分布。",
+          "将 PULSE 的运动先验与任务特定高层策略合并为直接读取用户目标的条件先验，使下游任务不再需要单独的 PPO/RL 训练；代价是任务必须能表达为模型已支持的部分目标，并可能需要人工 FSM 调度。"
+        ],
+        "implementation": [
+          "角色基于 neutral SMPL，具有 69 个自由度；状态空间为 358 维，动作是以指数映射编码的 69 维 PD 目标。当前姿态、速度、未来目标和场景均规范化到角色根部局部坐标系，根高度单独保留。",
+          "第一阶段使用 A2C 训练全约束教师：Transformer actor 读取当前状态、完整未来全身姿态和局部高度图，MLP critic 估计价值；奖励包含全局关节位置、旋转、根高度、关节速度、角速度和能耗六项。训练场景由平地、不规则地形和物体 playground 组成，并使用 early termination 与按平地失败率进行的 prioritized motion sampling。",
+          "第二阶段冻结教师并让学生控制仿真。结构化 mask 将完整目标变为部分目标；先验读取当前状态、部分关键帧、历史姿态、XCLIP 文本、物体和高度图，后验额外读取未遮挡未来姿态；decoder 根据当前状态、地形和 latent 输出 PD 动作。教师在学生访问的同一状态上读取完整目标并标注动作，训练目标由教师动作行为克隆损失和后验—先验 KL 损失组成。",
+          "先验采用 4 层、4 头 Transformer，模型维度 512、FFN 维度 1024，无 dropout，输出 64 维 Gaussian latent；各模态编码器为隐藏层 [256, 256] 的 MLP，后验编码器和 decoder 均使用 [1024, 1024, 1024] MLP。训练时 episode 内固定重参数化噪声 epsilon，部署时可取先验均值获得稳定结果或采样获得多样性。",
+          "学生使用 11 个未来目标：前 10 个为连续近期帧，第 11 个为随机远期目标；历史输入从过去 40 帧中每 8 帧取一个，共 5 个姿态。物体由 8 个三维包围盒角点、6D 朝向和类别索引表示，地形使用点距 10 cm 的 16×16 高度图，文本使用 512 维 XCLIP 嵌入。",
+          "训练数据聚合 AMASS、HumanML3D 和 SAMP，并进行 AMASS 过滤、左右镜像和同类别物体随机替换。论文报告使用 16,384 个 Isaac Gym 并行环境和 4 张 A100，训练约 14 天；全约束教师约 300 亿步，MaskedMimic 约 100 亿步，策略运行于 30 Hz，物理仿真运行于 120 Hz。",
+          "部署时删除全约束教师和特权后验，仅保留先验与 decoder。路径、steering、reach 和 sit 等任务通过外部 FSM 构造或切换部分目标；因此无需任务特定再训练，但并未消除任务特定的目标、阈值和状态机设计。",
+          "定量结果包括：AMASS 测试集全身跟踪 99.2% 成功率、35.1 mm MPJPE；VR 跟踪 98.1% 成功率、58.1 mm 全身 MPJPE 和 45.8 mm 观测关节误差；不规则地形上的全身与 VR 成功率分别为 95.4% 和 93.6%；测试坐具上的坐下成功率为 96.9%。主要定量评估使用先验均值，随机采样的多样性—成功率权衡未被量化。"
+        ]
+      },
+      "en": {
+        "title": "MaskedMimic: Unified Physics-Based Character Control Through Masked Motion Inpainting",
+        "authors": "Chen Tessler, Yunrong Guo, Ofir Nabati, Gal Chechik, Xue Bin Peng",
+        "institutions": "NVIDIA; Bar-Ilan University; Simon Fraser University",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea to remember is that MaskedMimic combines a fully constrained physics teacher, structured masking, and online conditional-VAE distillation to fold the task-specific high-level policies required by PULSE into a goal-conditioned prior, allowing one low-level physics controller to directly consume sparse-joint, text, and object goals.",
+        "tags": [
+          "Physics-Based Character Control",
+          "Motion Inpainting",
+          "DAgger",
+          "Conditional VAE",
+          "Transformer",
+          "AMASS"
+        ],
+        "mainContent": "The paper formulates physics-based character control as closed-loop motion inpainting from partial, multimodal motion descriptions: conditioned on the current physical state, sparse future joint targets, text, objects, and terrain, the policy outputs 69-dimensional PD joint targets instead of reconstructing an entire pose sequence offline. It first trains a fully constrained teacher with RL using complete future motion, then distills the teacher through DAgger-style online behavioral cloning and a VAE with a learned conditional prior into MaskedMimic, which only observes masked goals. The unified model reaches 99.2% full-body tracking success with 35.1 mm MPJPE on held-out AMASS motions and 98.1% success with 58.1 mm full-body MPJPE for sparse VR tracking, while requiring no additional policy training for path following, steering, reaching, or sitting. Its boundaries are that partial-joint conditioning was actually trained only for the left/right ankles, pelvis, head, and left/right hands; complex tasks still require manual goal-engineering/FSMs, while long-horizon text reasoning, active foothold planning, dynamic objects, and real-robot transfer remain unresolved.",
+        "innovations": [
+          "At the system level, it unifies full-body tracking, sparse VR tracking, keyframe inbetweening, path control, text control, and static-object interaction under one physics-based motion-inpainting interface; the individual components such as RL motion tracking, DAgger, VAEs, and Transformers are not themselves new.",
+          "It introduces temporally structured masking: near-term targets retain the previous joint-visibility pattern with 98% probability, fully masked time gaps are inserted, and text, objects, and long-term targets are randomly hidden, preventing the model from recovering the full motion through the union of independently visible joints across frames.",
+          "It uses a residual C-VAE with a privileged posterior and a goal-conditioned prior: the posterior observes the unmasked future motion to identify the concrete latent for each training example, while the prior observes only deployment-time partial goals and learns through KL alignment to predict a distribution of executable motions from underspecified inputs.",
+          "It merges PULSE's motion prior and task-specific high-level policy into a conditional prior that directly consumes user goals, removing separate PPO/RL training for downstream tasks; the tradeoff is that tasks must be expressible through supported partial goals and may still require a manually designed FSM."
+        ],
+        "implementation": [
+          "The character uses the neutral SMPL body with 69 degrees of freedom; the state space is 358-dimensional, and the action is a 69-dimensional PD target encoded with exponential maps. Current poses, velocities, future targets, and scene observations are canonicalized in the character's root-local frame, while root height is retained separately.",
+          "The first stage trains a fully constrained teacher with A2C: a Transformer actor consumes the current state, complete future full-body poses, and a local heightmap, while an MLP critic estimates value; the reward contains six terms for global joint position, rotation, root height, joint velocity, angular velocity, and energy. The training scene contains flat ground, irregular terrain, and an object playground, with early termination and prioritized motion sampling based on flat-ground failures.",
+          "The second stage freezes the teacher and lets the student control the simulation. Structured masking converts complete goals into partial goals; the prior consumes the current state, partial keyframes, pose history, XCLIP text, objects, and the heightmap, while the posterior additionally observes unmasked future poses; the decoder outputs PD actions from the current state, terrain, and latent. The teacher reads the complete goal at the same student-visited state to label actions, and training combines behavioral cloning of teacher actions with posterior-prior KL alignment.",
+          "The prior is a 4-layer, 4-head Transformer with model dimension 512, FFN dimension 1024, no dropout, and a 64-dimensional Gaussian latent; modality encoders are MLPs with hidden sizes [256, 256], while the posterior encoder and decoder use [1024, 1024, 1024] MLPs. Reparameterization noise epsilon is fixed within each episode during training; inference can use the prior mean for stable behavior or sample for diversity.",
+          "The student uses 11 future targets: the first 10 are consecutive near-term frames, and the 11th is a random long-term target; pose history consists of 5 poses sampled every 8 frames from the preceding 40 frames. Objects are represented by eight 3D bounding-box corners, a 6D orientation, and a category index; terrain uses a 16×16 heightmap with 10 cm spacing, and text uses a 512-dimensional XCLIP embedding.",
+          "Training aggregates AMASS, HumanML3D, and SAMP, with AMASS filtering, left-right mirroring, and random replacement of objects within the same class. The paper reports 16,384 parallel Isaac Gym environments on four A100 GPUs for approximately 14 days; the fully constrained teacher uses about 30 billion steps and MaskedMimic about 10 billion, with the policy running at 30 Hz and physics simulation at 120 Hz.",
+          "At deployment, the fully constrained teacher and privileged posterior are removed, leaving only the prior and decoder. Tasks such as path following, steering, reaching, and sitting are implemented by an external FSM that constructs or switches partial goals; thus task-specific retraining is eliminated, but task-specific goal, threshold, and state-machine engineering remains.",
+          "Quantitative results include 99.2% success and 35.1 mm MPJPE for full-body tracking on the AMASS test set; 98.1% success, 58.1 mm full-body MPJPE, and 45.8 mm observed-joint error for VR tracking; 95.4% and 93.6% success for full-body and VR tracking on irregular terrain; and 96.9% sitting success on held-out seating objects. Major quantitative evaluations use the prior mean, and the diversity-success tradeoff under random sampling is not quantified."
+        ]
+      }
+    },
+    {
+      "id": "m3imic-multimodal-motion-mimicking",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.04829",
+      "project": "https://github.com/Renforce-Dynamics/MultiModalWBC",
+      "arxiv": "https://arxiv.org/abs/2606.04829",
+      "year": "2026",
+      "venue": "IEEE Robotics and Automation Letters (RA-L), 2026",
+      "zh": {
+        "title": "M3imic: Learning a Versatile Whole-Body Controller for Multimodal Motion Mimicking",
+        "authors": "Zuxing Lu, Ziang Zheng, Yao Lyu, Jingyu Liu, Feihong Zhang, Song Lu, Xin Yuan, Changyin Sun, Xingxing Zuo, Shengbo Eben Li",
+        "institutions": "东南大学自动化学院；清华大学车辆与运载学院；穆罕默德·本·扎耶德人工智能大学机器人学系",
+        "status": "全文已精读",
+        "takeaway": "M3imic 最值得记住的是：它把机器人关节角、SMPL-X 人体姿态和稀疏末端位姿对齐到共享潜在命令空间，使同一个 Unitree G1 全身动作网络能够在密集参考的跟踪精度与稀疏参考的平衡鲁棒性之间切换，但核心潜空间损失缺少消融，控制接口与训练细节也不够完整。",
+        "tags": [
+          "Humanoid Whole-Body Control",
+          "Multimodal Motion Mimicking",
+          "Shared Latent Space",
+          "Asymmetric Actor-Critic",
+          "Curriculum Learning",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "论文研究如何用一个低层全身控制器统一跟踪机器人关节角、SMPL-X 人体姿态和五个末端位姿三种结构与稀疏程度不同的运动参考。M3imic 使用模态专属编码器将短期参考窗口映射到 64 维共享潜在命令空间，并联合优化物理运动跟踪策略、模态内重建、潜变量对齐和机器人空间一致性损失。模型在 LAFAN1 与 100STYLE 上训练，在未见的 OMOMO 测试集上由末端模态取得 98.42% 的最高成功率，并在 Unitree G1 上完成零样本 Sim-to-Real 跟踪和光学动捕遥操作。该结果支持密集关节参考精度更高、稀疏末端参考更鲁棒的趋势，但论文没有直接量化 OOD 自编码器误差，也没有对三项核心潜空间损失逐项消融。",
+        "innovations": [
+          "为机器人关节角、SMPL-X 人体姿态和末端位姿分别设计编码器，将三种异构参考映射到连续的 64 维共享潜在命令空间，而不是先统一为显式关节轨迹或简单拼接带掩码的命令向量。",
+          "联合使用模态内重建损失、成对潜变量对齐损失，以及通过机器人解码器 D_r 计算的机器人空间一致性损失，使不同模态保留自身信息的同时具有共同的机器人控制语义。",
+          "将表示学习与物理运动跟踪强化学习组成单阶段训练框架，部署时只需选择对应模态编码器并复用同一个 Action Decoder，无需为每种输入模态重新训练策略；末端模式不需要部署时显式 IK，但训练数据仍依赖离线 GMR 重定向。",
+          "使用基于一秒动作片段终止失败率 EMA 的课程采样，在均匀采样与困难片段采样之间逐步过渡，并截断极端困难片段的采样概率。",
+          "系统性比较三种部署模态，观察到机器人关节参考具有更好的姿态和关节跟踪精度，而稀疏末端参考在动作分布变化下具有更高的成功率；主要贡献属于多模态表示与全身控制的系统整合，而非新的稳定性或收敛理论。"
+        ],
+        "implementation": [
+          "数据预处理首先对人体动作进行筛选和 SMPL-X 整理，再通过 GMR 重定向到 29-DoF Unitree G1，形成时间对齐的机器人关节角、人体姿态和五个末端位姿三种参考。论文未说明具体筛选规则和 mini 数据子集的抽样方法。",
+          "机器人参考 q_t 为 29 维关节角；人体参考由 21 个关节的 6D rotation representation 构成；末端参考包含双手、双脚和胸部，每个末端由 3 维根坐标系相对位置和 6D 旋转表示构成。",
+          "每个控制时刻使用 H=10、采样间隔 Δ=2 的参考窗口，即索引 t、t+2 至 t+18。三个输入窗口分别为 10×29、10×21×6 和 10×5×9，并由模态专属 MLP 编码为 64 维潜变量。论文未说明控制周期，因此无法把该未来窗口换算为实际时间，也未解释在线遥操作如何取得未来参考。",
+          "三个模态解码器分别执行模态内重建；潜变量对齐损失最小化 z_r、z_h、z_e 的成对距离；一致性损失比较 D_r(z_r)、D_r(z_h) 和 D_r(z_e)，将机器人关节空间作为跨模态规范语义。",
+          "actor 输入潜在命令以及根姿态误差、基座角速度、实际关节角、关节速度和上一时刻动作；它刻意排除全局根位置与根线速度。critic 额外使用根位置误差、完整 body link 位置和姿态以及根线速度等仿真特权信息，部署时删除 critic。",
+          "总训练目标为策略损失与多模态自编码器损失之和。策略项采用 PPO 风格 clipped surrogate objective，包含 actor、value 和 entropy 项，实验部分称使用 RAD optimizer；论文未说明优势估计方法、clip 系数、学习率、损失权重及 RAD 与 clipped objective 的具体更新关系。",
+          "跟踪奖励包括根速度、根姿态、全身位置、全身姿态、全身线速度和全身角速度；正奖励权重依次为 0.5、0.5、1.0、1.0、1.0 和 1.0。正则项包括权重 -0.1 的动作变化、权重 -10.0 的关节越界和权重 -0.1 的碰撞惩罚；论文未给出各指数奖励的尺度参数。",
+          "课程学习将轨迹切分为一秒片段，以终止失败率 EMA 表示难度，并使用 P_final=αP_uniform+(1-α)clip(P_failure,0,P_max) 采样。消融实验设置 α_min=0.2、P_max=0.05；论文未给出 EMA 系数、α 调度曲线和截断后的概率归一化方法。",
+          "Sim-to-Real 训练随机化包括摩擦、外部推力、基座质心、基座质量、默认关节位置及姿态、角速度、关节位置和关节速度噪声。正文还提到 link mass、inertia、joint damping 和 motor strength，但表格没有给出相应范围。",
+          "训练数据为 LAFAN1 和 100STYLE，未见动作测试使用 OMOMO test subset。课程、数据规模和网络规模消融在 4 张 RTX 4090 上训练 50000 iterations；标准 MLP 配置为 512、256、128，大网络为 1024、512、256，但论文未报告主模型总训练时间和完整计算成本。",
+          "在训练数据上，M3imic 达到 99.54% 成功率、46.05 mm MPKPE、0.112 rad MPJAE 和 0.256 m/s 根速度误差。在 OMOMO 上，机器人参考模式的 MPKPE 和 MPJAE 最低，分别为 71.52 mm 和 0.139 rad；末端模式以 98.42% 获得最高成功率，但 MPKPE 和 MPJAE 略高。",
+          "真机光学动捕实验中，机器人参考模式与末端模式的 MPKPE 分别为 41.63 mm 和 43.22 mm，MPJAE 分别为 0.095 rad 和 0.105 rad。论文未报告试验次数、方差、真实成功率、端到端延迟、控制频率或推理硬件。",
+          "论文未说明动作 a_t 是关节位置目标、位置偏置还是力矩，也未给出动作维数、PD 增益、缩放和限幅。图 2 显示训练中的 Action Decoder 接收 z_r，而正文仅写未注明模态的 z_t，因此训练时是否让三种潜变量分别直接驱动 actor 仍不明确。"
+        ]
+      },
+      "en": {
+        "title": "M3imic: Learning a Versatile Whole-Body Controller for Multimodal Motion Mimicking",
+        "authors": "Zuxing Lu, Ziang Zheng, Yao Lyu, Jingyu Liu, Feihong Zhang, Song Lu, Xin Yuan, Changyin Sun, Xingxing Zuo, Shengbo Eben Li",
+        "institutions": "School of Automation, Southeast University; School of Vehicle and Mobility, Tsinghua University; Department of Robotics, Mohamed Bin Zayed University of Artificial Intelligence",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea to remember is that M3imic aligns robot joint angles, SMPL-X human poses, and sparse end-effector poses in a shared latent command space, allowing one Unitree G1 action network to trade dense-reference tracking fidelity for sparse-reference balance robustness, although the core latent losses are not ablated and important control and training details remain unspecified.",
+        "tags": [
+          "Humanoid Whole-Body Control",
+          "Multimodal Motion Mimicking",
+          "Shared Latent Space",
+          "Asymmetric Actor-Critic",
+          "Curriculum Learning",
+          "Sim-to-Real",
+          "Unitree G1"
+        ],
+        "mainContent": "The paper studies how a single low-level whole-body controller can track three motion-reference modalities with different structures and sparsity levels: robot joint angles, SMPL-X human poses, and five end-effector poses. M3imic uses modality-specific encoders to map short-horizon reference windows into a shared 64-dimensional latent command space and jointly optimizes physical motion tracking, within-modality reconstruction, latent alignment, and robot-space consistency. Trained on LAFAN1 and 100STYLE, the end-effector deployment mode reaches the highest success rate of 98.42% on the unseen OMOMO test set, and the controller is transferred zero-shot to Unitree G1 for tracking and optical-motion-capture teleoperation. The results support a fidelity-robustness trade-off between dense and sparse references, but the paper neither directly measures OOD autoencoder error nor ablates the three core latent-space losses.",
+        "innovations": [
+          "It introduces separate encoders for robot joint angles, SMPL-X human poses, and end-effector poses, mapping the heterogeneous references into a continuous shared 64-dimensional latent command space instead of converting all commands into explicit joint trajectories or concatenating masked command vectors.",
+          "It combines within-modality reconstruction, pairwise latent alignment, and robot-space consistency through the robot decoder D_r so that each modality retains its own information while acquiring shared robot-control semantics.",
+          "It jointly trains representation learning and physics-based motion tracking in a single-stage framework. At deployment, a modality-specific encoder is paired with the same Action Decoder without modality-specific policy retraining; the end-effector mode avoids explicit runtime IK, although training data still depend on offline GMR retargeting.",
+          "It uses curriculum sampling based on an EMA of termination failure rates for one-second motion segments, gradually shifting from uniform sampling toward difficult segments while clipping extremely difficult cases.",
+          "It systematically compares the three deployment modalities and observes that robot-joint references provide better pose and joint tracking fidelity, whereas sparse end-effector references yield higher success under motion-distribution shift. The contribution is primarily a systems integration of multimodal representation learning and whole-body control rather than a new stability or convergence theory."
+        ],
+        "implementation": [
+          "Human motion is filtered and processed in SMPL-X, then retargeted to the 29-DoF Unitree G1 with GMR to produce temporally aligned robot-joint, human-pose, and five-end-effector references. The paper does not specify the filtering criteria or how the mini data subset is sampled.",
+          "The robot reference q_t contains 29 joint angles. The human reference contains 21 joints represented with 6D rotations. The end-effector reference contains both hands, both feet, and the chest, with each pose represented by a 3D root-relative position and a 6D rotation.",
+          "At each control step, the encoders receive a reference horizon with H=10 and sampling interval Δ=2, covering indices t, t+2 through t+18. The three input sizes are 10×29, 10×21×6, and 10×5×9, and each modality-specific MLP produces a 64-dimensional latent code. The control period is not reported, so the physical duration of this future window and its causal handling in online teleoperation are unknown.",
+          "Three modality decoders perform within-modality reconstruction. The alignment loss minimizes pairwise distances among z_r, z_h, and z_e, while the consistency loss compares D_r(z_r), D_r(z_h), and D_r(z_e), using robot joint space as the canonical cross-modal semantics.",
+          "The actor receives the latent command, root-orientation error, base angular velocity, measured joint positions and velocities, and the previous action, while deliberately excluding global root position and root linear velocity. The critic additionally receives privileged simulation information including root-position error, full body-link positions and orientations, and root linear velocity, and is removed for deployment.",
+          "The total objective combines the policy loss and multimodal autoencoder loss. The policy term uses a PPO-style clipped surrogate objective with actor, value, and entropy components, and the experiments state that the model is optimized with RAD. The paper does not specify advantage estimation, clipping and learning-rate hyperparameters, loss coefficients, or how RAD is combined with the clipped objective.",
+          "Tracking rewards cover root velocity, root orientation, body position, body orientation, body linear velocity, and body angular velocity, with weights 0.5, 0.5, 1.0, 1.0, 1.0, and 1.0. Regularization includes action-rate, joint-limit, and collision penalties with weights -0.1, -10.0, and -0.1, while the exponential reward scale parameters are not reported.",
+          "The curriculum divides trajectories into one-second segments, maintains an EMA of termination failure rate as difficulty, and samples with P_final=αP_uniform+(1-α)clip(P_failure,0,P_max). The ablation uses α_min=0.2 and P_max=0.05; the EMA coefficient, α schedule, and post-clipping normalization are not specified.",
+          "Sim-to-Real training randomizes friction, external pushes, base center of mass, base mass, default joint positions, and observation noise for orientation, angular velocity, joint position, and joint velocity. The text also mentions link mass, inertia, joint damping, and motor strength, but their ranges are absent from the table.",
+          "Training uses LAFAN1 and 100STYLE, with the OMOMO test subset used for unseen-motion evaluation. Curriculum, data-scale, and network-size ablations are trained for 50000 iterations on four RTX 4090 GPUs. The standard and large MLP configurations are 512-256-128 and 1024-512-256, but the main-model wall-clock training cost is not reported.",
+          "On the training datasets, M3imic reaches 99.54% success, 46.05 mm MPKPE, 0.112 rad MPJAE, and 0.256 m/s root-velocity error. On OMOMO, the robot-reference mode obtains the lowest M3imic MPKPE and MPJAE at 71.52 mm and 0.139 rad, while the end-effector mode achieves the highest success rate at 98.42% with slightly higher tracking errors.",
+          "In real-world optical-motion-capture experiments, the robot-reference and end-effector modes obtain MPKPE values of 41.63 mm and 43.22 mm and MPJAE values of 0.095 rad and 0.105 rad. The number of trials, variance, real-world success rate, end-to-end latency, control frequency, and inference hardware are not reported.",
+          "The paper does not specify whether action a_t is a joint-position target, position offset, or torque, and it omits the action dimension, PD gains, scaling, and limits. Figure 2 shows z_r entering the Action Decoder during training, whereas the text only refers to an unspecified z_t, leaving it unclear whether all three modality latents directly drive the actor during RL training."
+        ]
+      }
     }
   ]
 }
