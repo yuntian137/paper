@@ -1860,6 +1860,85 @@
           "The paper does not specify whether action a_t is a joint-position target, position offset, or torque, and it omits the action dimension, PD gains, scaling, and limits. Figure 2 shows z_r entering the Action Decoder during training, whereas the text only refers to an unspecified z_t, leaving it unclear whether all three modality latents directly drive the actor during RL training."
         ]
       }
+    },
+    {
+      "id": "dynaretarget",
+      "categories": ["loco-manipulation", "imitation-teleop", "sim2real"],
+      "pdf": "https://arxiv.org/pdf/2602.06827",
+      "project": "https://atarilab.github.io/dynaretarget.io/",
+      "arxiv": "https://arxiv.org/abs/2602.06827",
+      "year": "2026",
+      "venue": "arXiv:2602.06827",
+      "zh": {
+        "title": "DynaRetarget: Dynamically-Feasible Retargeting using Sampling-Based Trajectory Optimization",
+        "authors": "Victor Dhédin, Ilyass Taouil, Shafeef Omar, Dian Yu, Kun Tao, Angela Dai, Majid Khadiv",
+        "institutions": "Munich Institute of Robotics and Machine Intelligence (MIRMI), Technical University of Munich (TUM), Germany",
+        "status": "全文已精读",
+        "takeaway": "把运动学重定向结果当作初值，在 MuJoCo 中用逐步扩展时域的 CEM/SBTO 搜索 PD-target，再用物理 rollout 训练 PPO tracker；核心创新是离线动力学精炼，而不是新的 IK 或 RL 算法。",
+        "tags": [
+          "Humanoid Loco-Manipulation",
+          "Motion Retargeting",
+          "OmniRetarget",
+          "SBTO",
+          "CEM",
+          "Trajectory Optimization",
+          "MuJoCo",
+          "PPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "DynaRetarget 面向接触丰富的人形 loco-manipulation，解决纯运动学重定向产生的缺失接触、穿透、脚滑和动力学不可执行问题。其核心 SBTO 在 MuJoCo 中用 CEM 优化稀疏 PD-target knots，逐步扩展优化时域，并允许早期控制变量在更长未来代价下继续更新；SBTO-skip 进一步缓存已收敛前缀。实验以 OmniRetarget 的 285 条 G1–箱子运动学轨迹为输入，SBTO-skip 的精炼成功率为 76.8%，高于 SPIDER 的 37.9%；使用精炼参考训练的 PPO tracker 在 8 条动作、1024 个 episode 上达到 97.09 ± 2.31% 成功率，而直接使用 OmniRetarget 参考为 79.41 ± 32.57%。论文还展示了策略零样本迁移至真机，但 SBTO 是离线过程：在 112 核 CPU 上精炼 1 秒动作约需 20 秒，且对低质量参考中的接触突变和物体姿态突翻仍会失败。",
+        "innovations": [
+          "据作者所知，提出首个在考虑完整问题时域的同时，将不完美运动学示范精炼为动力学可行人形 loco-manipulation 运动的采样式轨迹优化方法。",
+          "提出增量时域 SBTO：在当前窗口内反复执行 FHTO/CEM，协方差低于阈值后才加入下一个 knot；旧 knots 在更长有效时域下继续联合优化，从而预热最终 full-horizon 问题，并克服 SBMPC 的短视和已执行动作不可回溯问题。",
+          "提出 SBTO-skip：当前缀控制方差低于更严格阈值时，缓存其状态轨迹并跳过重复 rollout；Table III 中计算量由普通 SBTO 的 4.06e7 降至 1.18e7 个仿真步/秒参考动作，同时成功率由 74.6% 提升至 76.8%。",
+          "在系统层面将 IK 重定向、SBTO 动力学精炼和 PPO tracking 串联，并展示同一精炼目标可将单条示范适配到质量 0.1–8 kg、尺寸 0.2–0.4 m 的箱体以及圆柱、椅子和货架；下游 PPO 本身不是本文提出的新算法。"
+        ],
+        "implementation": [
+          "系统概念管线为“人–物体示范 → IK-based retargeting → SBTO → PPO tracking → 零样本真机部署”。但评测并未重新提出或训练新的 IK 前端，而是直接读取 OmniRetarget 已生成的 285 条 G1–箱子运动学轨迹；官方仓库同样要求下载 OmniRetarget robot-object 数据。",
+          "SBTO 优化的是稀疏 PD-target knots，而不是直接改写仿真状态。采样分布初始均值取参考关节位置在 knot 时刻的值，初始标准差为 0.25；候选节点插值后在 MuJoCo 中执行，仿真步长为 0.01 s、knot 间隔为 0.25 s，并使用完整机器人碰撞模型和 rollout API 并行评估。",
+          "CEM 每轮采样 1024 条候选，elite 比例为 0.03，使用完整协方差和 EWMA；均值与协方差 momentum 分别为 0.95 和 0.2，时域增长阈值为 0.055，前缀跳过阈值为 1e-4。论文没有给出 EWMA 的显式更新式，因此不能仅凭 momentum 数值判断其乘新统计量还是旧统计量。",
+          "SBTO 代价同时跟踪关节、基座和物体的位置、姿态与速度，并加入 torso、foot、hand 的任务空间跟踪以及不期望的机器人–物体碰撞和自碰撞项。每条候选 PD-target 必须先在 MuJoCo 中完整 rollout 当前有效窗口，再按 rollout 代价选择 elites 并更新 CEM 分布。",
+          "在 285 条 OmniRetarget 轨迹上，SBTO-skip、普通 SBTO、SBTO-pos 和 SPIDER 的精炼成功率分别为 76.8%、74.6%、62.1% 和 37.9%。SBTO-skip 的归一化计算量为 1.18e7 个仿真步/秒参考动作；实际墙钟开销约为每精炼 1 秒动作需 20 秒，硬件为 112 核 Intel Xeon Platinum 8480+。",
+          "下游控制器采用 PPO 和 residual action space。策略观测包括一步期望机器人轨迹、一步物体位姿误差以及机器人坐标系中的物体位姿；奖励包括机器人全身与关节跟踪、物体位姿和速度跟踪、接触匹配、action rate、关节限位及自碰撞，其中接触项逐渐惩罚超过 10 N 的接触力。",
+          "PPO 在 mjlab（GPU 版 MuJoCo、IsaacLab 风格 API）中以 8192 个环境训练 10000 iterations，使用单张 RTX 4090。训练采用 adaptive sampling，并随机化物体初始位姿或速度、外力、摩擦和质量；作者没有加入物体跟踪失败终止条件。",
+          "训练好的策略通过 domain randomization 零样本迁移至真实人形机器人。论文未报告策略网络层数、控制频率、完整 PPO 训练墙钟时间或真机量化成功率；官方仓库明确开源的是 SBTO，不能据此认定完整 IK、PPO 和真机部署代码均已开源。"
+        ]
+      },
+      "en": {
+        "title": "DynaRetarget: Dynamically-Feasible Retargeting using Sampling-Based Trajectory Optimization",
+        "authors": "Victor Dhédin, Ilyass Taouil, Shafeef Omar, Dian Yu, Kun Tao, Angela Dai, Majid Khadiv",
+        "institutions": "Munich Institute of Robotics and Machine Intelligence (MIRMI), Technical University of Munich (TUM), Germany",
+        "status": "Full paper reviewed",
+        "takeaway": "Treat the kinematically retargeted motion as an initialization, use horizon-growing CEM/SBTO in MuJoCo to search for PD targets, and train a PPO tracker from the physical rollouts; the novelty is offline dynamic refinement rather than a new IK or RL algorithm.",
+        "tags": [
+          "Humanoid Loco-Manipulation",
+          "Motion Retargeting",
+          "OmniRetarget",
+          "SBTO",
+          "CEM",
+          "Trajectory Optimization",
+          "MuJoCo",
+          "PPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "DynaRetarget targets contact-rich humanoid loco-manipulation and addresses missing contacts, penetrations, foot skating, and dynamic infeasibility left by purely kinematic retargeting. Its core SBTO method uses CEM in MuJoCo to optimize sparse PD-target knots, incrementally grows the optimization horizon, and keeps refining early controls under longer-term costs; SBTO-skip additionally caches converged prefixes. On 285 kinematically retargeted G1–box motions from OmniRetarget, SBTO-skip achieved a 76.8% refinement success rate versus 37.9% for SPIDER; PPO trackers trained from the refined references achieved 97.09 ± 2.31% success over 1024 episodes and 8 motions, compared with 79.41 ± 32.57% using OmniRetarget references directly. The paper also demonstrates zero-shot transfer to real hardware, but SBTO is an offline process: refining one second of motion takes roughly 20 seconds on a 112-core CPU, and poor references with abrupt contact changes or object-orientation flips remain failure cases.",
+        "innovations": [
+          "To the authors' knowledge, this is the first sampling-based trajectory optimization method that refines imperfect kinematic demonstrations into dynamically feasible humanoid loco-manipulation motions while considering the full problem horizon.",
+          "The incremental-horizon SBTO repeatedly runs FHTO/CEM within the current window and adds a new knot only after covariance falls below a threshold; earlier knots remain jointly optimized under a longer effective horizon, warm-starting the final full-horizon problem and addressing SBMPC's myopia and irreversibility.",
+          "SBTO-skip caches a state prefix and skips repeated rollouts once the corresponding control variances fall below a stricter threshold. In Table III, it reduces compute from 4.06e7 to 1.18e7 simulation steps per second of reference motion while increasing success from 74.6% to 76.8%.",
+          "At the system level, the work connects IK retargeting, SBTO dynamic refinement, and PPO tracking, and shows that one demonstration can be adapted with the same objective to boxes of 0.1–8 kg and 0.2–0.4 m as well as a cylinder, chair, and shelf; the downstream PPO algorithm itself is not a new contribution."
+        ],
+        "implementation": [
+          "The conceptual pipeline is human–object demonstration → IK-based retargeting → SBTO → PPO tracking → zero-shot real-robot deployment. The evaluation does not introduce or train a new IK front end; it directly consumes 285 kinematically retargeted G1–box trajectories from OmniRetarget, and the official repository likewise downloads the OmniRetarget robot-object data.",
+          "SBTO optimizes sparse PD-target knots rather than directly editing simulated states. The sampling mean is initialized from reference joint positions at knot times with an initial standard deviation of 0.25; interpolated candidates are executed in MuJoCo with a 0.01 s simulation step, 0.25 s knot spacing, the full robot collision model, and parallel evaluation through the rollout API.",
+          "Each CEM iteration samples 1024 candidates with an elite proportion of 0.03, a full covariance matrix, and EWMA. Mean and covariance momenta are 0.95 and 0.2, the horizon-increment threshold is 0.055, and the prefix-skip threshold is 1e-4. The paper does not provide the explicit EWMA update equation, so the momentum values alone do not establish whether they multiply new or old statistics.",
+          "The SBTO cost tracks joint, base, and object positions, orientations, and velocities, adds task-space tracking for the torso, feet, and hands, and penalizes undesired robot–object collisions and self-collisions. Every PD-target candidate is rolled out over the complete current effective window in MuJoCo before elites are selected and the CEM distribution is updated.",
+          "Across 285 OmniRetarget motions, refinement success was 76.8% for SBTO-skip, 74.6% for SBTO, 62.1% for SBTO-pos, and 37.9% for SPIDER. SBTO-skip required 1.18e7 normalized simulation steps per second of reference motion; in wall-clock terms, refinement took about 20 seconds per second of motion on a 112-core Intel Xeon Platinum 8480+ CPU.",
+          "The downstream controller uses PPO with a residual action space. Observations include the one-step desired robot trajectory, one-step object-pose error, and object pose in the robot frame; rewards cover whole-body and joint tracking, object pose and velocity tracking, contact matching, action rate, joint limits, and self-collisions, with the contact term increasingly penalizing forces above 10 N.",
+          "PPO is trained in mjlab, a GPU MuJoCo environment with an IsaacLab-style API, using 8192 environments for 10000 iterations on one RTX 4090. Training uses adaptive sampling and randomizes object initial pose or velocity, external pushes, friction, and mass; the authors do not add object-tracking failure terminations.",
+          "The trained policy is transferred zero-shot to a real humanoid using domain randomization. The paper does not report the policy network architecture, control frequency, total PPO wall-clock training time, or quantitative real-robot success rates; the official repository explicitly releases SBTO, not necessarily the complete IK, PPO, and deployment stack."
+        ]
+      }
     }
   ]
 }
