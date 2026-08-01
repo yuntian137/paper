@@ -394,14 +394,15 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 
 ### 图片截取与文档交付（Codex）
 
-* 如果用户指定了输出路径，严格使用该路径；否则将报告保存为 <paper-slug>-reading-report.md，并在同级创建 <paper-slug>-reading-report-assets/ 图片目录。
+* 如果用户指定了输出位置或文件名，优先遵循；否则创建 <paper-slug>-reading-report/ 目录，在其中保存 <paper-slug>-reading-report.md，并创建 assets/ 子目录存放图片。
 * 阅读 PDF 正文和附录时，主动寻找真正帮助理解的原论文图片。优先级依次是：完整方法或系统 pipeline、核心模块或算法结构、训练与部署关系、最关键的实验结果或消融、能说明任务和硬件设置的图片。
 * 通常选取 2–5 张信息密度最高的图片，但以解释价值为准，不为凑数量插图；没有合适图片时可以不插入。
 * 使用可用的 PDF 页面截图、渲染或裁剪工具把图片保存为本地 PNG。紧密裁掉页边距和无关正文，但必须保留理解图片所需的坐标轴、图例、子图编号、标注和单位；不得修改实验数值、曲线或原图含义。
-* 使用相对路径把图片嵌入 Markdown，使图片在预览中直接显示，而不是只给出文件路径或外部链接。例如：![方法总览](<paper-slug>-reading-report-assets/fig-03-pipeline.png)。文件名使用稳定、简短、可读的英文，不使用空格或绝对路径。
+* 报告中的图片路径统一相对于 Markdown 文件写成 assets/<filename>.png，例如：![方法总览](assets/fig-03-pipeline.png)。不要使用绝对路径、file:// URI 或依赖网络的外部图片链接；文件名使用稳定、简短、可读的英文且不含空格。
 * 图片放在正文第一次深入解释它的位置附近。每张图片后写一条简短图注，说明“读者应看什么”，并标注准确来源，例如“截自论文 Figure 3，第 6 页”；若来自项目主页或其他外部官方资料，明确标记为“外部官方资料”。
 * 不要用图片代替分析，不要截取大段纯文字或只起装饰作用的照片，也不要伪造、重绘或使用与论文无关的生成图片。无法访问、清晰截取或确认来源时，说明限制并跳过，不要留下占位图。
-* 最终回复只需给出报告文件的可点击链接，并简要说明共保存了多少张论文截图；不要再次粘贴整篇报告。
+* 报告和图片写完后，保留原始报告目录，并额外创建同级的 <paper-slug>-reading-report.zip。ZIP 必须包含完整的 <paper-slug>-reading-report/ 目录、Markdown 文件和 assets/ 子目录，使用户解压后无需修改路径即可看到图片；即使没有选取图片，也仍然生成 ZIP 以保持交付方式一致。
+* 最终回复先提供 ZIP 的可点击链接，再提供 Markdown 报告的可点击链接，并简要说明共保存了多少张论文截图；不要再次粘贴整篇报告。
 
 ### 聊天回复中的公式格式
 
@@ -701,14 +702,15 @@ Do not let these verification details interrupt the explanatory thread.
 
 ### Figure Capture and Document Delivery (Codex)
 
-* If the user specifies an output path, use it exactly. Otherwise, save the report as <paper-slug>-reading-report.md and create a sibling <paper-slug>-reading-report-assets/ directory for images.
+* Prefer any user-specified output location or filename. Otherwise, create a <paper-slug>-reading-report/ directory containing <paper-slug>-reading-report.md and an assets/ subdirectory for images.
 * While reading the main PDF and appendices, actively identify original figures that materially improve understanding. Prioritize the full method or system pipeline, core module or algorithm architecture, training-versus-deployment relationships, the most important result or ablation, and informative task or hardware setups, in that order.
 * Normally select the 2–5 highest-value figures, but use explanatory value rather than a quota. Include no figures when none would improve the report.
 * Use available PDF page capture, rendering, or cropping tools to save figures locally as PNG files. Crop page margins and unrelated prose tightly, but retain every axis, legend, panel label, annotation, and unit needed to interpret the figure. Never alter reported values, curves, or the scientific meaning of the original image.
-* Embed each image with a relative Markdown path so it appears directly in the rendered document rather than as a bare path or external link. For example: ![Method overview](<paper-slug>-reading-report-assets/fig-03-pipeline.png). Use stable, short, descriptive English filenames without spaces or absolute paths.
+* Write every image path relative to the Markdown file as assets/<filename>.png, for example: ![Method overview](assets/fig-03-pipeline.png). Do not use absolute paths, file:// URIs, or network-dependent external image links. Use stable, short, descriptive English filenames without spaces.
 * Place each image close to its first substantive explanation. Follow it with a short caption stating what the reader should notice and the exact source, for example, "Captured from Figure 3, page 6 of the paper." Clearly mark images from a project page or another official source as "External official source."
 * Do not substitute images for analysis, capture long passages of prose, include merely decorative photos, fabricate or redraw figures, or use unrelated generated images. If a source cannot be accessed, captured clearly, or verified, state the limitation and omit the image instead of leaving a placeholder.
-* In the final response, provide only a clickable link to the report and briefly state how many paper figures were saved. Do not paste the full report again.
+* After writing the report and images, keep the unpacked report directory and also create a sibling <paper-slug>-reading-report.zip. The ZIP must contain the complete <paper-slug>-reading-report/ directory, its Markdown file, and its assets/ subdirectory so images work immediately after extraction. Create the ZIP even when no figures were selected, keeping delivery consistent.
+* In the final response, provide a clickable ZIP link first, followed by a clickable Markdown-report link, and briefly state how many paper figures were saved. Do not paste the full report again.
 
 ### Equation Formatting in Chat Responses
 

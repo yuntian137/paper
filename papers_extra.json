@@ -1939,6 +1939,77 @@
           "The trained policy is transferred zero-shot to a real humanoid using domain randomization. The paper does not report the policy network architecture, control frequency, total PPO wall-clock training time, or quantitative real-robot success rates; the official repository explicitly releases SBTO, not necessarily the complete IK, PPO, and deployment stack."
         ]
       }
+    },
+    {
+      "id": "kdmr-kinodynamic-motion-retargeting",
+      "categories": ["locomotion", "imitation-teleop"],
+      "pdf": "https://arxiv.org/pdf/2603.09956",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2603.09956",
+      "year": "2026",
+      "venue": "arXiv:2603.09956 [cs.RO]",
+      "zh": {
+        "title": "Kinodynamic Motion Retargeting for Humanoid Locomotion via Multi-Contact Whole-Body Trajectory Optimization",
+        "authors": "Xiaoyu Zhang, Steven Haener, Varun Madabushi, Maegan Tucker",
+        "institutions": "Georgia Institute of Technology, Atlanta, GA, USA",
+        "status": "全文已精读",
+        "takeaway": "KDMR 将同步 MoCap marker 与 GRF 先解释为人体姿态和 heel/toe 接触日程，再用全身动力学 NLP 离线逐序列修正机器人参考轨迹；它的价值是生成更易被 BeyondMimic 跟踪策略学习的动力学可行数据，而不是提供可在线泛化的重定向模型。",
+        "tags": [
+          "KDMR",
+          "Motion Retargeting",
+          "Trajectory Optimization",
+          "Multi-Contact",
+          "Ground Reaction Force",
+          "BeyondMimic"
+        ],
+        "mainContent": "论文针对纯运动学 human-to-humanoid retargeting 容易产生脚底滑动、穿地、悬空和动力学不可行过渡的问题。方法先用 OpenSim 将光学 MoCap markers 拟合为人体姿态，从竖直 GRF 提取 heel-only、flat-foot 和 toe-only 接触阶段，再以差分 IK 生成 Unitree G1 的运动学参考，最后通过带浮动基刚体动力学、heel/toe 点接触、摩擦和驱动力限制的 NLP 联合修正当前优化时域内的轨迹与接触力。与 GMR 的选定跑步机步行片段对比显示，KDMR 的接触保持和轨迹平滑性更好；使用两类参考分别进行五次 BeyondMimic 训练时，KDMR 曲线表现出更快收敛。证据仍限于仿真和有限动作数据，论文没有消融、真机结果、NLP 求解时间或完整约束残差统计。",
+        "innovations": [
+          "核心创新：将 humanoid motion retargeting 表述为预给定 heel/toe 多接触日程下的全身动力学轨迹优化，在参考姿态跟踪之外显式加入浮动基刚体动力学、接触点驻留、摩擦和驱动力限制。",
+          "关键设计：利用同步 GRF 的竖直双峰形态识别 heel-only、flat-foot 与 toe-only 阶段，并将质量缩放后的单脚合力分解为 heel/toe 接触力变量，使优化能够表达自然的 heel-to-toe roll。",
+          "工程组合与验证：以 OpenSim 人体 IK、差分机器人 IK 和动力学 NLP 组成离线数据生成链，并用 BeyondMimic 下游策略训练比较说明动力学参考数据可能降低策略补偿非物理伪影的负担；OpenSim、CasADi、Pinocchio 和 BeyondMimic 本身均为继承组件。"
+        ],
+        "implementation": [
+          "输入为同步的光学 marker 三维轨迹与测力板 GRF；OpenSim inverse kinematics 每个 keyframe 求人体骨架配置，再通过人体 forward kinematics 生成 hip、knee、ankle 等目标 frame 位姿。论文未给出 OpenSim 模型版本、marker 权重、完整 frame 列表或 human-to-robot link mapping。",
+          "接触预处理以竖直 GRF 的 mid-stance dip 为中心确定 flat-foot 窗口，其前后非零 GRF 时段分别标为 heel-only 和 toe-only；GRF 按 robot/human 质量比缩放，并满足单脚合力等于 heel 与 toe 力之和。该启发式针对 steady-state walking。",
+          "差分 IK 在速度层最小化机器人 frame 速度与人体目标 frame 速度的加权误差，并满足关节位置和速度边界，输出动力学阶段使用的参考/初始轨迹 \\(\\mathbf q^{\\mathrm{ref}}\\)。",
+          "动力学阶段在离散时域内联合优化机器人配置、速度、驱动力和四个 heel/toe 三维接触力；加速度是独立变量还是由离散关系导出，论文没有说明清楚。约束包括浮动基刚体动力学、stance 点零空间速度与加速度、正法向力、线性摩擦金字塔、关节/力矩边界和梯形积分；swing 点接触力设为零。",
+          "代价包含 base/reference tracking、leg joint tracking、相邻速度差、相邻 stance 接触力差、驱动力正则和 stance 点竖直高度软惩罚。论文给出 \\(w_v=10^{-3}\\)、\\(w_\\lambda=10^{-4}\\)、\\(w_\\tau=10^{-4}\\)、\\(w_c=10^3\\)，以及 base 和双腿关节的对角权重。",
+          "NLP 使用 CasADi 构造，Pinocchio 计算运动学和刚体动力学，目标机器人为 Unitree G1。论文没有说明具体 NLP backend、Hessian 处理、line search、容差、最大迭代数、warm start、分窗方式、边界条件或求解时间，因此该方法应视为每条新序列都需重新运行的离线逐实例求解器。",
+          "下游评估使用 BeyondMimic 默认超参数，KDMR 与 GMR 各进行五次训练，在相同迭代预算下只改变随机初始化种子；报告 mean reward 和 value function loss 的均值与标准差。论文没有真机部署、关键组件消融或多数据集泛化验证，代码仅声明将在正式发表时开源。",
+          "公式存在重要歧义：摘要所称 contact complementarity 在正文中实际表现为外部给定的二值接触日程与分模式约束，未展示标准 gap-force 互补条件；展示的 NLP 也未写出源 GRF tracking loss。论文称为梯形积分的两式使用相邻导数之差而非标准的和，不能确认是排版错误还是实际实现。"
+        ]
+      },
+      "en": {
+        "title": "Kinodynamic Motion Retargeting for Humanoid Locomotion via Multi-Contact Whole-Body Trajectory Optimization",
+        "authors": "Xiaoyu Zhang, Steven Haener, Varun Madabushi, Maegan Tucker",
+        "institutions": "Georgia Institute of Technology, Atlanta, GA, USA",
+        "status": "Full paper reviewed",
+        "takeaway": "KDMR converts synchronized MoCap markers and GRFs into human poses and a heel/toe contact schedule, then runs an offline whole-body dynamics NLP for every motion sequence; its value is producing dynamically feasible references that are easier for a BeyondMimic tracker to learn, not providing an online generalizable retargeting model.",
+        "tags": [
+          "KDMR",
+          "Motion Retargeting",
+          "Trajectory Optimization",
+          "Multi-Contact",
+          "Ground Reaction Force",
+          "BeyondMimic"
+        ],
+        "mainContent": "The paper addresses foot sliding, ground penetration or floating, and dynamically infeasible transitions introduced by purely kinematic human-to-humanoid retargeting. It fits optical MoCap markers to a human model with OpenSim, extracts heel-only, flat-foot, and toe-only phases from vertical GRF, generates a kinematic Unitree G1 reference with differential IK, and then jointly refines the trajectory and contact forces through an NLP with floating-base rigid-body dynamics, heel/toe point contacts, friction, and actuation limits. On a selected treadmill-walking segment, KDMR shows better contact preservation and smoother trajectories than GMR; five BeyondMimic runs per reference source show faster convergence with KDMR data. The evidence remains simulation-only and limited in motion coverage, with no ablation, hardware result, NLP runtime, or complete constraint-residual statistics.",
+        "innovations": [
+          "Core novelty: formulate humanoid motion retargeting as whole-body dynamic trajectory optimization under a prescribed heel/toe multi-contact schedule, explicitly adding floating-base rigid-body dynamics, stationary contact-point conditions, friction, and actuation limits beyond pose tracking.",
+          "Key design: use the double-peaked vertical GRF profile to identify heel-only, flat-foot, and toe-only phases, and decompose the mass-scaled net foot force into heel and toe contact-force variables so that the optimizer can represent a natural heel-to-toe roll.",
+          "Engineering integration and validation: combine OpenSim human IK, differential robot IK, and a dynamics NLP into an offline data-generation pipeline, then use BeyondMimic training to test whether dynamically feasible references reduce the policy's burden of compensating for nonphysical artifacts; OpenSim, CasADi, Pinocchio, and BeyondMimic are inherited components rather than new algorithms."
+        ],
+        "implementation": [
+          "Inputs are synchronized 3D optical-marker trajectories and force-plate GRFs. OpenSim inverse kinematics solves the human skeleton configuration at every keyframe, and human-model forward kinematics produces target-frame poses such as hip, knee, and ankle. The OpenSim model version, marker weights, complete frame list, and human-to-robot link mapping are not specified.",
+          "Contact preprocessing centers a flat-foot window around the mid-stance dip of the vertical GRF and labels the preceding and succeeding nonzero-GRF intervals as heel-only and toe-only. GRF is scaled by the robot-to-human mass ratio, with each foot's resultant represented as the sum of heel and toe forces. This heuristic is specific to steady-state walking.",
+          "Differential IK minimizes weighted task-space velocity errors between corresponding human and robot frames under joint-position and velocity bounds, producing the reference/initial trajectory \\(\\mathbf q^{\\mathrm{ref}}\\) for the dynamic stage.",
+          "The dynamic stage jointly optimizes robot configurations, velocities, actuation, and four 3D heel/toe contact forces over a discretized horizon; the paper is unclear whether acceleration is an independent variable or derived from the transcription. Constraints include floating-base rigid-body dynamics, zero spatial velocity and acceleration for stance points, positive normal force, a linearized friction pyramid, joint/torque bounds, and trapezoidal integration; swing contact forces are set to zero.",
+          "The objective includes base and leg-joint reference tracking, adjacent-velocity smoothing, adjacent stance-force smoothing, actuation regularization, and a soft vertical-height penalty on stance points. Reported weights include \\(w_v=10^{-3}\\), \\(w_\\lambda=10^{-4}\\), \\(w_\\tau=10^{-4}\\), and \\(w_c=10^3\\), together with diagonal base and bilateral leg-joint weights.",
+          "The NLP is formulated with CasADi and uses Pinocchio for kinematics and rigid-body dynamics, targeting the Unitree G1. The NLP backend, Hessian treatment, line search, tolerances, maximum iterations, warm start, windowing, boundary conditions, and solve time are not reported, so the method should be treated as an offline per-instance solver that must be rerun for each new sequence.",
+          "The downstream evaluation uses BeyondMimic default hyperparameters with five runs for KDMR and five for GMR, identical iteration budgets, and only random initialization seeds changed; mean reward and value-function loss are reported with mean and standard deviation. There is no hardware deployment, component ablation, or multi-dataset generalization test, and the paper only states that code will be released upon publication.",
+          "Important formulation ambiguities remain: the abstract's contact-complementarity claim is implemented in the shown equations as an externally prescribed binary contact schedule with mode-dependent constraints, not a standard gap-force complementarity condition; the displayed NLP also contains no explicit source-GRF tracking loss. The equations labeled as trapezoidal integration use differences rather than the standard sums of adjacent derivatives, so it is unclear whether this is a typographical error or the implemented form."
+        ]
+      }
     }
   ]
 }
