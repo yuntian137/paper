@@ -1895,9 +1895,10 @@
         ],
         "implementation": [
           "系统概念管线为“人–物体示范 → IK-based retargeting → SBTO → PPO tracking → 零样本真机部署”。但评测并未重新提出或训练新的 IK 前端，而是直接读取 OmniRetarget 已生成的 285 条 G1–箱子运动学轨迹；官方仓库同样要求下载 OmniRetarget robot-object 数据。",
-          "SBTO 优化的是稀疏 PD-target knots，而不是直接改写仿真状态。采样分布初始均值取参考关节位置在 knot 时刻的值，初始标准差为 0.25；候选节点插值后在 MuJoCo 中执行，仿真步长为 0.01 s、knot 间隔为 0.25 s，并使用完整机器人碰撞模型和 rollout API 并行评估。",
-          "CEM 每轮采样 1024 条候选，elite 比例为 0.03，使用完整协方差和 EWMA；均值与协方差 momentum 分别为 0.95 和 0.2，时域增长阈值为 0.055，前缀跳过阈值为 1e-4。论文没有给出 EWMA 的显式更新式，因此不能仅凭 momentum 数值判断其乘新统计量还是旧统计量。",
-          "SBTO 代价同时跟踪关节、基座和物体的位置、姿态与速度，并加入 torso、foot、hand 的任务空间跟踪以及不期望的机器人–物体碰撞和自碰撞项。每条候选 PD-target 必须先在 MuJoCo 中完整 rollout 当前有效窗口，再按 rollout 代价选择 elites 并更新 CEM 分布。",
+          "SBTO 优化的是稀疏 PD-target knots，而不是直接改写仿真状态。初始化时先按 0.25 s 的 knot 间隔从输入的运动学参考关节序列中直接取样，得到一整组 reference knots，并把这组 knot 向量设为 CEM 初始高斯分布的均值，初始标准差为 0.25。因此这里的初值是运动学参考在低频 knot 参数化下的直接抽样，不是零值、随机轨迹或仿真状态。",
+          "初始化之后，每轮 CEM 都从当前多元高斯搜索分布中采样 N=1024 组完整的候选 knot 序列，而不是在每个时刻彼此独立地挑选单个 knot。每组候选 knots 经插值变成稠密 PD-target 序列，再使用完整机器人碰撞模型和 rollout API 在 MuJoCo 中并行执行；仿真步长为 0.01 s。",
+          "SBTO 代价同时跟踪关节、基座和物体的位置、姿态与速度，并加入 torso、foot、hand 的任务空间跟踪以及不期望的机器人–物体碰撞和自碰撞项。候选序列按当前有效窗口内的累计 rollout 代价排序，选择 elites 后更新下一轮 CEM 搜索分布。",
+          "CEM 的 elite 比例为 0.03，使用完整协方差和 EWMA；均值与协方差 momentum 分别为 0.95 和 0.2，时域增长阈值为 0.055，前缀跳过阈值为 1e-4。论文没有给出 EWMA 的显式更新式，因此不能仅凭 momentum 数值判断其乘新统计量还是旧统计量。",
           "在 285 条 OmniRetarget 轨迹上，SBTO-skip、普通 SBTO、SBTO-pos 和 SPIDER 的精炼成功率分别为 76.8%、74.6%、62.1% 和 37.9%。SBTO-skip 的归一化计算量为 1.18e7 个仿真步/秒参考动作；实际墙钟开销约为每精炼 1 秒动作需 20 秒，硬件为 112 核 Intel Xeon Platinum 8480+。",
           "下游控制器采用 PPO 和 residual action space。策略观测包括一步期望机器人轨迹、一步物体位姿误差以及机器人坐标系中的物体位姿；奖励包括机器人全身与关节跟踪、物体位姿和速度跟踪、接触匹配、action rate、关节限位及自碰撞，其中接触项逐渐惩罚超过 10 N 的接触力。",
           "PPO 在 mjlab（GPU 版 MuJoCo、IsaacLab 风格 API）中以 8192 个环境训练 10000 iterations，使用单张 RTX 4090。训练采用 adaptive sampling，并随机化物体初始位姿或速度、外力、摩擦和质量；作者没有加入物体跟踪失败终止条件。",
@@ -1930,9 +1931,10 @@
         ],
         "implementation": [
           "The conceptual pipeline is human–object demonstration → IK-based retargeting → SBTO → PPO tracking → zero-shot real-robot deployment. The evaluation does not introduce or train a new IK front end; it directly consumes 285 kinematically retargeted G1–box trajectories from OmniRetarget, and the official repository likewise downloads the OmniRetarget robot-object data.",
-          "SBTO optimizes sparse PD-target knots rather than directly editing simulated states. The sampling mean is initialized from reference joint positions at knot times with an initial standard deviation of 0.25; interpolated candidates are executed in MuJoCo with a 0.01 s simulation step, 0.25 s knot spacing, the full robot collision model, and parallel evaluation through the rollout API.",
-          "Each CEM iteration samples 1024 candidates with an elite proportion of 0.03, a full covariance matrix, and EWMA. Mean and covariance momenta are 0.95 and 0.2, the horizon-increment threshold is 0.055, and the prefix-skip threshold is 1e-4. The paper does not provide the explicit EWMA update equation, so the momentum values alone do not establish whether they multiply new or old statistics.",
-          "The SBTO cost tracks joint, base, and object positions, orientations, and velocities, adds task-space tracking for the torso, feet, and hands, and penalizes undesired robot–object collisions and self-collisions. Every PD-target candidate is rolled out over the complete current effective window in MuJoCo before elites are selected and the CEM distribution is updated.",
+          "SBTO optimizes sparse PD-target knots rather than directly editing simulated states. At initialization, the input kinematic reference-joint sequence is sampled directly at the 0.25 s knot interval to form a complete set of reference knots, and this knot vector becomes the mean of the initial CEM Gaussian with a standard deviation of 0.25. The initialization is therefore a lower-frequency knot parameterization sampled from the kinematic reference, not a zero vector, random trajectory, or simulated state.",
+          "After initialization, every CEM iteration samples N=1024 complete candidate knot sequences from the current multivariate Gaussian search distribution rather than selecting each time-indexed knot independently. Each sampled knot sequence is interpolated into dense PD targets and executed in parallel through the MuJoCo rollout API with the full robot collision model and a 0.01 s simulation step.",
+          "The SBTO cost tracks joint, base, and object positions, orientations, and velocities, adds task-space tracking for the torso, feet, and hands, and penalizes undesired robot–object collisions and self-collisions. Candidate sequences are ranked by cumulative rollout cost over the current effective horizon; elites are then selected to update the next CEM search distribution.",
+          "CEM uses an elite proportion of 0.03, a full covariance matrix, and EWMA. Mean and covariance momenta are 0.95 and 0.2, the horizon-increment threshold is 0.055, and the prefix-skip threshold is 1e-4. The paper does not provide the explicit EWMA update equation, so the momentum values alone do not establish whether they multiply new or old statistics.",
           "Across 285 OmniRetarget motions, refinement success was 76.8% for SBTO-skip, 74.6% for SBTO, 62.1% for SBTO-pos, and 37.9% for SPIDER. SBTO-skip required 1.18e7 normalized simulation steps per second of reference motion; in wall-clock terms, refinement took about 20 seconds per second of motion on a 112-core Intel Xeon Platinum 8480+ CPU.",
           "The downstream controller uses PPO with a residual action space. Observations include the one-step desired robot trajectory, one-step object-pose error, and object pose in the robot frame; rewards cover whole-body and joint tracking, object pose and velocity tracking, contact matching, action rate, joint limits, and self-collisions, with the contact term increasingly penalizing forces above 10 N.",
           "PPO is trained in mjlab, a GPU MuJoCo environment with an IsaacLab-style API, using 8192 environments for 10000 iterations on one RTX 4090. Training uses adaptive sampling and randomizes object initial pose or velocity, external pushes, friction, and mass; the authors do not add object-tracking failure terminations.",
@@ -2008,6 +2010,80 @@
           "The NLP is formulated with CasADi and uses Pinocchio for kinematics and rigid-body dynamics, targeting the Unitree G1. The NLP backend, Hessian treatment, line search, tolerances, maximum iterations, warm start, windowing, boundary conditions, and solve time are not reported, so the method should be treated as an offline per-instance solver that must be rerun for each new sequence.",
           "The downstream evaluation uses BeyondMimic default hyperparameters with five runs for KDMR and five for GMR, identical iteration budgets, and only random initialization seeds changed; mean reward and value-function loss are reported with mean and standard deviation. There is no hardware deployment, component ablation, or multi-dataset generalization test, and the paper only states that code will be released upon publication.",
           "Important formulation ambiguities remain: the abstract's contact-complementarity claim is implemented in the shown equations as an externally prescribed binary contact schedule with mode-dependent constraints, not a standard gap-force complementarity condition; the displayed NLP also contains no explicit source-GRF tracking loss. The equations labeled as trapezoidal integration use differences rather than the standard sums of adjacent derivatives, so it is unclear whether this is a typographical error or the implemented form."
+        ]
+      }
+    },
+    {
+      "id": "motiondisco",
+      "categories": [
+        "loco-manipulation",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.06139",
+      "project": "https://atarilab.github.io/motiondisco.io/",
+      "arxiv": "https://arxiv.org/abs/2606.06139",
+      "year": "2026",
+      "venue": "arXiv:2606.06139",
+      "zh": {
+        "title": "MotionDisco: Motion Discovery for Extreme Humanoid Loco-Manipulation",
+        "authors": "Ilyass Taouil, Michal Ciebielski, Shafeef Omar, Haizhou Zhao, Angela Dai, Aaron M. Johnson, Majid Khadiv",
+        "institutions": "Technical University of Munich; New York University; Carnegie Mellon University",
+        "status": "全文已精读",
+        "takeaway": "LLM 不直接生成逐帧动作，而是在离散接触方案空间中做进化搜索；顺序运动学优化与接触显式 TO 将候选方案变成连续参考轨迹，RL tracker 再负责鲁棒真机执行。",
+        "tags": [
+          "LLM-guided Evolutionary Search",
+          "Contact Planning",
+          "Trajectory Optimization",
+          "Sequential Kinematic Optimization",
+          "RL Tracking",
+          "Sim-to-Real"
+        ],
+        "mainContent": "MotionDisco 面向无现成人类示范的长时域、富接触人形 loco-manipulation，目标是在不依赖遥操作或 human-to-humanoid motion retargeting 的情况下从零发现动作。给定完全已知的文本场景表示与任务目标，Claude Opus 4.7 在进化树中修改可执行的接触计划程序；顺序运动学优化先做廉价几何筛选，随后接触显式 TO 联合求解机器人—物体状态、控制、接触 wrench 与各接触阶段时长，并把数值和文本反馈返回搜索。论文在 8 个任务上报告完整方法均找到有效方案，且相较单次 LLM 调用以及无文本反馈的进化搜索获得更高的有效方案比例和更低的 TO cost；各任务首次有效解耗时为 1.34–7.49 分钟。发现的轨迹随后作为参考训练带 domain randomization 的 DeepMimic-style RL 跟踪策略并 zero-shot 部署到真机，但系统假设场景预先已知，且接触和物体模型受到明显限制。",
+        "innovations": [
+          "把长时域 loco-manipulation 表示成可执行程序形式的离散接触模式序列，并采用基于 ShinkaEvolve 的 LLM 引导进化树搜索；island 子群、inspiration sampling、novelty rejection 和多种 mutation 共同维持探索多样性。",
+          "设计分层 kinodynamic evaluator：先用忽略动力学的顺序运动学优化快速剔除几何不可行计划，再对通过者运行完整接触显式 TO；系统还定位最长可行前缀和首个失败接触转换，并将其转为文本反馈指导下一轮局部修补。",
+          "将自动接触方案发现、连续动力学轨迹生成和 RL 跟踪部署连成闭环。论文声称这是首个完全通过自动进化搜索发现并部署长时域人形 loco-manipulation 技能的工作，同时能够在一次搜索中产生多种不同的可行接触方案。"
+        ],
+        "implementation": [
+          "搜索输入为场景 \\(\\mathcal{S}\\) 与目标 \\(\\mathcal{G}\\)：\\(\\mathcal{S}\\) 是包含每个物体标签、世界位置和尺寸的已知文本场景，\\(\\mathcal{G}\\) 可同时指定目标接触关系与机器人或物体的连续目标位姿。LLM 输出 Python 接触计划程序，程序执行后得到离散接触模式序列 \\(\\mathcal{C}\\)，而不是输出 policy action 或逐帧轨迹。",
+          "每个搜索节点保存接触计划程序、执行得到的接触序列、标量 score、可选文本反馈和 offspring count。所有 LLM 组件使用 Claude Opus 4.7；mutation 类型为 targeted diff edit、full rewrite 和 crossover，采样概率分别为 0.6、0.3 和 0.1。",
+          "顺序运动学优化忽略动力学，仅检查碰撞规避、构型限制与接触转换一致性；若完整序列失败，程序反复缩短序列以找出最长可行前缀并报告首个失败 mode 或 transition。该阶段采用 direct multiple shooting transcription，并由 acados 求解。",
+          "对运动学可行的固定接触序列，TO 联合优化机器人—物体状态轨迹 \\(x(\\cdot)\\)、控制轨迹 \\(u(\\cdot)\\)、接触 wrench 以及各 mode 的持续时间 \\(\\bar{T}_{0:K-1}\\)，同时约束动力学、接触、碰撞和状态/控制限位。TO 采用 direct multiple shooting transcription，并由 Hippo 求解。",
+          "TO 的抽象目标为 \\(\\int_0^T \\phi(x(t),u(t))\\,dt+\\phi_T(x(T))+w_TT\\)。用于评价接触方案的 cost 为 \\(J(\\mathcal{C})=\\sum_i\\lVert r(x_i,u_i,c_{s(i)})\\rVert_1+w_j\\sum_i\\lVert\\dddot q_i\\rVert^2\\)，即约束残差与 jerk 正则之和；运动学失败的节点不运行 TO，并获得零 score。论文未公开 \\(\\phi\\)、\\(\\phi_T\\) 的逐项构成、各代价权重、离散步长和完整停止条件。",
+          "评测包含 Banana、Box Stacking、Climb Table w/ Box、Long-Distance Pick & Place、Move Through Clutter、两项 Parkour Pick & Place 和 Under-Table Pick & Place 共 8 个任务。完整方法在全部任务中找到有效方案；论文把“通过顺序运动学检查且 TO 收敛”定义为 valid plan。",
+          "部署阶段将 TO 轨迹作为 reference，在仿真中用 DeepMimic-style rewards 和 domain randomization 训练 RL motion-tracking policy，再 zero-shot 迁移到真实人形机器人。论文未说明 policy 网络架构、具体 observation/action、RL 算法、奖励逐项公式、训练超参数、仿真器以及量化真机成功率，只报告所有尝试任务均实现多次连续成功执行。",
+          "关键限制是场景几何与初始状态必须预先已知且没有 perception；当前规划器只支持矩形 patch 上的 unilateral sticking contact，被操作对象限于 rigid box-like geometry，不支持滑动接触、关节物体、自由形状物体或软体。"
+        ]
+      },
+      "en": {
+        "title": "MotionDisco: Motion Discovery for Extreme Humanoid Loco-Manipulation",
+        "authors": "Ilyass Taouil, Michal Ciebielski, Shafeef Omar, Haizhou Zhao, Angela Dai, Aaron M. Johnson, Majid Khadiv",
+        "institutions": "Technical University of Munich; New York University; Carnegie Mellon University",
+        "status": "Full paper reviewed",
+        "takeaway": "The LLM does not generate frame-level actions: it evolves discrete contact plans, sequential kinematic optimization and contact-explicit TO turn them into continuous references, and an RL tracker provides robust hardware execution.",
+        "tags": [
+          "LLM-guided Evolutionary Search",
+          "Contact Planning",
+          "Trajectory Optimization",
+          "Sequential Kinematic Optimization",
+          "RL Tracking",
+          "Sim-to-Real"
+        ],
+        "mainContent": "MotionDisco targets long-horizon, contact-rich humanoid loco-manipulation without requiring teleoperation or human-to-humanoid motion retargeting. Given a fully known textual scene representation and task goal, Claude Opus 4.7 mutates executable contact-plan programs in an evolutionary tree; sequential kinematic optimization provides a cheap geometric filter, after which contact-explicit TO jointly solves robot-object states, controls, contact wrenches, and contact-stage durations while returning numerical and textual feedback to the search. Across eight tasks, the complete method found valid plans in every scenario and reported higher valid-plan rates and lower TO costs than a single LLM call and evolutionary search without textual feedback; time to the first valid solution ranged from 1.34 to 7.49 minutes. The discovered trajectories are then used as references for DeepMimic-style RL tracking with domain randomization and zero-shot hardware deployment, although the method assumes a known scene and uses restricted contact and object models.",
+        "innovations": [
+          "It represents long-horizon loco-manipulation as executable programs over discrete contact-mode sequences and applies ShinkaEvolve-based LLM-guided evolutionary tree search, using island subpopulations, inspiration sampling, novelty rejection, and multiple mutation operators to preserve diversity.",
+          "It introduces a layered kinodynamic evaluator: dynamics-free sequential kinematic optimization first rejects geometrically infeasible plans, and full contact-explicit TO evaluates the survivors. The evaluator identifies the longest feasible prefix and first failing contact mode or transition, then converts this information into textual feedback for local repair in subsequent mutations.",
+          "It closes the loop from automated contact-plan discovery through continuous dynamically feasible trajectory generation to RL tracking on hardware. The paper claims the first deployment of long-horizon humanoid loco-manipulation skills discovered entirely through automated evolutionary search, while producing multiple distinct feasible solutions within a single run."
+        ],
+        "implementation": [
+          "The search takes a scene \\(\\mathcal{S}\\) and goal \\(\\mathcal{G}\\). The known textual scene lists each object's label, world position, and dimensions, while the goal can include desired discrete contacts and continuous robot or object poses. The LLM outputs a Python contact-plan program whose execution produces a discrete mode sequence \\(\\mathcal{C}\\), not policy actions or a frame-level trajectory.",
+          "Each tree node stores the contact-plan program, its executed contact sequence, a scalar score, optional textual feedback, and an offspring count. All LLM components use Claude Opus 4.7. The targeted-diff, full-rewrite, and crossover mutations are sampled with probabilities 0.6, 0.3, and 0.1, respectively.",
+          "Sequential kinematic optimization ignores dynamics and checks collision avoidance, configuration limits, and contact-transition consistency. When a full sequence fails, the system repeatedly shortens it to recover the longest feasible prefix and report the first failing mode or transition. This stage uses a direct multiple-shooting transcription solved with acados.",
+          "For a kinematically feasible fixed contact sequence, TO jointly optimizes the robot-object state trajectory \\(x(\\cdot)\\), control trajectory \\(u(\\cdot)\\), contact wrenches, and mode durations \\(\\bar{T}_{0:K-1}\\), subject to dynamics, contact, collision, and state/control-limit constraints. The TO also uses direct multiple shooting and is solved with Hippo.",
+          "The abstract TO objective is \\(\\int_0^T \\phi(x(t),u(t))\\,dt+\\phi_T(x(T))+w_TT\\). Contact-plan evaluation uses \\(J(\\mathcal{C})=\\sum_i\\lVert r(x_i,u_i,c_{s(i)})\\rVert_1+w_j\\sum_i\\lVert\\dddot q_i\\rVert^2\\), combining constraint residuals and jerk regularization; a kinematically infeasible node skips TO and receives zero score. The paper does not disclose the full term-wise definitions of \\(\\phi\\) and \\(\\phi_T\\), all weights, discretization step, or complete stopping criteria.",
+          "Evaluation covers eight tasks: Banana, Box Stacking, Climb Table with Box, Long-Distance Pick and Place, Move Through Clutter, two Parkour Pick and Place variants, and Under-Table Pick and Place. The complete method found a valid plan for every task; a plan is considered valid when it passes sequential kinematic feasibility and TO converges.",
+          "For deployment, the TO trajectory becomes a reference for an RL motion-tracking policy trained in simulation with DeepMimic-style rewards and domain randomization, followed by zero-shot transfer to a real humanoid. The paper does not specify the policy architecture, exact observations/actions, RL algorithm, term-wise reward, training hyperparameters, simulator, or quantitative hardware success rate; it only reports multiple consecutive successful executions across all attempted tasks.",
+          "The method assumes known scene geometry and initial state and contains no perception. Its planner currently supports only unilateral sticking contacts on rectangular patches and rigid box-like manipulated objects, excluding sliding contact, articulated objects, free-form objects, and deformable objects."
         ]
       }
     }
