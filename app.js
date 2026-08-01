@@ -90,9 +90,9 @@ const uiText = {
 const siteMetaPath = "site_meta.json";
 const siteMeta = {
   lastUpdated: {
-    iso: "2026-07-31",
-    zh: "2026-07-31",
-    en: "Jul 31, 2026",
+    iso: "2026-08-01",
+    zh: "2026-08-01",
+    en: "Aug 1, 2026",
   },
 };
 
@@ -224,12 +224,13 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 
 公式排版要求：
 
-* 为兼容 ChatGPT 官方网页的数学渲染，内联公式统一使用 \\(...\\)；
-* 独立公式统一使用 \\[...\\]，并让开始和结束定界符各自独占一行；
-* 禁止使用单美元符号或双美元符号作为公式定界符，否则公式可能显示为原始 LaTeX 文本；
+* 写入 Markdown 报告文件的行内公式统一使用 $...$；
+* 写入 Markdown 报告文件的独立公式统一使用 $$...$$，开始和结束的双美元符号各自独占一行；
+* 报告文件中不要使用 \\(...\\) 或 \\[...\\] 作为公式定界符；
+* 报告交付后的后续问答对话如果需要直接显示公式，则改用 \\(...\\) 表示行内公式、\\[...\\] 表示独立公式；这一对话规则不改变已生成报告的美元符号格式；
 * 不要把公式放入代码块；
-* 向量和矩阵使用粗体，如 \\(\\mathbf{x}\\)、\\(\\mathbf{R}\\)；
-* 检查公式分隔符、正负号、上下标、量纲和单位；
+* 向量和矩阵使用粗体，如 $\\mathbf{x}$、$\\mathbf{R}$；
+* 保持公式分隔符、正负号、上下标、量纲和单位正确；
 * 如果改写了论文符号以保持统一，必须明确说明。
 
 ### 5. 严格区分训练、求解和部署
@@ -401,27 +402,7 @@ Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
 * 使用相对路径把图片嵌入 Markdown，使图片在预览中直接显示，而不是只给出文件路径或外部链接。例如：![方法总览](<paper-slug>-reading-report-assets/fig-03-pipeline.png)。文件名使用稳定、简短、可读的英文，不使用空格或绝对路径。
 * 图片放在正文第一次深入解释它的位置附近。每张图片后写一条简短图注，说明“读者应看什么”，并标注准确来源，例如“截自论文 Figure 3，第 6 页”；若来自项目主页或其他外部官方资料，明确标记为“外部官方资料”。
 * 不要用图片代替分析，不要截取大段纯文字或只起装饰作用的照片，也不要伪造、重绘或使用与论文无关的生成图片。无法访问、清晰截取或确认来源时，说明限制并跳过，不要留下占位图。
-* 完成后实际打开 Markdown 预览，逐张检查相对路径、清晰度、裁剪范围、图注和正文引用。发现破图、文字不可读或关键图例被裁掉时，重新导出并再次检查。
 * 最终回复只需给出报告文件的可点击链接，并简要说明共保存了多少张论文截图；不要再次粘贴整篇报告。
-
-## 九、输出前自检
-
-在提交报告前检查：
-
-* 只读 Takeaway，是否已经能准确复述整篇论文；
-* 后文是否确实沿着 Takeaway 的顺序展开；
-* 是否存在尚未展开全称的缩写；
-* 是否明确区分了数据处理、逐实例优化、模型训练和在线部署；
-* 是否说清了每个核心模块的输入、输出和下游用途；
-* 是否明确了优化变量、模型参数和临时求解状态的区别；
-* 是否把核心创新、辅助技巧、实现小巧思和已有组件区分开；
-* 公式是否不仅排版正确，而且数学含义与上下文一致；
-* 所有公式是否都只使用 \\(...\\) 或 \\[...\\] 定界，且没有使用美元符号定界或留下裸露 LaTeX；
-* 是否只截取了真正帮助理解的图片，并为每张图片保留完整图例、写明来源且使用可用的相对路径；
-* 是否已实际预览最终 Markdown，确认所有图片清晰显示且没有破图；
-* 实验结论是否与证据强度匹配；
-* 是否有同一条信息在多个章节重复出现；
-* 是否存在读完报告反而还需要读者自己拼接 pipeline 的问题。
 
 最终报告应当像一位真正理解论文的研究者在带领读者沿系统闭环逐层放大，而不是把论文重新整理成一份更长、更碎的论文。`,
   en: `You are Codex and a senior expert in intelligent control, robot learning, and motion planning with experience reviewing for top-tier journals. Read the paper supplied in the current task, whether as a workspace file, attachment, or link; use the available tools to verify it; and generate an English close-reading report in the current workspace for graduate students in control, robotics, and reinforcement learning.
@@ -545,12 +526,13 @@ Keep only equations necessary to understand the core mechanism. Move secondary e
 
 Equation formatting:
 
-* For compatibility with math rendering on the official ChatGPT website, use \\(...\\) for all inline mathematics;
-* Use \\[...\\] for display mathematics, with the opening and closing delimiters on their own lines;
-* Do not use single or double dollar signs as math delimiters, because they may be displayed as raw LaTeX text;
+* In the Markdown report file, use $...$ for all inline mathematics;
+* In the Markdown report file, use $$...$$ for display mathematics, with the opening and closing double dollar signs on their own lines;
+* Do not use \\(...\\) or \\[...\\] as math delimiters inside the report file;
+* In follow-up conversation after delivering the report, use \\(...\\) for inline mathematics and \\[...\\] for display mathematics when equations must render directly in the chat interface. This conversation rule does not change the dollar-sign format of the generated report;
 * Do not place equations in code blocks;
-* Typeset vectors and matrices in bold, for example \\(\\mathbf{x}\\) and \\(\\mathbf{R}\\);
-* Check delimiters, signs, superscripts, subscripts, dimensions, and units;
+* Typeset vectors and matrices in bold, for example $\\mathbf{x}$ and $\\mathbf{R}$;
+* Keep delimiters, signs, superscripts, subscripts, dimensions, and units correct;
 * If you rename paper notation for consistency, state that explicitly.
 
 ### 5. Strictly Separate Training, Solving, and Deployment
@@ -722,27 +704,7 @@ Do not let these verification details interrupt the explanatory thread.
 * Embed each image with a relative Markdown path so it appears directly in the rendered document rather than as a bare path or external link. For example: ![Method overview](<paper-slug>-reading-report-assets/fig-03-pipeline.png). Use stable, short, descriptive English filenames without spaces or absolute paths.
 * Place each image close to its first substantive explanation. Follow it with a short caption stating what the reader should notice and the exact source, for example, "Captured from Figure 3, page 6 of the paper." Clearly mark images from a project page or another official source as "External official source."
 * Do not substitute images for analysis, capture long passages of prose, include merely decorative photos, fabricate or redraw figures, or use unrelated generated images. If a source cannot be accessed, captured clearly, or verified, state the limitation and omit the image instead of leaving a placeholder.
-* After writing, open the rendered Markdown and inspect every image for a valid relative path, legibility, correct crop, caption, and in-text reference. Re-export and recheck any broken, unreadable, or over-cropped image.
 * In the final response, provide only a clickable link to the report and briefly state how many paper figures were saved. Do not paste the full report again.
-
-## IX. Pre-Submission Self-Check
-
-Before submitting, verify:
-
-* Can the complete paper be accurately retold from the Takeaway alone?
-* Does the body actually follow the concept order established in the Takeaway?
-* Does any abbreviation remain unexpanded?
-* Are data processing, per-instance optimization, model training, and online deployment clearly separated?
-* Are each core module's input, output, and downstream use clear?
-* Are optimized variables, model parameters, and temporary solver state distinguished?
-* Are core innovations, supporting techniques, implementation insights, and inherited components separated?
-* Are equations both correctly typeset and mathematically consistent with their context?
-* Does every equation use only \\(...\\) or \\[...\\] delimiters, with no dollar-sign delimiters or raw LaTeX left visible?
-* Were only figures that materially aid understanding captured, with complete legends, precise source labels, and valid relative paths?
-* Was the final Markdown actually previewed to confirm that every image is legible and none is broken?
-* Does the strength of each experimental conclusion match the evidence?
-* Is the same information unnecessarily repeated across sections?
-* Must the reader still reconstruct the pipeline themselves after reading the report?
 
 The final report should feel like a researcher who genuinely understands the paper is guiding the reader through the system's closed loop at progressively finer resolution—not like the paper has merely been rearranged into a longer, more fragmented document.`,
 
