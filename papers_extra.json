@@ -2088,6 +2088,169 @@
           "The method assumes known scene geometry and initial state and contains no perception. Its planner currently supports only unilateral sticking contacts on rectangular patches and rigid box-like manipulated objects, excluding sliding contact, articulated objects, free-form objects, and deformable objects."
         ]
       }
+    },
+    {
+      "id": "deeploco",
+      "categories": [
+        "locomotion"
+      ],
+      "pdf": "https://www.cs.ubc.ca/~van/papers/2017-TOG-deepLoco/2017-TOG-deepLoco.pdf",
+      "project": "https://xbpeng.github.io/projects/DeepLoco/index.html",
+      "arxiv": "",
+      "year": "2017",
+      "venue": "ACM Transactions on Graphics, 36(4), Article 41",
+      "zh": {
+        "title": "DeepLoco: Dynamic Locomotion Skills Using Hierarchical Deep Reinforcement Learning",
+        "authors": "Xue Bin Peng, Glen Berseth, KangKang Yin, Michiel van de Panne",
+        "institutions": "University of British Columbia；National University of Singapore",
+        "status": "全文已精读",
+        "takeaway": "DeepLoco 最该记住的不是一个从地图端到端输出力矩的单策略，而是一个顺序训练的两层控制系统：先训练并冻结能把“未来两步脚点与躯干朝向”转换为关节 PD target 的低层控制器，再为不同任务训练负责选择这些脚点的高层控制器，以具有物理语义的接口分开高频平衡控制和长期环境规划。",
+        "tags": [
+          "Hierarchical RL",
+          "Physics-Based Character Control",
+          "Footstep Planning",
+          "CACLA",
+          "Motion Imitation"
+        ],
+        "mainContent": "DeepLoco 研究模拟 3D 双足角色如何在保持自然、稳定行走的同时完成路径跟随、静态或动态避障和足球运球等环境感知任务。第一阶段利用手工动画或 mocap 片段构造模仿奖励，训练低层控制器从本体状态、固定步态相位和两步落脚计划输出 22 维关节 PD target；第二阶段冻结低层控制器，再让任务专用高层控制器从角色状态、局部环境地图和任务目标生成两步脚点与朝向。两层采用 CACLA 风格的正 TD actor–critic，而不是 PPO，也不是端到端联合训练。实验支持这种分阶段层级训练比作者构造的单层方案更容易优化，但全部结果来自简化角色和理想观测下的仿真，未验证真机部署、感知误差或 Sim-to-Real。",
+        "innovations": [
+          "核心创新：用“未来两步二维脚点＋下一步躯干朝向”作为高层与低层之间具有物理语义的接口，使高层只负责步级规划，低层只负责高频平衡、摆腿和落脚。",
+          "核心训练设计：先独立训练 LLC，再冻结 LLC 训练任务专用 HLC，避免联合训练时 LLC 持续变化导致高层所面对的等效动力学非平稳。层级强化学习本身并非本文首次提出，贡献主要在这一具体接口、训练顺序和完整系统。",
+          "系统贡献：同一个脚点接口同时支持路径跟随、静态与动态避障以及通过足部接触完成的足球运球，说明它可以作为多种环境感知 locomotion 任务的动作抽象。",
+          "关键辅助设计：用参考动作奖励降低三维双足行走的探索难度，并通过四槽双线性相位变换显式区分不同 gait phase；这些设计对训练很重要，但不是层级方法的核心创新。",
+          "有限的模块复用：不同风格 LLC 可由名义 LLC 微调得到，高层也可在更换 LLC 后继续微调；实验支持已有策略可作为有效初始化，但不支持 HLC 与 LLC 可以任意、无损地即插即用。"
+        ],
+        "implementation": [
+          "数据准备：LLC 可以使用手工 keyframed walk cycle，也可以使用约 7 秒的 walking/turning mocap。后者被切成约 10 个单步片段，统一为右脚支撑并 time-warp 到 0.5 秒；训练时根据当前支撑腿镜像。最近邻选择器在每步开始时选取与目标脚点和朝向最匹配的参考片段。",
+          "LLC 输入输出：低层状态共 110 维，包含相对 root 表达的 link 位置、旋转、线速度和角速度、双足接触以及固定相位；另接收未来两步脚点和下一步躯干朝向。LLC 以 30 Hz 输出 22 维关节 PD target，而不是直接输出力矩。",
+          "参考动作的边界：参考片段只用于选择模仿目标和计算训练奖励，不作为 LLC 在线输入。运行时可以删除 mocap、参考片段选择器和模仿奖励，因此 LLC 不是 reference-conditioned tracker。",
+          "LLC 奖励：奖励由关节姿态、关节速度、root 高度、质心速度、摆动脚与支撑脚位置以及 heading 项组成。参考项维持动作风格，脚点和 heading 项让策略能够偏离参考并服从高层命令。",
+          "学习算法：两层均使用带最近 50k transitions 经验回放的 CACLA 式 actor–critic。critic 学习一步 bootstrap value；只有样本确实加入了探索噪声且 TD error 为正时，actor 才向该探索动作靠近。探索采用固定对角 Gaussian，并通过 Bernoulli 变量决定当前动作是否加入噪声；部署时只使用 actor 均值。",
+          "网络与优化：LLC actor 在四槽双线性相位变换后接 512、256 单元 ReLU 层并输出 22 维动作。优化器为带 0.9 momentum 的 SGD；actor 使用 0.0005 的 L2 weight decay，critic 不使用 weight decay。这是策略正则化的辅助技巧，不是核心贡献。",
+          "HLC 输入输出：静态环境任务的高层状态包含角色特征和角色中心坐标系下的 32×32 高度图，报告总维数为 1129；动态障碍任务改用记录障碍水平速度的 velocity map。HLC 还接收任务目标，并以 2 Hz 输出两个二维脚点和一个 heading，由接口定义可知共 5 维。",
+          "HLC 网络：地图依次经过 16 个 5×5、32 个 4×4、32 个 3×3 卷积滤波器和一个 128 单元全连接层，再与角色特征及任务目标拼接，经过 512、256 单元 ReLU 层输出脚点计划。论文未说明卷积 stride、padding、pooling 以及 HLC critic 的完整结构。",
+          "两阶段训练：名义 LLC 约训练 6M iterations；随后完全冻结 LLC，为路径、障碍或足球等每项任务分别训练一个 HLC，约 1M iterations。论文报告在 16 核 CPU 上 LLC 训练约 2 天、每个 HLC 约 7 天，但没有准确定义 iteration 对应 transition、batch 还是 SGD update。",
+          "运行闭环：HLC 每 0.5 秒生成一次落脚计划，LLC 在该计划下约执行 15 次更新；stable PD 将关节目标变成受限力矩，Bullet 以 3 kHz 推进物理仿真。运行时保留 HLC actor、LLC actor、固定相位、状态和地图提取、动作裁剪、PD 与物理系统；critic、replay buffer、reward、参考动作和探索噪声全部删除。",
+          "实验结论：Figure 11 中，分层版本在路径跟随和足球任务上明显优于作者的单层版本；Figure 8 表明多个参考片段能显著改善 LLC 学习。名义步态可承受论文所测的 200 N 前向推力、210 N 侧向推力和 16% 上坡，但实验没有多随机种子误差条、外部方法基线或真实机器人验证。",
+          "关键限制：系统依赖仿真真值本体状态、足接触、局部地图和球状态；默认 LLC 只会恒速行走与转向，不会停止，导致动态避障 NCR 仅为 0.18。每个新任务仍需训练新的 HLC，能力范围受 LLC skill repertoire 和脚点训练分布限制。",
+          "复现注意：Algorithm 1 的 critic target 与正文公式冲突，可能重复减去一次 value；双线性相位公式的最后一个槽也疑似把 Phi3 误印成重复的 Phi2。论文还缺少角色完整惯量与碰撞体、精确归一化参数、逐维探索方差、mocap 索引和 retarget 脚本等信息。"
+        ]
+      },
+      "en": {
+        "title": "DeepLoco: Dynamic Locomotion Skills Using Hierarchical Deep Reinforcement Learning",
+        "authors": "Xue Bin Peng, Glen Berseth, KangKang Yin, Michiel van de Panne",
+        "institutions": "University of British Columbia; National University of Singapore",
+        "status": "Full paper reviewed",
+        "takeaway": "DeepLoco should be remembered not as a single end-to-end map-to-torque policy, but as a sequentially trained hierarchy: it first trains and freezes a low-level controller that converts a future two-step foot plan and torso heading into joint PD targets, and then trains task-specific high-level controllers to choose that semantic interface, separating high-frequency balance control from long-horizon environmental planning.",
+        "tags": [
+          "Hierarchical RL",
+          "Physics-Based Character Control",
+          "Footstep Planning",
+          "CACLA",
+          "Motion Imitation"
+        ],
+        "mainContent": "DeepLoco studies how a simulated 3D biped can maintain natural, stable walking while performing environment-aware tasks such as path following, static or dynamic obstacle avoidance, and soccer dribbling. In the first stage, handcrafted animation or mocap clips define imitation rewards for an LLC that maps proprioceptive state, a fixed gait phase, and a two-step foot plan to 22-dimensional joint PD targets; in the second stage, the LLC is frozen and a task-specific HLC maps character state, a local environment map, and a task goal to two footsteps and a heading. Both levels use a positive-TD CACLA-style actor–critic rather than PPO, and they are not trained jointly end to end. The experiments support that this staged hierarchy is easier to optimize than the authors' monolithic alternative, but all results use a simplified simulated character with ideal observations and do not establish real-robot deployment, perception robustness, or Sim-to-Real transfer.",
+        "innovations": [
+          "Core innovation: a physically meaningful interface consisting of two future 2D footsteps and a desired torso heading separates step-level planning in the HLC from high-frequency balance, swing-leg control, and landing in the LLC.",
+          "Core training design: the LLC is trained first and then frozen while task-specific HLCs are learned, avoiding the non-stationary effective dynamics faced by the HLC when the LLC changes during joint training. Hierarchical RL itself was not introduced by this paper; the contribution lies in this concrete interface, training order, and complete system.",
+          "System contribution: the same footstep interface supports path following, static and dynamic obstacle avoidance, and soccer dribbling through foot–ball contact, demonstrating its value as an action abstraction for multiple environment-aware locomotion tasks.",
+          "Key auxiliary design: reference-motion rewards reduce the exploration burden of 3D bipedal walking, while a four-slot bilinear phase transform explicitly separates gait phases. These components are important to training but are not the central hierarchical contribution.",
+          "Limited module reuse: style-specific LLCs are fine-tuned from a nominal LLC, and HLCs can be fine-tuned after changing the LLC. The evidence supports reuse as a useful initialization, not arbitrary lossless plug-and-play compatibility."
+        ],
+        "implementation": [
+          "Data preparation: the LLC can use either a handcrafted keyframed walk cycle or roughly seven seconds of walking and turning mocap. The mocap is divided into about ten single-step clips, normalized to right-foot support, and time-warped to 0.5 seconds; clips are mirrored according to the current support leg. At each step, a nearest-neighbor selector chooses the clip best matching the requested foot placement and heading.",
+          "LLC inputs and outputs: the 110-dimensional low-level state contains root-relative link positions, rotations, linear and angular velocities, two foot-contact indicators, and a fixed phase. It also receives two future footsteps and a desired torso heading. At 30 Hz, the LLC outputs 22-dimensional joint PD targets rather than torques.",
+          "Boundary of reference motion: reference clips are used only to select imitation targets and compute training rewards; they are not LLC runtime inputs. Mocap, the reference selector, and imitation rewards can therefore be removed at runtime, so the LLC is not a reference-conditioned tracker.",
+          "LLC reward: the objective combines joint-pose, joint-velocity, root-height, center-of-mass velocity, swing- and stance-foot position, and heading terms. Reference terms preserve motion style, while foot-placement and heading terms allow the policy to deviate from the reference and follow high-level commands.",
+          "Learning algorithm: both levels use a CACLA-style actor–critic with a replay buffer containing the latest 50k transitions. The critic learns a one-step bootstrapped value; the actor moves toward an exploratory action only when noise was actually applied and the TD error is positive. Exploration uses a fixed diagonal Gaussian gated by a Bernoulli variable, while runtime execution uses only the actor mean.",
+          "Network and optimization: after the four-slot bilinear phase transform, the LLC actor uses 512- and 256-unit ReLU layers and a 22-dimensional output. Optimization uses SGD with 0.9 momentum; the actor has L2 weight decay of 0.0005, while the critic has no weight decay. This is an auxiliary policy-regularization choice rather than a core contribution.",
+          "HLC inputs and outputs: for static-environment tasks, the high-level state combines character features with a character-centric 32×32 height map and is reported as 1129-dimensional; dynamic-obstacle tasks replace it with a velocity map encoding horizontal obstacle velocities. The HLC additionally receives a task goal and outputs two 2D footsteps plus one heading at 2 Hz, yielding a five-dimensional interface by construction.",
+          "HLC network: the map passes through 16 filters of size 5×5, 32 filters of size 4×4, 32 filters of size 3×3, and a 128-unit fully connected layer. The result is concatenated with character features and the task goal, followed by 512- and 256-unit ReLU layers. Convolution stride, padding, pooling, and the complete HLC critic architecture are not specified.",
+          "Two-stage training: the nominal LLC is trained for about 6M iterations and then fully frozen; a separate HLC is trained for each path, obstacle, or soccer task for about 1M iterations. The paper reports roughly two days for LLC training and seven days per HLC on a 16-core CPU, but it does not define whether an iteration denotes a transition, batch, or SGD update.",
+          "Runtime loop: the HLC generates a foot plan every 0.5 seconds, during which the LLC performs about 15 updates. Stable PD converts joint targets into bounded torques, and Bullet advances physics at 3 kHz. Runtime retains the HLC actor, LLC actor, fixed phase, state and map extraction, action clipping, PD, and physical system; critics, replay buffers, rewards, reference motions, and exploration noise are removed.",
+          "Experimental conclusion: Figure 11 shows that the hierarchical version substantially outperforms the authors' monolithic versions on path following and soccer, while Figure 8 shows that multiple reference clips improve LLC learning. The nominal gait tolerates the tested 200 N forward push, 210 N lateral push, and 16% uphill slope, but the experiments provide no multi-seed error bars, external-method baseline, or real-robot validation.",
+          "Key limitations: the system relies on simulation-ground-truth proprioception, foot contacts, local maps, and ball state. The default LLC only walks and turns at an approximately fixed speed and cannot stop, contributing to the low dynamic-obstacle NCR of 0.18. Each new heterogeneous task still requires a new HLC, and the system is bounded by the LLC skill repertoire and footstep-training distribution.",
+          "Reproduction caveats: the critic target in Algorithm 1 conflicts with the main-text equations and may subtract the value twice; the final slot in the bilinear phase equation also appears to repeat Phi2 instead of Phi3. Complete link inertias and collision geometry, precise normalization parameters, per-dimension exploration variances, mocap indices, and retargeting scripts are also missing."
+        ]
+      }
+    },
+    {
+      "id": "gmr-retargeting-matters",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2510.02252",
+      "project": "https://jaraujo98.github.io/retargeting_matters/",
+      "arxiv": "https://arxiv.org/abs/2510.02252",
+      "year": "2026",
+      "venue": "ICRA 2026",
+      "zh": {
+        "title": "Retargeting Matters: General Motion Retargeting for Humanoid Motion Tracking",
+        "authors": "João Pedro Araújo, Yanjie Ze, Pei Xu, Jiajun Wu, C. Karen Liu",
+        "institutions": "Department of Computer Science, School of Engineering, Stanford University",
+        "status": "全文已精读",
+        "takeaway": "GMR 最该记住的是：它不是训练得到的重定向网络，而是用“局部非均匀缩放 + 两阶段逐帧 IK”把每条人体动作转换成机器人参考轨迹的逐实例运动学求解器；固定 BeyondMimic 管线的实验进一步表明，重定向产生的穿地、自交和关节突跳会直接削弱下游物理跟踪策略的鲁棒性。",
+        "tags": [
+          "GMR",
+          "Motion Retargeting",
+          "Humanoid Motion Tracking",
+          "Differential IK",
+          "BeyondMimic",
+          "LAFAN1"
+        ],
+        "mainContent": "人体与人形机器人在骨长、关节拓扑和活动范围上的差异，会让传统重定向产生足滑、穿地、自交或关节突跳，而这些 reference artifact 会被下游 RL tracker 直接继承。GMR 接收人体骨架动作、机器人 XML/URDF 和人工适配配置，通过 rest-pose 对齐、root 全局运动与 body 局部形态的解耦缩放，以及两阶段逐帧 IK，输出机器人 root 位姿与关节轨迹。作者在 Unitree G1 上使用 LAFAN1 的 21 条动作和统一的 BeyondMimic 训练管线，对比 PHC、ProtoMotions、GMR 与闭源 Unitree reference；GMR 总体上优于两个开源基线，并在成功率、跟踪误差和感知忠实度上接近 Unitree。结论仍限于运动学重定向及仿真/sim2sim 评估：论文没有真机、跨机器人、复杂接触或组件消融，也未证明 GMR 输出本身满足动力学可行性。",
+        "innovations": [
+          "核心方法创新是局部非均匀缩放：body 相对 root 的位置可使用不同局部比例，而 root 的世界坐标平移始终使用统一比例，从而把“机器人整体应移动多远”与“各肢体相对骨盆应伸展多远”解耦，并针对传统缩放造成的形变和足滑问题进行处理。",
+          "将上述缩放与两阶段 IK 组合成完整重定向流程：第一阶段跟踪全部关键体旋转和手脚位置，意在先获得较合理的粗构型与 IK 解支；第二阶段以其结果为初值，再加入全部关键体的位置约束进行精修。论文没有单阶段对照或组件消融，因此不能确认两阶段设计的独立增益。",
+          "实验性贡献是把 retargeting quality 放入固定物理跟踪管线中进行端到端评估：作者不针对不同 retargeter 重新调节 BeyondMimic 奖励，并结合 sim、sim-dr、sim2sim、跟踪误差与用户研究分析 reference artifact 和首帧选择对策略学习及鲁棒性的影响。这属于评估设计贡献，而不是新的 RL 算法。"
+        ],
+        "implementation": [
+          "GMR 的输入包括人体 skeleton pose、机器人 XML/URDF，以及人工设置的关键体映射、位置/旋转权重、rest-pose offset、局部 scale 和 joint limits；实验中的人体输入为 LAFAN1 BVH。输出是逐帧机器人广义坐标序列，包括 root translation、root rotation 和 joint values，它是下游 tracking policy 的 reference，而不是控制 action。",
+          "预处理先对齐人体与机器人关键体在 rest pose 下的坐标轴，并可为个别 body 添加位置 offset；随后分别缩放 body 相对 root 的局部位置与 root 的全局平移。论文没有给出各 scale、offset、权重的自动学习规则或完整 G1 配置，这些量属于人工适配参数。",
+          "每帧第一阶段直接优化机器人姿态：目标包含全部映射关键体的旋转误差，以及手、脚的 Cartesian 位置误差，并受 joint limits 约束。第一帧使用缩放后的人体 root position 和 root yaw 初始化；其余关节以及 root roll/pitch 的初值论文未说明。",
+          "第一阶段使用 Mink differential IK：在当前姿态附近线性化残差，求能够降低误差的广义速度，再积分更新姿态。求解在目标值变化低于 0.001 时停止，或者最多运行 10 次迭代。",
+          "第二阶段以第一阶段结果为初值，保留关键体旋转目标，并把位置目标从手脚扩展到全部关键体，使用另一组权重继续求解；终止条件与第一阶段相同。论文没有在 Step 5 再次明确 solver，结合上下文可推测仍使用 Mink，但这不是正文明确确认的实现细节。",
+          "动作序列按时间顺序逐帧求解，从第二帧开始以上一帧结果作为 Step 4 的 warm start。整段完成后，通过 FK 计算机器人各 body 的高度，并对 root translation 施加统一竖直偏移以修正整体悬空或穿地；该流程不是含速度、加速度和接触时序的整段 trajectory optimization。",
+          "GMR 本身没有神经网络参数，也不进行监督学习或强化学习；每条新动作都需要重新运行逐帧 IK。相同人体骨架约定与机器人组合的映射和配置原则上可以复用，但论文未完整说明其缓存与自动适配策略。",
+          "下游评估阶段为每条 retargeted reference 单独训练 BeyondMimic single-trajectory policy。每个策略分别进行 100 次 sim、4096 次 sim-dr 和 100 次 sim2sim rollout；sim2sim 使用 BeyondMimic 的 ROS 状态估计与推理包在 MuJoCo 中运行，不是真机实验。",
+          "在本文固定 reference 的评估流程中，GMR 只负责离线生成参考轨迹，随后 RL 训练和 sim2sim 推理不再更新或调用 GMR。论文没有报告 GMR 在线运行频率，也没有给出 BeyondMimic 的 observation、action、actor/critic、reward、控制频率、PD 参数、训练预算或 seed，因此这些细节不能从本文补写。",
+          "公开目标只包含运动学位置、旋转和 joint-limit 约束，没有接触状态、足端零速度、碰撞、摩擦、力矩、速度、加速度或显式平滑项；因此输出是较易跟踪的运动学 reference，而不是由 GMR 保证动力学可执行的控制轨迹。"
+        ]
+      },
+      "en": {
+        "title": "Retargeting Matters: General Motion Retargeting for Humanoid Motion Tracking",
+        "authors": "João Pedro Araújo, Yanjie Ze, Pei Xu, Jiajun Wu, C. Karen Liu",
+        "institutions": "Department of Computer Science, School of Engineering, Stanford University",
+        "status": "Full paper reviewed",
+        "takeaway": "GMR should be remembered not as a learned retargeting network, but as a per-instance kinematic solver that converts each human motion into a robot reference trajectory through non-uniform local scaling and two-stage framewise IK; experiments with a fixed BeyondMimic pipeline further show that ground penetration, self-intersection, and joint discontinuities introduced during retargeting can directly reduce downstream physical tracking robustness.",
+        "tags": [
+          "GMR",
+          "Motion Retargeting",
+          "Humanoid Motion Tracking",
+          "Differential IK",
+          "BeyondMimic",
+          "LAFAN1"
+        ],
+        "mainContent": "Differences in bone lengths, joint topology, and range of motion between humans and humanoids can make conventional retargeting produce foot sliding, ground penetration, self-intersection, or abrupt joint changes, which are then inherited by downstream RL trackers. GMR takes human skeletal motion, a robot XML/URDF model, and manually specified adaptation parameters, then applies rest-pose alignment, decoupled scaling of global root motion and local body shape, and two-stage framewise IK to output robot root poses and joint trajectories. On 21 LAFAN1 motions retargeted to the Unitree G1 and evaluated with a fixed BeyondMimic training pipeline, GMR generally outperforms the two open-source baselines, PHC and ProtoMotions, and approaches the closed-source Unitree references in success rate, tracking error, and perceptual fidelity. The evidence remains limited to kinematic retargeting and simulation/sim2sim evaluation: the paper provides no real-robot, cross-robot, complex-contact, or component-ablation experiments and does not establish that GMR outputs are dynamically feasible by themselves.",
+        "innovations": [
+          "The core method contribution is non-uniform local scaling: body positions relative to the root may use body-specific scale factors, while the root translation in world coordinates always uses one uniform factor. This separates how far the robot should travel globally from how far individual limbs should extend relative to the pelvis, targeting deformation and foot-sliding artifacts caused by conventional scaling.",
+          "The scaling procedure is combined with a two-stage IK pipeline. Stage 1 tracks all mapped body orientations and the Cartesian positions of the hands and feet, with the intent of first finding a more plausible coarse configuration and IK branch; Stage 2 uses that solution as initialization and adds position constraints for all key bodies. The paper provides neither a single-stage comparison nor a component ablation, so the independent gain of the two-stage design is not established.",
+          "The experimental contribution is an end-to-end evaluation of retargeting quality inside a fixed physical tracking pipeline. BeyondMimic rewards are not retuned for different retargeters, and sim, sim-dr, sim2sim, tracking-error, and user-study evidence is combined to examine how reference artifacts and initial-frame selection affect learning and robustness. This is an evaluation contribution rather than a new RL algorithm."
+        ],
+        "implementation": [
+          "GMR takes a human skeleton pose, a robot XML/URDF model, and manually specified key-body mappings, position/orientation weights, rest-pose offsets, local scales, and joint limits. The experiments use LAFAN1 BVH motions. Its output is a sequence of robot generalized coordinates containing root translation, root rotation, and joint values; this sequence is a reference for a downstream tracking policy, not a control action.",
+          "Preprocessing first aligns the coordinate frames of corresponding human and robot bodies in their rest poses and may add position offsets to selected bodies. It then scales body positions relative to the root separately from the global root translation. The paper does not provide an automatic learning rule or the complete G1 values for all scales, offsets, and weights; they are adaptation parameters.",
+          "For each frame, Stage 1 directly optimizes the robot configuration using orientation errors for all mapped key bodies and Cartesian position errors for the hands and feet, subject to joint limits. The first frame initializes the root from the scaled human root position and root yaw; the initial values of the remaining joints and root roll/pitch are not specified.",
+          "Stage 1 uses Mink differential IK: it linearizes the residual around the current configuration, solves for generalized velocities that reduce the error, and integrates them to update the pose. It stops when the objective change is below 0.001 or after at most 10 iterations.",
+          "Stage 2 starts from the Stage 1 solution, retains key-body orientation targets, and expands position tracking from the hands and feet to all key bodies using a second set of weights. The same termination conditions apply. Because the paper does not explicitly restate the solver used in Step 5, Mink remains the context-supported interpretation rather than an explicitly confirmed implementation detail.",
+          "Motion sequences are solved sequentially, with each frame after the first warm-started from the previous solution in Step 4. After the sequence is processed, FK is used to compute robot-body heights and a uniform vertical offset is applied to the root translation to correct global floating or ground penetration. This is not a joint trajectory optimization with velocity, acceleration, or contact-timing terms.",
+          "GMR has no neural-network parameters and performs neither supervised nor reinforcement learning; each new motion clip must be solved again with framewise IK. Mappings and configuration parameters can in principle be reused for the same human-skeleton convention and robot, but the paper does not fully specify caching or automatic adaptation.",
+          "For downstream evaluation, a separate BeyondMimic single-trajectory policy is trained for each retargeted reference. Each policy is evaluated with 100 sim, 4096 sim-dr, and 100 sim2sim rollouts. Sim2sim runs the BeyondMimic ROS state-estimation and inference package with MuJoCo and is not a real-robot experiment.",
+          "In the paper's fixed-reference evaluation pipeline, GMR is used only to generate references offline; subsequent RL training and sim2sim inference neither update nor call GMR. The paper does not report an online GMR frequency or specify BeyondMimic observations, actions, actor/critic networks, rewards, control rate, PD parameters, training budget, or seeds, so those details should not be filled in from this paper.",
+          "The published objective contains only kinematic position, orientation, and joint-limit constraints. It includes no contact state, zero foot-velocity constraint, collision, friction, torque, velocity, acceleration, or explicit smoothing term. The output is therefore a kinematic reference intended to be easier to track, not a control trajectory whose dynamic feasibility is guaranteed by GMR."
+        ]
+      }
     }
   ]
 }
