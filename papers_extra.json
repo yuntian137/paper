@@ -2251,6 +2251,80 @@
           "The published objective contains only kinematic position, orientation, and joint-limit constraints. It includes no contact state, zero foot-velocity constraint, collision, friction, torque, velocity, acceleration, or explicit smoothing term. The output is therefore a kinematic reference intended to be easier to track, not a control trajectory whose dynamic feasibility is guaranteed by GMR."
         ]
       }
+    },
+    {
+      "id": "add-motion-imitation",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2505.04961",
+      "project": "https://add-moo.github.io/",
+      "arxiv": "https://arxiv.org/abs/2505.04961",
+      "year": "2025",
+      "venue": "SIGGRAPH Asia 2025 Conference Papers",
+      "zh": {
+        "title": "Physics-Based Motion Imitation with Adversarial Differential Discriminators",
+        "authors": "Ziyu Zhang, Sergey Bashkirov, Dun Yang, Yi Shi, Michael Taylor, Xue Bin Peng",
+        "institutions": "Simon Fraser University; Sony PlayStation; NVIDIA",
+        "status": "全文已精读",
+        "takeaway": "ADD 不是动作生成器，而是训练期的可学习 reward 聚合器：它保留 reference-conditioned mimic 的逐帧跟踪与 PPO/PD 控制链，只把手工加权的多项 tracking reward 换成判别器输出；因此真正有意义的基线是 DeepMimic，AMP 只能作为不同模仿目标的参照。",
+        "tags": [
+          "ADD",
+          "Motion Tracking",
+          "PPO",
+          "Adversarial Reward",
+          "Multi-Objective Optimization"
+        ],
+        "mainContent": "论文解决物理角色逐帧跟踪中姿态、位置与速度等多项目标需要人工定权的问题。给定同步参考状态与仿真状态，方法构造差分向量 \\(\\boldsymbol{\\Delta}_t=\\phi(\\hat{\\mathbf{s}}_t)\\ominus\\phi(\\mathbf{s}_t)\\)，以零向量作为判别器唯一正样本、策略 rollout 产生的差分作为负类样本，再将判别分数变成 PPO 的标量奖励；actor 仍输出关节目标旋转并由 PD 执行。13 个单动作、DanceDB 与 LaFAN1 子集实验表明 ADD 在多数任务上达到或超过 DeepMimic，并能扩展到 Walker、Go1 等非模仿多目标任务，但 Run、Sideflip、Roll 等任务暴露了 root 误差被高维特征稀释和局部最优问题。论文没有真机实验；AMP 对比只能说明同步逐帧误差更适合 precise tracking，不能证明 ADD 是更好的通用 imitation 方法。",
+        "innovations": [
+          "核心创新：提出 Adversarial Differential Discriminator（ADD），用 MLP 判别器替代多目标损失的固定线性加权，将高维差分非线性地聚合为单一训练信号，并允许聚合关系随当前策略误差分布变化。",
+          "核心机制：把理想解统一表示为唯一的零差分正样本，把当前模型或策略产生的差分作为负类样本；判别器学习的是“当前误差离理想零点有多近”，而不是 AMP 式 expert motion distribution。",
+          "关键辅助设计：在策略实际产生的负类差分附近施加 zero-centered gradient penalty，避免判别器退化为只识别精确零点的硬分类器；消融显示没有该项或直接采用 WGAN-GP 时多数任务失败。",
+          "工程扩展：同一 ADD 聚合形式被用于精确 motion tracking、imitation + steering，以及 Walker/Go1 的非模仿多目标 RL；reference-conditioned actor、PPO、GAE、TD(λ) 与 PD controller 均属于继承组件，不是本文新提出的控制接口。"
+        ],
+        "implementation": [
+          "输入与差分：参考状态和同一时刻的仿真状态先映射为同构特征，再计算 \\(\\boldsymbol{\\Delta}_t\\)。差分包含 root 全局位置/旋转、各关节局部位置与全局旋转、root 局部线/角速度及各关节局部速度；论文没有逐项说明 \\(\\ominus\\) 对旋转的精确实现，也未完整给出不同量纲特征的归一化方式。",
+          "Actor 接收当前各 body link 相对 root 的位置、6D normal-tangent 旋转、局部线/角速度以及同步目标 reference pose，输出高斯动作分布下的关节目标旋转；球关节使用 3D exponential map，转动关节输出标量角度，随后由 PD controller 转成执行力矩。",
+          "训练循环：策略在 Isaac Gym 中 rollout，逐步计算差分与奖励 \\(r_t=-\\log(1-D(\\boldsymbol{\\Delta}_t))\\)；GAE 估计优势、TD(λ) 构造 value target，PPO 更新 actor，回归损失更新 critic，判别器使用零向量正类与 rollout/cache 中的差分负类交替更新。判别器梯度不会穿过仿真器直接回传给 actor。",
+          "网络与优化：actor、critic 和 discriminator 都使用 1024、512 单元的两层 ReLU MLP；actor 后接线性动作头，critic 与 discriminator 输出标量。策略协方差是人工指定的固定对角阵；论文未报告 asymmetric privileged critic、历史堆叠或明确的未来参考窗口。",
+          "控制与训练规模：28-DoF humanoid 的仿真/策略频率为 120/30 Hz，26-DoF Sony EVAL 为 150/50 Hz；主要实验使用 NVIDIA A100。多数单动作约训练 7.5–8.5 亿 samples，ADD 约 9 h；DanceDB 约 90 亿 samples、约 5 天，LaFAN1 子集约 180 亿 samples、约 10 天，因此它减少的是 reward 调参成本而不是计算成本。",
+          "关键证据与失败：Double Kong 的位置误差为 ADD 0.030 m、DeepMimic 0.223 m；DanceDB 为 0.044/0.045 m，LaFAN1 为 0.028/0.029 m。Run 上 ADD 为 0.165 m、DeepMimic 为 0.013 m，且 Sideflip、Roll 会出现局部最优，说明判别器自动聚合不保证学到任务上最重要的权衡。",
+          "训练/部署边界：训练时需要参考动作、物理仿真器、ADD、critic、PPO/GAE、经验缓存和梯度惩罚；推理时只保留当前状态、同步 reference pose、冻结 actor 与 PD controller，ADD 和 tracking 差分都不再运行。论文全部结果均为仿真，没有 system identification、domain randomization、延迟/噪声建模或真机部署证据。",
+          "对比边界：ADD 与 DeepMimic 都是逐帧 reference-conditioned tracker，主要区别是 reward scalarization；AMP 判别 expert 与 policy 的状态转移分布，不要求与指定参考帧同步。用逐帧 tracking error 比较 AMP 天然偏向 ADD/DeepMimic，因此 AMP 结果不能支持“ADD 是更强的通用 adversarial imitation”这一结论。"
+        ]
+      },
+      "en": {
+        "title": "Physics-Based Motion Imitation with Adversarial Differential Discriminators",
+        "authors": "Ziyu Zhang, Sergey Bashkirov, Dun Yang, Yi Shi, Michael Taylor, Xue Bin Peng",
+        "institutions": "Simon Fraser University; Sony PlayStation; NVIDIA",
+        "status": "Full paper reviewed",
+        "takeaway": "ADD is not a motion generator but a learned training-time reward aggregator: it keeps the reference-conditioned frame-tracking and PPO/PD control pipeline while replacing the manually weighted tracking reward with a discriminator output; DeepMimic is therefore the substantive baseline, whereas AMP serves only as a reference with a different imitation objective.",
+        "tags": [
+          "ADD",
+          "Motion Tracking",
+          "PPO",
+          "Adversarial Reward",
+          "Multi-Objective Optimization"
+        ],
+        "mainContent": "The paper addresses the manual weighting of pose, position, and velocity objectives in frame-synchronous physics-based motion tracking. Given aligned reference and simulated states, it constructs a differential vector \\(\\boldsymbol{\\Delta}_t=\\phi(\\hat{\\mathbf{s}}_t)\\ominus\\phi(\\mathbf{s}_t)\\), uses the zero vector as the discriminator's sole positive sample and rollout differentials as negative-class samples, and converts the score into a scalar PPO reward; the actor still outputs joint target rotations executed by a PD controller. Experiments on 13 individual motions, DanceDB, and a LaFAN1 subset show that ADD matches or exceeds DeepMimic on most tasks and extends to non-imitation Walker and Go1 multi-objective tasks, while Run, Sideflip, and Roll expose root-error dilution and local optima. The paper reports no real-robot experiments; its AMP comparison shows that synchronized per-frame errors are better suited to precise tracking than unsynchronized distribution matching, not that ADD is a universally superior imitation method.",
+        "innovations": [
+          "Core innovation: Adversarial Differential Discriminator (ADD) replaces a fixed weighted sum of objectives with an MLP discriminator that nonlinearly aggregates a high-dimensional differential into one training signal and can adapt to the current error distribution.",
+          "Core mechanism: the ideal solution is represented by a single zero-differential positive sample, while differentials produced by the current model or policy form the negative class; unlike AMP, the discriminator learns proximity to an ideal zero-error point rather than an expert motion distribution.",
+          "Key supporting design: a zero-centered gradient penalty is applied near policy-generated negative-class differentials to prevent the discriminator from becoming a hard detector of the exact zero point; the ablation shows that omitting it or directly using WGAN-GP causes most tasks to fail.",
+          "Engineering extension: the same ADD aggregation is applied to precise motion tracking, imitation plus steering, and non-imitation Walker/Go1 multi-objective RL. The reference-conditioned actor, PPO, GAE, TD(λ), and PD controller are inherited components rather than new control interfaces introduced by this paper."
+        ],
+        "implementation": [
+          "Inputs and differential: aligned reference and simulated states are mapped to matching features before computing \\(\\boldsymbol{\\Delta}_t\\). Features include global root position/rotation, local joint positions and global joint rotations, local root linear/angular velocities, and local joint velocities; the paper does not specify the exact rotational implementation of \\(\\ominus\\) or the complete normalization across units.",
+          "The actor receives current body-link positions relative to the root, 6D normal-tangent rotations, local linear/angular velocities, and a synchronized target reference pose. It outputs Gaussian-distributed joint target rotations: 3D exponential maps for spherical joints and scalar angles for revolute joints, followed by a PD controller that produces torques.",
+          "Training loop: the policy rolls out in Isaac Gym and computes \\(r_t=-\\log(1-D(\\boldsymbol{\\Delta}_t))\\) at every step. GAE estimates advantages, TD(λ) supplies value targets, PPO updates the actor, regression updates the critic, and the discriminator alternates updates using zero-vector positives and rollout/cache differential negatives. Discriminator gradients are not backpropagated through the simulator into the actor.",
+          "Networks and optimization: actor, critic, and discriminator use two-layer ReLU MLPs with 1024 and 512 hidden units. The actor has a linear action head, while critic and discriminator output scalars. The policy covariance is a manually specified fixed diagonal matrix; the paper does not report an asymmetric privileged critic, observation history stacking, or a clearly defined future reference window.",
+          "Control and training scale: the 28-DoF humanoid runs at 120 Hz simulation and 30 Hz policy frequency, while the 26-DoF Sony EVAL runs at 150/50 Hz; major experiments use an NVIDIA A100. Most single-motion runs use roughly 0.75–0.85 billion samples and about 9 h for ADD; DanceDB uses about 9 billion samples and 5 days, and the LaFAN1 subset about 18 billion samples and 10 days, so the method reduces reward-tuning effort rather than computation.",
+          "Key evidence and failures: Double Kong position error is 0.030 m for ADD versus 0.223 m for DeepMimic; DanceDB is 0.044/0.045 m and LaFAN1 is 0.028/0.029 m. On Run, ADD obtains 0.165 m versus DeepMimic's 0.013 m, and Sideflip/Roll exhibit local optima, showing that learned aggregation does not guarantee task-relevant trade-offs.",
+          "Training/deployment boundary: training requires reference motions, the physics simulator, ADD, critic, PPO/GAE, replay storage, and gradient regularization. In inference, only the current state, synchronized reference pose, frozen actor, and PD controller remain; ADD and tracking-differential computation are removed. All reported results are simulated, with no system identification, domain randomization, latency/noise model, or real-robot evidence.",
+          "Comparison boundary: ADD and DeepMimic are both frame-synchronous reference-conditioned trackers and mainly differ in reward scalarization. AMP instead discriminates expert and policy transition distributions without requiring alignment to a specified reference frame. Evaluating AMP with per-frame tracking errors inherently favors ADD/DeepMimic and cannot support a claim that ADD is a generally stronger adversarial imitation method."
+        ]
+      }
     }
   ]
 }
