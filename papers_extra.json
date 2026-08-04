@@ -2325,6 +2325,93 @@
           "Comparison boundary: ADD and DeepMimic are both frame-synchronous reference-conditioned trackers and mainly differ in reward scalarization. AMP instead discriminates expert and policy transition distributions without requiring alignment to a specified reference frame. Evaluating AMP with per-frame tracking errors inherently favors ADD/DeepMimic and cannot support a claim that ADD is a generally stronger adversarial imitation method."
         ]
       }
+    },
+    {
+      "id": "learning-quadrupedal-locomotion-over-challenging-terrain",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2010.11251",
+      "project": "https://leggedrobotics.github.io/rl-blindloco/",
+      "arxiv": "https://arxiv.org/abs/2010.11251",
+      "year": "2020",
+      "venue": "Science Robotics, Vol. 5, Issue 47, eabc5986",
+      "zh": {
+        "title": "Learning Quadrupedal Locomotion over Challenging Terrain",
+        "authors": "Joonho Lee, Jemin Hwangbo, Lorenz Wellhausen, Vladlen Koltun, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Robotics and Artificial Intelligence Lab, KAIST; Intelligent Systems Lab, Intel",
+        "status": "全文已精读",
+        "takeaway": "最该记住的不是“TCN 直接输出 PD target”，而是：先用能看见地形与接触真值的教师通过 RL 学会反应，再用 DAgger 把动作和环境隐变量蒸馏给约 2 秒本体历史的 TCN 学生；部署时学生只调节周期足端轨迹，随后由解析 IK 和关节 PD 执行。",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "Privileged Learning",
+          "TCN",
+          "DAgger",
+          "Adaptive Terrain Curriculum",
+          "PMTG",
+          "TRPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究 ANYmal 在没有视觉、显式接触检测和滑移检测的条件下，如何仅依靠本体感知历史在未知崎岖地形上稳定运动。方法先在程序化刚体地形中以 TRPO 训练具有地形、接触、摩擦和外力特权信息的教师，再通过 DAgger 让因果 TCN 学生同时模仿教师动作与教师隐变量，并用粒子滤波课程把训练地形维持在中等难度。部署时只保留本体学生、PMTG、水平足端坐标系、解析 IK、状态估计器与关节 PD，网络输出的是四腿频率偏置和足端位置残差，而不是力矩或最终关节位置目标。多随机种子消融、10 kg 载荷、湿滑表面、自然地形与 DARPA 地下挑战部署支持其鲁棒性，但方法只得到 trot 步态，盲行无法预见悬崖，且自然地形泛化缺少系统的大样本成功率统计。",
+        "innovations": [
+          "核心创新：以长时间因果 TCN 读取本体历史，让策略隐式利用卡脚、滑移、持续外力和地形变化的时间证据，减少对人工接触/滑移检测器和反射状态机的依赖。",
+          "核心创新：采用特权教师—本体学生两阶段学习。教师直接读取仿真中的局部地形、接触、摩擦和外力真值；学生在自己访问的状态分布上通过 DAgger 同时拟合教师动作与教师环境隐变量，把困难的部分可观测 RL 转化为带表征监督的模仿学习。",
+          "核心创新：以 0.5 到 0.9 的可通行性区间为目标，用粒子滤波维护程序化地形参数分布，使课程随当前策略能力自动移动到“能够前进但仍有挑战”的区域，而不是按固定时间表单调加难。",
+          "关键系统设计：策略采用 PMTG 接口，只修正每条腿的频率和三维足端目标；水平足端坐标系保持竖直轴与重力对齐，再由已有的 FTG、解析 IK 和 PD 完成可执行映射。PMTG、IK、PD、TRPO、TCN 与 DAgger 本身并非本文新算法，贡献在于围绕特权训练和纯本体部署形成闭环。"
+        ],
+        "implementation": [
+          "任务输入是平面运动方向、离散转向命令以及机器人本体状态；方向命令只给方向而不指定速度幅值。当前观测包含重力方向、基座线/角速度、关节位置/速度、腿相位与频率及执行器短历史，实机基座状态依赖 IMU 与腿运动学状态估计器。",
+          "教师状态由可部署观测 o_t 与特权信息 x_t 组成；特权信息包括每足周围的局部高度、地形法向、足/胫/大腿接触、足地摩擦和基座外力。教师的特权编码器产生环境 latent，Table S5 的末层规模表明该 latent 为 64 维，但正文未单独声明这一维数。",
+          "教师在 RaiSim 中使用 TRPO 训练：batch size 80,000，共 10,000 次迭代，平均 KL 约束阈值 0.01，共轭梯度 50 次，damping 0.1；奖励覆盖命令方向速度、转向、机身稳定、摆动足净空、非足端碰撞、足端目标平滑和关节力矩。论文未说明 critic/value baseline、优势估计、动作分布与输出缩放等细节。",
+          "课程标签由 rollout 自动生成：若下一状态沿命令方向的速度投影大于 0.2 m/s，则该状态转移标 1；速度不足或 episode 终止则标 0。地形可通行性是这些转移标签的期望或比例，不等同于严格的整回合到达终点成功率，也不是要求精确达到某个预设速度；线速度奖励在 0.6 m/s 处饱和，与课程的 0.2 m/s 判定阈值用途不同。",
+          "每类 hills、slippery hills、steps 或 stairs 地形维护 10 个参数粒子，每粒子生成 6 条轨迹；课程每 10 次策略迭代重估权重并重采样，以 0.8 概率在离散参数网格上随机移动到邻居，以 0.05 概率回放旧地形。粒子表示的是地形生成参数而非机器人状态，粒子滤波只负责下一批训练地形的采样，不在真机上估计地形。",
+          "学生使用因果 TCN 编码本体历史。默认 TCN-100 每 0.02 s 保存一帧、覆盖约 2.0 s，采用卷积核 5、dilation 1/2/4 的三组因果卷积与 stride-2 卷积，最终产生 64 维 latent；动作主干为 256-128-64-16 的 MLP。学生损失是动作均方误差与 latent 均方误差之和。",
+          "学生阶段冻结教师，由学生在课程地形上 rollout，再让教师针对学生实际访问的同一仿真状态生成动作与 latent 标签。学生用 Adam 训练 4,000 次迭代，batch size 20,000，每轮 4 个 epoch、5 个 minibatch，初始学习率 5e-4 并指数衰减；论文没有说明复制自教师的 MLP 层是否随后冻结，也没有完整说明 DAgger buffer 和学生课程初始化。",
+          "策略 action 共 16 维：4 个腿频率偏置和 4 个三维足端位置残差。在线链路为“TCN/MLP action → FTG 周期足端底稿与残差相加 → 从水平足端坐标系变换 → 解析 IK 得到 12 维关节位置目标 → 高频关节 PD 产生力矩”，因此神经网络 action 本身不是 PD target。",
+          "仿真中使用针对机器人平台训练的执行器网络近似串联弹性执行器与 PD 动态，并随机化地形摩擦、外力和观测噪声。真机部署删除教师、特权信息、地形课程、诊断 decoder 与仿真执行器网络，只保留学生前向、状态估计、相位或足端轨迹生成、IK 和真实关节 PD；ANYmal-B 与 ANYmal-C 不能据论文视为共享同一组跨形态权重。",
+          "教师训练约 12 小时，学生约 4 小时，报告硬件为 Intel i7-8700K 与 GeForce RTX 2080。论文对控制频率存在内部不一致：Figure 4C 标注网络或轨迹生成 50 Hz、关节 PD 400 Hz，而 Supplement S2 又称神经网络策略运行于 400 Hz；复现时需以代码或平台配置核对。",
+          "关键证据包括：控制参数量后，2.0 s 历史相较短历史更利于高台阶和持续横向外力；论文给定预算下，无特权 TCN-20 直接 TRPO 未学会，但这不能外推为所有纯本体直接 RL 都会失败；自适应课程优于全范围均匀采样。实机还展示了 10 kg 载荷、湿滑表面、泥雪植被、碎石和流水中的鲁棒性，但方法只有 trot，依赖经典状态估计，且没有形式化安全保证。"
+        ]
+      },
+      "en": {
+        "title": "Learning Quadrupedal Locomotion over Challenging Terrain",
+        "authors": "Joonho Lee, Jemin Hwangbo, Lorenz Wellhausen, Vladlen Koltun, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Robotics and Artificial Intelligence Lab, KAIST; Intelligent Systems Lab, Intel",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea is not that a TCN directly outputs PD targets: an RL-trained privileged teacher is distilled with DAgger into a student using about two seconds of proprioceptive history, and the deployed student only modulates periodic foot trajectories that are converted to joint targets by analytical IK and joint PD control.",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "Privileged Learning",
+          "TCN",
+          "DAgger",
+          "Adaptive Terrain Curriculum",
+          "PMTG",
+          "TRPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "The paper studies blind ANYmal locomotion over unknown challenging terrain using only proprioceptive history, without vision or explicit contact and slip detectors. A privileged teacher is first trained with TRPO on procedurally generated rigid terrain using ground-truth terrain, contact, friction, and external-force information; DAgger then trains a causal TCN student to imitate both the teacher's actions and latent environment representation, while a particle-filter curriculum maintains terrains of medium difficulty. At deployment, only the proprioceptive student, PMTG, horizontal foot frames, analytical IK, state estimator, and joint PD controller remain; the network predicts per-leg frequency offsets and foot-position residuals rather than torques or final joint targets. Multi-seed ablations and deployments with a 10 kg payload, slippery surfaces, natural terrain, and the DARPA Subterranean Challenge support robustness, but the method learns only a trot gait, cannot anticipate cliffs when operating blindly, and lacks systematic large-sample success statistics for natural-terrain generalization.",
+        "innovations": [
+          "Core contribution: a long-horizon causal TCN processes proprioceptive history so that the policy can exploit temporal evidence of foot trapping, slippage, sustained forces, and terrain changes, reducing reliance on hand-engineered contact or slip detectors and reflex state machines.",
+          "Core contribution: a two-stage privileged-teacher/proprioceptive-student pipeline. The teacher directly observes simulated terrain, contact, friction, and force ground truth, while DAgger trains the student on its own state distribution to match both teacher actions and the teacher's environment latent, turning a difficult partially observable RL problem into imitation learning with representation supervision.",
+          "Core contribution: a particle-filter terrain curriculum targets a traversability band from 0.5 to 0.9, adapting the procedural-terrain parameter distribution toward regions that are currently traversable but still challenging instead of increasing difficulty on a fixed schedule.",
+          "Key system design: the policy uses a PMTG interface and predicts only per-leg frequency and 3D foot-target corrections. Gravity-aligned horizontal foot frames stabilize the action semantics, after which existing FTG, analytical IK, and PD components produce executable commands. PMTG, IK, PD, TRPO, TCN, and DAgger are not individually new; the contribution is their closed-loop organization around privileged training and proprioception-only deployment."
+        ],
+        "implementation": [
+          "The task input consists of a planar travel direction, a discrete turning command, and proprioceptive robot state; the direction command specifies direction but not a target speed magnitude. Current observations include gravity direction, base linear/angular velocity, joint positions/velocities, leg phases and frequencies, and short actuator histories; on hardware, base state comes from an IMU- and leg-kinematics-based estimator.",
+          "The teacher receives deployable observations o_t plus privileged variables x_t, including local height samples and normals around each foot, foot/shank/thigh contacts, foot-ground friction, and base external force. Its privileged encoder produces an environment latent; the final layer in Table S5 implies a 64-dimensional latent, although the main text does not separately state the dimension.",
+          "The teacher is trained in RaiSim with TRPO using a batch size of 80,000 for 10,000 iterations, an average-KL limit of 0.01, 50 conjugate-gradient iterations, and damping 0.1. Rewards cover commanded-direction velocity, turning, body stability, swing-foot clearance, non-foot body collisions, foot-target smoothness, and joint torque. The paper does not specify the critic/value baseline, advantage estimator, action distribution, or output scaling.",
+          "Curriculum labels are generated automatically from rollouts: a transition is labeled 1 if the next state's velocity projection along the commanded direction exceeds 0.2 m/s, and 0 if progress is slower or the episode terminates. Traversability is the expectation or fraction of these transition labels, not strictly a binary full-episode arrival success rate and not exact tracking of a prescribed speed; the velocity reward saturates at 0.6 m/s, which serves a different purpose from the curriculum threshold.",
+          "Each terrain family—hills, slippery hills, steps, or stairs—maintains 10 parameter particles, with six trajectories per particle. Every 10 policy iterations, the curriculum reweights and resamples particles, moves them to neighboring grid cells with probability 0.8, and replays old terrains with probability 0.05. Particles represent terrain-generation parameters rather than robot states, and this filter samples future training terrains rather than estimating terrain online on the robot.",
+          "The student uses a causal TCN over proprioceptive history. The default TCN-100 stores one frame every 0.02 s for an approximately 2.0 s receptive field, uses kernel size 5 with dilations 1/2/4 interleaved with stride-2 convolutions, and outputs a 64-dimensional latent; the action MLP is 256-128-64-16. Its objective is the sum of action MSE and latent MSE.",
+          "During student training, the frozen teacher labels states actually visited by student rollouts on curriculum terrains. Adam runs for 4,000 iterations with batch size 20,000, four epochs and five minibatches per iteration, starting at 5e-4 with exponential decay. The paper does not clarify whether copied teacher MLP layers are subsequently frozen, nor does it fully specify the DAgger buffer or student-curriculum initialization.",
+          "The policy action is 16-dimensional: four per-leg frequency offsets and four 3D foot-position residuals. The online chain is 'TCN/MLP action → residual added to the FTG periodic foot template → horizontal-foot-frame conversion → analytical IK producing 12 joint-position targets → high-rate joint PD producing torque'; therefore, the neural action itself is not the PD target.",
+          "Simulation uses a platform-specific learned actuator model to approximate the series-elastic actuator and PD dynamics, together with randomization of terrain friction, external forces, and observation noise. Deployment removes the teacher, privileged variables, terrain curriculum, diagnostic decoder, and simulated actuator network, retaining only student inference, state estimation, phase or foot trajectory generation, IK, and physical joint PD. The paper does not establish a single morphology-general policy shared by ANYmal-B and ANYmal-C.",
+          "Teacher and student training take approximately 12 and 4 hours, respectively, on an Intel i7-8700K and GeForce RTX 2080. The paper is internally inconsistent about control rate: Figure 4C labels network or trajectory generation at 50 Hz and joint PD at 400 Hz, whereas Supplement S2 states that the neural policy runs at 400 Hz; reproduction requires checking code or platform configuration.",
+          "Key evidence shows that, at roughly matched capacity, 2.0 s of history improves tall-step traversal and rejection of sustained lateral forces; the non-privileged TCN-20 direct-TRPO baseline fails under the reported budget, which does not prove that all direct proprioceptive RL must fail; and the adaptive curriculum outperforms full-range uniform sampling. Hardware tests include a 10 kg payload, slippery surfaces, mud, snow, vegetation, rubble, and water, but the controller supports only trot, depends on classical state estimation, and provides no formal safety guarantees."
+        ]
+      }
     }
   ]
 }

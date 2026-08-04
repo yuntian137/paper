@@ -3471,65 +3471,94 @@ const papers = [
     }
   },
   {
-    "id": "phc-perpetual-humanoid-control-for-real-time-simulated-a",
+    "id": "phc-perpetual-humanoid-control",
     "categories": [
       "locomotion",
-      "sim2real",
       "imitation-teleop"
     ],
     "pdf": "https://arxiv.org/pdf/2305.06456",
-    "project": "https://arxiv.org/abs/2305.06456",
+    "project": "https://zhengyiluo.github.io/PHC/",
     "arxiv": "https://arxiv.org/abs/2305.06456",
     "year": "2023",
     "venue": "arXiv:2305.06456",
     "zh": {
-      "title": "PHC: Perpetual Humanoid Control for Real-time Simulated Avatars",
+      "title": "Perpetual Humanoid Control for Real-time Simulated Avatars",
       "authors": "Zhengyi Luo, Jinkun Cao, Alexander Winkler, Kris Kitani, Weipeng Xu",
-      "status": "已整理",
+      "institutions": "Reality Labs Research, Meta; Carnegie Mellon University",
+      "status": "全文已精读",
+      "takeaway": "PHC 最值得记住的是：它不靠 RFC 外力或反复 reset，而是用“冻结旧 primitive、复制权重训练更难动作、单独学习恢复技能、最后由 composer 乘性组合”的 PMCP 流程，把大规模 motion imitation、抗遗忘和 fail-state recovery 统一成一个实时物理控制器。",
       "tags": [
-        "Large-scale Motion Imitation",
+        "PHC",
         "PMCP",
-        "Multiplicative Composer",
+        "PPO",
+        "AMP",
+        "Motion Imitation",
         "Hard Negative Mining",
-        "Recovery"
+        "Fail-state Recovery",
+        "Multiplicative Control"
       ],
-      "mainContent": "PHC 提出一个可从大规模 motion clips 中学习高保真物理模仿和故障恢复的人形控制器。核心是 Progressive Multiplicative Control Policy (PMCP)，它通过逐步增加网络容量学习越来越困难的运动，并避免在新增恢复等任务时 catastrophic forgetting。",
+      "mainContent": "论文研究如何让物理仿真人形体在噪声参考动作和意外摔倒下持续运行，同时在不使用 Residual Force Control（RFC）等外部稳定力的条件下覆盖大规模人体动作库。核心方法 PMCP 先用 PPO、AMP 和 motion tracking reward 训练多个逐步扩容的 primitive：第一个 primitive 学全数据集，后续 primitive 专门学习上一阶段自动筛出的失败序列，并冻结旧网络以避免灾难性遗忘；随后另训恢复 primitive，再用 multiplicative composer 统一组合。主实验总计使用 4 个 primitive，其中 3 个用于 motion imitation、1 个用于 fail-state recovery，在 AMASS-Train* 上达到 98.9% 成功率，并能直接接收关节旋转或仅 3D keypoints。局限是仍难覆盖后空翻、高跳、侧手翻等需要未来意图和长时规划的高动态动作，且训练成本约为单张 A100 一周、约 100 亿样本。",
       "innovations": [
-        "提出 PMCP，用渐进式容量扩展学习大规模 motion database。",
-        "不依赖 external stabilizing force 即可模仿上万 motion clips。",
-        "支持 noisy pose inputs 和 fail-state recovery。",
-        "可用于视频姿态估计、语言生成动作等实时 avatar 场景。"
+        "核心新方法是 Progressive Multiplicative Control Policy（PMCP）：把上一 primitive 无法完成的 motion clips 视为更难的新任务，冻结旧 primitive 并增加新网络容量，从结构上减少继续训练同一 actor 时的灾难性遗忘。",
+        "将 progressive primitives 与 Multiplicative Control Policy 结合：所有 primitive 训练完成并冻结后，composer 根据同一状态输入输出各 primitive 的激活权重，以 product-of-Gaussians 形式生成最终动作分布，而不是人工指定某个动作类别或只选择一个 expert。",
+        "将 fail-state recovery 作为独立 primitive 纳入同一 primitive stack；角色摔倒或距离参考 root 超过 0.5 m 时，目标从全身模仿退化为只保留参考 root 位姿的 point-goal recovery，靠近后再切回完整 motion imitation。",
+        "论文展示了只依赖 3D keypoints 的 keypoint-based controller，可把视觉估计得到的关键点直接转成物理可执行动作；这更像由物理策略完成受动力学约束的在线 IK，而不要求输入完整关节旋转。",
+        "AMP、PPO、PNN、MCP、RSI 和 hard negative mining 均来自已有工作；本文的主要贡献是把它们重新组织成可扩展的大规模 imitation 与恢复框架。Relaxed Early Termination（RET）和 energy penalty 属于重要辅助设计，而非单独的核心理论创新。"
       ],
       "implementation": [
-        "使用 reference motion 训练 physics-based humanoid controller。",
-        "通过 hard motion/failure mining 分配新 capacity 学习困难序列。",
-        "使用 multiplicative composer 动态融合多个 primitives。",
-        "加入 fail-state recovery，使 avatar 无需 reset 持续控制。"
+        "动作序列的数学单位是一段连续参考轨迹 \\(\\hat q_{1:T}\\)，每帧包含所有 link 的旋转 \\(\\hat\\theta_t\\) 和位置 \\(\\hat p_t\\)，速度由有限差分得到。论文没有规定“一段 clip 必须对应一个 .npz 或 .pkl 文件”；文件只是存储容器，训练逻辑识别的是连续 sequence。",
+        "单步策略输入为 \\(s_t=(s_t^p,s_t^g)\\)。本体状态 \\(s_t^p\\) 包含当前仿真 pose、velocity 和可选 body shape；rotation-based goal 包含下一帧参考旋转、位置、线速度、角速度及其与当前仿真状态的差，keypoint-based goal 只包含 3D 位置、速度及误差。",
+        "策略输出不是 torque，而是 23 个可驱动 SMPL 关节的 3 维 PD target，即 \\(a_t\\in\\mathbb R^{23\\times3}\\) 且 \\(q_t^d=a_t\\)。PD 控制器再计算关节力矩；PHC 不使用 \\(q_t^d=\\hat q_t+a_t\\) 的 residual action，也不在 root 上施加 RFC 外力。",
+        "基础训练循环：从当前 motion set 随机采样序列和起始帧，构造状态，策略输出动作，Isaac Gym 推进一步，计算 reward 并存入 rollout memory；actor 和 value function 用 PPO 更新，AMP discriminator 用同一批经验持续更新。",
+        "imitation primitive 的奖励为 \\(r_t=0.5r_t^{g}+0.5r_t^{amp}+r_t^{energy}\\)。任务项跟踪所有 link 的位置、旋转、线速度和角速度；AMP 提供人类运动先验；energy penalty 抑制无外力策略为了平衡而产生的脚部高频抖动。",
+        "阶段 1：在完整 AMASS 训练集上训练 \\(P^{(1)}\\)，直到当前数据集上的成功率不再提高。训练使用 Reference State Initialization；RET 在平均全局关节误差超过 0.5 m 时终止 episode，但从终止条件中排除 ankle 和 toe，允许脚部为保持平衡略微偏离 MoCap。",
+        "阶段 2：自动在当前数据集上逐条 rollout 并筛选失败 clips，形成下一轮 hard subset。论文的成功指标定义为：模仿过程中任意时刻，body joints 与参考动作的平均全局距离超过 0.5 m，则该序列失败；因此 hard mining 主要是自动评估，不是人工逐条看视频。论文没有明确说明正式评估 Succ 时是否也像训练 RET 一样排除 ankle 和 toe。",
+        "阶段 3：冻结旧 primitive，新建 \\(P^{(k+1)}\\) 专门训练上一阶段的 hard subset。主实验采用 weight sharing / warm start：复制前一个 primitive 的权重后继续训练新网络，而不是直接修改旧网络，也不是完全从零独立训练；旧 primitive 保持冻结。论文还在附录比较了“随机初始化新 primitive + lateral connections”的原始 PNN 形式，但没有测试“随机初始化且完全不访问旧 primitive”的纯从头训练。",
+        "主实验总计使用 4 个 primitive，其中最后一个是恢复 primitive，因此可理解为 3 个 imitation primitives 覆盖绝大多数 motion clips，再加 \\(P^{(F)}\\) 处理失败恢复。覆盖并非 100%；AMASS-Train* 成功率为 98.9%，剩余失败主要是 backflip、cartwheel、high jump 等高动态动作。",
+        "阶段 4：训练 fail-state recovery primitive \\(P^{(F)}\\)。训练初始状态通过随机把 humanoid 扔到地面，或初始化在参考 root 之外 2–5 m；恢复时移除非 root 参考关节目标，只保留参考 root 的相对位置和方向，奖励使用距离进展 \\(d_{t-1}-d_t\\)、AMP 和 energy penalty。其训练数据 \\(\\mathcal Q_{loco}\\) 是人工挑选的 AMASS walking/running 子集。",
+        "阶段 5：冻结全部 imitation 和 recovery primitives，训练 composer \\(C\\)。Composer 与 primitive 接收相同状态，输出每个 primitive 的非负权重，并将多个独立高斯动作分布乘性组合为最终 \\(\\pi_{PHC}(a_t\\mid s_t)\\)；composer 训练中交替包含 imitation 和 fail-recovery 任务。",
+        "网络均为两层 MLP，隐藏维度为 [1024, 512]；策略使用固定对角高斯协方差。训练并行 1536 个 humanoid，Isaac Gym 仿真 60 Hz、策略 30 Hz，单张 NVIDIA A100 约训练 7 天并收集约 100 亿样本。四 primitive 模型约 28.8 MB，带仿真和渲染约 32 FPS，不带渲染约 50 FPS。",
+        "部署阶段只保留冻结的 primitives、composer、PD 控制与物理仿真闭环；PPO value function 和 AMP discriminator 主要用于训练奖励与优化。输入可以来自 MoCap、HybrIK 关节旋转、MeTRAbs 3D keypoints 或 MDM 生成动作，最终输出仍是逐步 PD targets。"
       ]
     },
     "en": {
-      "title": "PHC: Perpetual Humanoid Control for Real-time Simulated Avatars",
+      "title": "Perpetual Humanoid Control for Real-time Simulated Avatars",
       "authors": "Zhengyi Luo, Jinkun Cao, Alexander Winkler, Kris Kitani, Weipeng Xu",
-      "status": "Summarized",
+      "institutions": "Reality Labs Research, Meta; Carnegie Mellon University",
+      "status": "Full paper reviewed",
+      "takeaway": "The key idea of PHC is to replace RFC-based stabilization and repeated resets with a PMCP pipeline that freezes old primitives, warm-starts new primitives on harder clips, learns recovery as a separate primitive, and finally combines all skills with a multiplicative composer.",
       "tags": [
-        "Large-scale Motion Imitation",
+        "PHC",
         "PMCP",
-        "Multiplicative Composer",
+        "PPO",
+        "AMP",
+        "Motion Imitation",
         "Hard Negative Mining",
-        "Recovery"
+        "Fail-state Recovery",
+        "Multiplicative Control"
       ],
-      "mainContent": "PHC presents a physics-based humanoid controller for high-fidelity motion imitation and fault-tolerant behavior. Its core PMCP architecture dynamically allocates new network capacity to learn increasingly difficult motion sequences and avoids catastrophic forgetting when adding tasks such as fail-state recovery.",
+      "mainContent": "The paper studies perpetual control of physically simulated humanoids under noisy reference motion and unexpected falls, without Residual Force Control (RFC) or other external stabilizing forces. PMCP trains a progressive stack of PPO/AMP motion primitives: the first primitive learns the full dataset, later primitives learn automatically mined failure sequences while previous networks are frozen, a separate recovery primitive is then added, and a multiplicative composer combines them. The main model uses four primitives in total—three for motion imitation and one for fail-state recovery—reaching 98.9% success on AMASS-Train* and supporting either joint rotations or 3D keypoints as reference input. Remaining limitations include highly dynamic clips that require future intent and long-horizon planning, as well as a training cost of roughly one week and ten billion samples on a single A100.",
       "innovations": [
-        "Progressive Multiplicative Control Policy for large-scale imitation.",
-        "Imitation of ten thousand motion clips without external stabilizing forces.",
-        "Robustness to noisy input poses and unexpected falls.",
-        "Real-time avatar control from video-based or language-generated poses."
+        "The main new method is the Progressive Multiplicative Control Policy (PMCP): motion clips failed by the current primitive are treated as a harder task, the old primitive is frozen, and new network capacity is allocated to reduce catastrophic forgetting.",
+        "Progressive primitives are combined with a Multiplicative Control Policy. After all primitives are pretrained and frozen, a composer receives the same state input and outputs activation weights, producing the final action distribution through a product of Gaussian experts instead of manual task selection or top-1 routing.",
+        "Fail-state recovery is introduced as a separate primitive in the same stack. When the humanoid is fallen or more than 0.5 m from the reference root, the goal is reduced from full-body imitation to root-only point-goal recovery, and full imitation resumes after the character returns.",
+        "The paper demonstrates a keypoint-only controller that maps estimated 3D keypoints to physically executable motion, effectively performing dynamics-regularized online inverse kinematics without requiring reference joint rotations.",
+        "AMP, PPO, PNN, MCP, RSI, and hard negative mining are existing components. The main contribution is their organization into a scalable large-dataset imitation and recovery framework; RET and the energy penalty are important auxiliary design choices rather than standalone theoretical novelties."
       ],
       "implementation": [
-        "Train physics-based humanoid controllers from reference motion.",
-        "Progressively allocate new primitives/capacity for difficult motions.",
-        "Use multiplicative composition to fuse primitives.",
-        "Add recovery behavior for perpetual control without resets."
+        "A motion sequence is mathematically a continuous reference trajectory \\(\\hat q_{1:T}\\), where each frame contains link rotations \\(\\hat\\theta_t\\) and positions \\(\\hat p_t\\), with velocities computed by finite differences. The paper does not define a clip by a .npz or .pkl file; file formats are storage containers, while training operates on continuous sequences.",
+        "The per-step policy input is \\(s_t=(s_t^p,s_t^g)\\). Proprioception includes the simulated pose, velocity, and optional body shape. The rotation-based goal contains next-frame reference rotations, positions, linear and angular velocities and their errors, whereas the keypoint-based goal uses only 3D positions, velocities, and position errors.",
+        "The policy output is not torque but a 3D PD target for each of the 23 actuated SMPL joints, \\(a_t\\in\\mathbb R^{23\\times3}\\), with \\(q_t^d=a_t\\). A PD controller converts these targets to joint torques. PHC uses neither residual actions of the form \\(q_t^d=\\hat q_t+a_t\\) nor RFC forces applied at the root.",
+        "The basic training loop samples a motion and starting frame from the current set, constructs the state, rolls the policy in Isaac Gym, computes rewards, stores transitions, updates the actor and value function with PPO, and continuously updates the AMP discriminator from the collected experience.",
+        "The imitation reward is \\(r_t=0.5r_t^{g}+0.5r_t^{amp}+r_t^{energy}\\). The task term tracks link positions, rotations, linear velocities, and angular velocities; AMP provides a human-motion prior; and the energy term suppresses high-frequency foot jitter in the no-external-force setting.",
+        "Stage 1 trains \\(P^{(1)}\\) on the full AMASS training set until success on the current set stops improving. Reference State Initialization is used. Relaxed Early Termination stops an episode when the average global joint error exceeds 0.5 m, but excludes ankle and toe joints so the feet may deviate slightly from MoCap for balance.",
+        "Stage 2 evaluates the current primitive by rolling out every clip and automatically collects failed clips into the next hard subset. The reported success criterion marks a sequence as failed if, at any time, the mean global body-joint distance from the reference exceeds 0.5 m. Thus, hard mining is primarily automatic rather than manual. The paper does not clearly state whether the evaluation Succ metric also excludes ankles and toes as RET does during training.",
+        "Stage 3 freezes the old primitive and creates \\(P^{(k+1)}\\) for the previous hard subset. The main experiments use weight sharing / warm start: the new network copies the previous primitive's weights and is then trained separately, while the old primitive remains frozen. The appendix also compares the original PNN variant with a randomly initialized new primitive plus lateral connections, but does not test a purely independent random initialization with no access to prior primitives.",
+        "The main model uses four primitives in total, with the last one reserved for recovery. It is therefore reasonable to view the model as three imitation primitives covering almost all motion clips plus one fail-recovery primitive. Coverage is not complete: AMASS-Train* success is 98.9%, and remaining failures are mainly backflips, cartwheels, high jumps, and other highly dynamic motions.",
+        "Stage 4 trains the fail-state recovery primitive \\(P^{(F)}\\). Episodes start by randomly dropping the humanoid or placing it 2–5 m from the reference root. During recovery, non-root reference joint goals are removed and only the relative root position and orientation remain. The reward combines distance progress \\(d_{t-1}-d_t\\), AMP, and an energy penalty. Its training set \\(\\mathcal Q_{loco}\\) is a hand-picked subset of AMASS walking and running clips.",
+        "Stage 5 freezes all imitation and recovery primitives and trains composer \\(C\\). The composer receives the same state, outputs nonnegative weights for all primitives, and multiplicatively combines their Gaussian action distributions into \\(\\pi_{PHC}(a_t\\mid s_t)\\). Composer training interleaves imitation and recovery tasks.",
+        "All networks are two-layer MLPs with hidden sizes [1024, 512], and the policy uses a fixed diagonal Gaussian covariance. Training uses 1,536 parallel humanoids in Isaac Gym, 60 Hz simulation and 30 Hz control, taking about seven days and roughly ten billion samples on one NVIDIA A100. The four-primitive model is 28.8 MB and runs at about 32 FPS with simulation and rendering or 50 FPS without rendering.",
+        "At deployment, the frozen primitives, composer, PD controller, and physics simulation remain in the loop; the PPO value function and AMP discriminator are primarily training components. Reference input may come from MoCap, HybrIK rotations, MeTRAbs 3D keypoints, or MDM-generated motion, while the final controller output remains per-step PD targets."
       ]
     }
   },
@@ -4744,7 +4773,7 @@ const paperInstitutionOverrides = {
   "dexterous-functional-grasping": "Carnegie Mellon University",
   "efficient-sim-to-real-transfer-of-contact-rich-manipulat": "University of California, Berkeley",
   "amp-adversarial-motion-priors": "University of California, Berkeley; Shanghai Jiao Tong University",
-  "phc-perpetual-humanoid-control-for-real-time-simulated-a": "Reality Labs Research, Meta; Carnegie Mellon University",
+  "phc-perpetual-humanoid-control": "Reality Labs Research, Meta; Carnegie Mellon University",
   "beyondmimic": "University of California, Berkeley; Stanford University",
   "pmtg-policies-modulating-trajectory-generators": "Google Brain",
   "skillblender-towards-versatile-humanoid-whole-body-loco-": "University of Southern California; Stanford University; Peking University; University of California, Berkeley",
@@ -5160,11 +5189,13 @@ function tagItems(items, className = "") {
 function typesetMath() {
   if (!window.MathJax || !window.MathJax.typesetPromise) return;
 
+  const targets = [nodes.paperList, nodes.paperDetail].filter(Boolean);
+
   if (window.MathJax.typesetClear) {
-    window.MathJax.typesetClear([nodes.paperDetail]);
+    window.MathJax.typesetClear(targets);
   }
 
-  window.MathJax.typesetPromise([nodes.paperDetail]).catch(() => {});
+  window.MathJax.typesetPromise(targets).catch(() => {});
 }
 
 function searchableText(paper) {
