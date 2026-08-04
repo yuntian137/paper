@@ -2147,7 +2147,7 @@ const papers = [
     }
   },
   {
-    "id": "rma-legged-robots",
+    "id": "rma-rapid-motor-adaptation-for-legged-robots",
     "categories": [
       "locomotion",
       "sim2real"
@@ -2156,53 +2156,87 @@ const papers = [
     "project": "https://ashish-kmr.github.io/rma-legged-robots/",
     "arxiv": "https://arxiv.org/abs/2107.04034",
     "year": "2021",
-    "venue": "arXiv:2107.04034",
+    "venue": "Robotics: Science and Systems (RSS) 2021",
     "zh": {
       "title": "RMA: Rapid Motor Adaptation for Legged Robots",
       "authors": "Ashish Kumar, Zipeng Fu, Deepak Pathak, Jitendra Malik",
-      "status": "已整理",
+      "institutions": "University of California, Berkeley; Carnegie Mellon University; Facebook AI Research",
+      "status": "全文已精读（含补充材料）",
+      "takeaway": "最该记住的是：RMA 先用 PPO 联合训练读取仿真特权参数的环境编码器 \\(\\mu\\) 与直接输出关节目标的 base policy \\(\\pi\\)，再冻结两者，用机器人最近 0.5 s 的状态—动作历史训练 \\(\\phi\\) 回归同一个 8 维 extrinsics；部署时只在线重估 latent，不更新任何网络权重。",
       "tags": [
-        "Reinforcement Learning",
-        "Legged Locomotion",
-        "Online Adaptation"
+        "Quadruped Locomotion",
+        "Rapid Adaptation",
+        "Privileged Learning",
+        "PPO",
+        "On-Policy Supervision",
+        "Latent System Identification",
+        "Domain Randomization",
+        "Sim-to-Real"
       ],
-      "mainContent": "RMA 研究四足机器人如何在真实世界中快速适应未见过的地形、负载变化、摩擦变化和硬件差异。论文提出 Rapid Motor Adaptation 框架，完全在仿真中训练，不依赖参考轨迹或手写足端轨迹生成器，然后直接部署到 Unitree A1 真机。机器人能够在沙地、泥地、草地、碎石、楼梯、变形地面等复杂场景中实时调整运动策略。",
+      "mainContent": "RMA 研究纯本体感知的 Unitree A1 如何在未知且会变化的载荷、电机强度、摩擦和地形条件下快速调整运动，而不依赖真机微调、参考动作或预定义足端轨迹。第一阶段用 PPO 联合训练特权环境编码器 \\(\\mu:e_t\\mapsto z_t\\) 与 base policy \\(\\pi(x_t,a_{t-1},z_t)\\)；第二阶段冻结二者，让 adaptation module \\(\\phi\\) 在自己预测的 latent 所诱导的状态分布上，仅用最近 0.5 s 状态—动作历史回归 \\(z_t\\)。部署时 \\(\\phi\\) 以 10 Hz 更新 8 维 latent，\\(\\pi\\) 以 100 Hz 直接输出 12 维关节位置目标，再由固定 PD 转为力矩，全程没有在线梯度更新。论文的仿真多随机种子实验及小样本真机试验支持适应模块优于普通 domain randomization、显式 SysID、AWR 和无适应版本，但系统只会无视觉地向前行走、只能在扰动发生后反应，且自然地形试验规模和对比基线有限。",
       "innovations": [
-        "把腿式机器人 sim-to-real 问题转化为在线快速适应：不需要在新环境中先采几分钟数据，也不需要真实世界微调。",
-        "提出 base policy + adaptation module 的结构：base policy 使用特权环境信息训练，adaptation module 在部署时从最近状态/动作历史估计 latent extrinsics。",
-        "adaptation module 的输出不追求真实物理参数精确辨识，而是学习对动作决策有用的低维环境表征，从而绕开部分不可辨识问题。",
-        "使用多样地形生成器和生物能量学启发奖励，在仿真中覆盖质量、摩擦、质心、马达强度、地形高度等变化，提高真实泛化能力。"
+        "核心方法：把控制拆成固定的快速 base policy 与较慢的 adaptation module。特权环境参数先被压缩成只需服务于控制回报的低维 extrinsics，部署时再由历史模块估计该表征；所谓 rapid online adaptation 是在线 latent inference，而不是真机在线 RL、参数优化或网络微调。",
+        "关键训练设计：第二阶段不使用由真实 \\(z_t\\) 产生的完美专家轨迹，而让随机初始化或尚不准确的 \\(\\phi\\) 实际驱动冻结的 \\(\\pi\\) rollout，再用仿真中的 \\(\\mu(e_t)\\) 标注这些访问状态。这是 DAgger-style 的 on-policy 监督，专门缓解部署时 latent 误差造成的分布偏移；补充算法每轮清空 \\(D_2\\)，没有证明使用了经典 DAgger 的永久数据聚合。",
+        "表征设计：不强迫历史网络恢复可解释的质量、摩擦等 17 维物理参数，而回归 PPO 为控制自动学习的 8 维 \\(z_t\\)。因此 \\(z_t\\) 可把物理上不同但需要相似控制响应的条件映射到相近区域，不过其各维没有明确物理语义，也不能当作准确的参数辨识结果。",
+        "工程贡献：利用环境条件变化慢、关节状态变化快的时间尺度差异，让 \\(\\phi\\) 与 \\(\\pi\\) 分别以 10 Hz 和 100 Hz 异步运行，base policy 始终读取最新 latent；该设计在 A1 的有限板载算力上保留了高频控制。",
+        "辅助系统设计：用 fractal terrain、参数随机化、能耗与冲击相关奖励及固定惩罚课程，从零学出直接关节位置控制器，不使用 reference trajectory、PMTG、解析 IK 或专门拟合的 actuator model。这些奖励、PPO、CNN、PD 和 domain randomization 本身不是本文新算法。",
+        "贡献边界：特权表示再由本体历史推断的范式与 Lee et al. 2020 高度相关；RMA 更鲜明的结构是保留冻结的 direct-joint base policy，只把特权 encoder 替换成历史 adaptation module，并进行双频异步部署，不能把整套 privileged-latent 思路都视为首次提出。"
       ],
       "implementation": [
-        "第一阶段在仿真中训练 base policy：输入当前状态、上一时刻动作和由环境因子编码器生成的 extrinsics latent，通过 model-free RL 输出目标关节位置。",
-        "第二阶段冻结 base policy，训练 adaptation module：用 on-policy 仿真数据，从过去约 50 步状态和动作历史监督预测 extrinsics latent。",
-        "部署时没有真实环境参数，adaptation module 以约 10Hz 在线估计 extrinsics，base policy 以约 100Hz 根据最新 extrinsics 输出动作，两者异步运行。",
-        "动作输出是目标关节位置，再由 A1 机器人的 PD controller 转成关节力矩执行。",
-        "训练过程结合地形随机化和动力学参数随机化，覆盖摩擦、质量、质心、马达强度等因素，提升零微调真机迁移表现。"
+        "任务没有速度或转向 command：奖励只鼓励沿机身前向移动，前向项在 \\(0.35\\,\\mathrm{m/s}\\) 饱和。当前状态 \\(x_t\\in\\mathbb R^{30}\\) 由 12 维关节位置、12 维关节速度、torso roll/pitch 和 4 维二值足端接触组成，不含基座线速度、角速度或视觉；base policy 另接收上一动作和环境 latent。",
+        "仿真特权向量 \\(e_t\\in\\mathbb R^{17}\\) 包括载荷质量及其机身位置合计 3 维、12 个 motor-strength 系数、1 维摩擦和 1 维局部地形高度。局部高度取四足下方高度的最大值并量化到小数点后一位；训练还随机化 \\(K_p,K_d\\)，但论文没有把二者列入 \\(e_t\\)，因此 base policy 必须对这部分变化保持鲁棒。",
+        "环境编码器 \\(\\mu\\) 是 hidden sizes 256、128 的 3-layer MLP，将 17 维 \\(e_t\\) 压成 8 维 \\(z_t\\)。base policy 是论文所称的 3-layer MLP，hidden width 为 128；它接收 \\(30+12+8=50\\) 维输入并输出 12 个 desired joint positions，而不是足端残差或直接力矩。随后 \\(\\tau=K_p(\\hat q-q)+K_d(0-\\dot q)\\)，实机固定使用 \\(K_p=55,K_d=0.8\\)。",
+        "阶段 1 从头联合训练 \\(\\mu\\) 与 \\(\\pi\\)：每步先算 \\(z_t=\\mu(e_t)\\)，再算 \\(a_t=\\pi(x_t,a_{t-1},z_t)\\)，由 PD 和 RaiSim 推进环境，最后用 PPO 回传到两个网络。训练 15,000 iterations，每轮 80,000 transitions、4 个 minibatches 并重复 4 rounds，共约 12 亿仿真步、24 小时；硬件只写 ordinary desktop 和 1 GPU，未给具体型号。",
+        "PPO 补充细节为：surrogate policy loss 加 \\(0.5\\) 倍 value loss，ratio clip 为 \\([0.8,1.2]\\)，\\(\\gamma=0.998\\)、GAE \\(\\lambda=0.95\\)，Adam learning rate \\(5\\times10^{-4}\\)、\\(\\beta=(0.9,0.999)\\)、\\(\\epsilon=10^{-8}\\)。策略使用参数化 Gaussian action，取消 entropy regularization，但把标准差下限设为 0.2；论文未给 critic 架构、观测归一化、动作缩放或关节限幅等细节。",
+        "奖励由 forward、横向速度/yaw、机械功、ground-impact 变化、torque 变化、action magnitude、joint speed、roll/pitch、竖直运动和接触足滑移十项组成，对应 scale 为 20、21、0.002、0.02、0.001、0.07、0.002、1.5、2.0、0.8。正文把第 9 项命名为 Z Acceleration，但公式实际惩罚 \\(v_z^2\\)；惩罚项 3–10 另乘从 \\(k_0=0.03\\) 按 \\(k_{t+1}=k_t^{0.997}\\) 增至 1 的固定课程，同时线性扩大质量、摩擦和 motor strength 随机化，terrain difficulty 从一开始固定随机采样，没有地形课程。",
+        "RaiSim 使用 A1 URDF 与 fractal terrain，参数为 octaves 2、lacunarity 2.0、gain 0.25、z-scale 0.27。训练范围包括 friction \\([0.05,4.5]\\)、\\(K_p\\) \\([50,60]\\)、\\(K_d\\) \\([0.4,0.8]\\)、payload \\([0,6]\\) kg 和 motor strength \\([0.90,1.10]\\)，并以每步 0.004 概率在 episode 内重采样；最大 1,000 步，base height 低于 0.28 m、roll 超过 0.4 rad 或 pitch 超过 0.2 rad 时提前终止。复现警告：正文同时写 policy 100 Hz 和 simulation time step 0.025 s，两者数值不一致；Table II 的 Center of Mass 单位与数值也可疑，需以代码核对。",
+        "adaptation module 的输入是过去 50 步、约 0.5 s 的 \\(x\\) 与 \\(a\\) 历史。每个 42 维 state-action 对先经 2-layer MLP 嵌入到 32 维，再经三层 1-D CNN；各层 \\([C_{in},C_{out},kernel,stride]\\) 为 \\([32,32,8,4]\\)、\\([32,32,5,1]\\)、\\([32,32,5,1]\\)，flatten 后线性映射到 8 维 \\(\\hat z_t\\)。论文未说明 episode 开始不足 50 帧时如何 padding 或初始化 latent。",
+        "阶段 2 冻结 \\(\\pi\\) 和 \\(\\mu\\)，随机初始化 \\(\\phi\\)。rollout 始终执行 \\(a_t=\\pi(x_t,a_{t-1},\\hat z_t)\\)，同时用 \\(z_t=\\mu(e_t)\\) 作为标签，只最小化 \\(\\|\\phi(H_t)-\\mu(e_t)\\|_2^2\\)；没有 PPO、action imitation loss 或继续更新 base policy。训练 1,000 iterations，每轮 80,000 samples、4 minibatches，Adam learning rate \\(5\\times10^{-4}\\)，约 8,000 万仿真步和 3 小时。",
+        "真机部署删除 \\(e_t\\)、\\(\\mu\\)、critic、reward 和所有优化器，只保留 \\(\\phi+\\pi+\\) 固定关节 PD。电机编码器提供关节位置/速度，IMU 提供 roll/pitch，足端传感器提供接触；\\(\\phi\\) 以 10 Hz 从最近历史刷新共享的 \\(\\hat z\\)，\\(\\pi\\) 以 100 Hz 读取最新 \\(\\hat z\\) 输出关节目标。网络权重全程冻结，因此更准确的说法是 online latent/state estimation，而非 online learning。",
+        "仿真主表在 3 个随机初始化、每个 1,000 episodes 上报告：RMA success 73.5%、TTF 0.85，接近使用真实 \\(z_t\\) 的 Expert 76.2%/0.86，并高于 Robust domain randomization 62.4%、SysID 56.5%、AWR 41.7% 和 RMA without adaptation 52.1%。这支持 learned latent 与 adaptation module 的价值，但不同 baseline 的失效不能证明所有显式 SysID、history policy 或 domain-randomized policy 一般都会更差。",
+        "真机上，同一策略报告 15 cm step-down 80%、memory mattress 与 uneven foam 100%、oily patch 90%，并能携带最高 12 kg；outdoor 中 hiking stairs 为 70%，cement/pebble pile 为 80%，若干沙地、泥地和植被任务报告无失败。室内多数结果仅 5 trials，严重失败的 baseline 甚至只做 2 trials，部分户外任务未给总次数；真实对比也只含 A1 原厂控制器和无 adaptation 版本，因此论文证明的是有力的概念验证，而不是大样本可靠性或全面 SOTA。",
+        "主要局限是 blind、reactive 且任务单一：机器人必须先发生滑移、下沉或姿态变化，历史模块才有证据改变 latent，无法提前看到台阶或规划落脚；论文也只训练固定向前 locomotion，没有速度跟踪、转向、多 gait、多机器人验证或形式化安全保证。项目页当前的 Code 链接指向一个后来用于 Cross-Modal Supervision 的衍生仓库，不能无条件视为原始 2021 实验的完整冻结代码。"
       ]
     },
     "en": {
       "title": "RMA: Rapid Motor Adaptation for Legged Robots",
       "authors": "Ashish Kumar, Zipeng Fu, Deepak Pathak, Jitendra Malik",
-      "status": "Summarized",
+      "institutions": "University of California, Berkeley; Carnegie Mellon University; Facebook AI Research",
+      "status": "Full paper and supplementary reviewed",
+      "takeaway": "The key point is that RMA first jointly trains a privileged environment encoder \\(\\mu\\) and a direct-joint base policy \\(\\pi\\) with PPO, then freezes both and trains \\(\\phi\\) to regress the same 8-dimensional extrinsics from the latest 0.5 s of state-action history; deployment updates only the latent online, never the network weights.",
       "tags": [
-        "Reinforcement Learning",
-        "Legged Locomotion",
-        "Online Adaptation"
+        "Quadruped Locomotion",
+        "Rapid Adaptation",
+        "Privileged Learning",
+        "PPO",
+        "On-Policy Supervision",
+        "Latent System Identification",
+        "Domain Randomization",
+        "Sim-to-Real"
       ],
-      "mainContent": "RMA studies how quadruped robots can rapidly adapt to unseen terrains, payload changes, friction changes, and hardware mismatch in the real world. The paper proposes Rapid Motor Adaptation, trained entirely in simulation without reference trajectories or hand-designed foot trajectory generators, and directly deployed on a Unitree A1 robot. The robot adapts online across sand, mud, grass, pebbles, stairs, deformable surfaces, and other challenging environments.",
+      "mainContent": "RMA studies how a proprioceptive Unitree A1 can rapidly adjust to unknown and changing payload, motor strength, friction, and terrain without hardware fine-tuning, reference motions, or predefined foot trajectories. Phase 1 jointly trains a privileged environment encoder \\(\\mu:e_t\\mapsto z_t\\) and base policy \\(\\pi(x_t,a_{t-1},z_t)\\) with PPO; Phase 2 freezes both and trains an adaptation module \\(\\phi\\), on the state distribution induced by its own predicted latent, to recover \\(z_t\\) from the latest 0.5 s of state-action history. At deployment, \\(\\phi\\) updates the 8-dimensional latent at 10 Hz, while \\(\\pi\\) directly predicts 12 joint-position targets at 100 Hz for a fixed PD controller, with no online gradient update. Multi-seed simulation experiments and small real-robot trials support improvements over ordinary domain randomization, explicit SysID, AWR, and a no-adaptation ablation, but the system only walks forward blindly, reacts after disturbances occur, and has limited real-world sample sizes and baseline coverage.",
       "innovations": [
-        "It frames legged sim-to-real transfer as rapid online adaptation, avoiding minutes of real-world data collection or real-world fine-tuning in each new environment.",
-        "The architecture combines a base policy trained with privileged environment information and an adaptation module that estimates latent extrinsics from recent state-action history at deployment.",
-        "The adaptation module does not need exact physical system identification; it learns a low-dimensional environment representation that is useful for choosing actions.",
-        "A diverse terrain generator and bioenergetics-inspired rewards expose the policy to variations in mass, friction, center of mass, motor strength, and terrain height during simulation training."
+        "Core method: control is decomposed into a fixed fast base policy and a slower adaptation module. Privileged environment parameters are compressed into low-dimensional extrinsics optimized only for control return, and deployment estimates that representation from history; rapid online adaptation means online latent inference, not hardware-side RL, parameter optimization, or weight fine-tuning.",
+        "Key training design: Phase 2 does not rely on perfect expert trajectories generated with the true \\(z_t\\). Instead, the randomly initialized or still-imperfect \\(\\phi\\) actually drives the frozen \\(\\pi\\), and simulation labels the visited states with \\(\\mu(e_t)\\). This is DAgger-style on-policy supervision aimed at covariate shift from latent error; the supplementary algorithm clears \\(D_2\\) each iteration and does not establish permanent dataset aggregation as in classical DAgger.",
+        "Representation design: the history network is not forced to recover interpretable mass, friction, and other 17-dimensional physical parameters. It regresses the 8-dimensional \\(z_t\\) learned by PPO, allowing physically different conditions that require similar control responses to share a representation; individual latent coordinates have no declared physical meaning and are not accurate parameter estimates.",
+        "Engineering contribution: because environmental conditions change slowly while joint state changes quickly, \\(\\phi\\) and \\(\\pi\\) run asynchronously at 10 Hz and 100 Hz, respectively, and the base policy always consumes the latest latent. This preserves high-rate control on the A1's limited onboard compute.",
+        "Supporting system design: fractal terrain, parameter randomization, work- and impact-related rewards, and a fixed penalty curriculum learn a direct joint-position controller from scratch without reference trajectories, PMTG, analytical IK, or a separately fitted actuator model. The rewards, PPO, CNN, PD, and domain randomization are not individually new algorithms.",
+        "Contribution boundary: the privileged-representation-then-history-inference pattern is closely related to Lee et al. 2020. RMA's more distinctive formulation keeps a frozen direct-joint base policy, replaces only the privileged encoder with a history adaptation module, and deploys the two modules asynchronously; the broader privileged-latent idea should not be treated as wholly unprecedented."
       ],
       "implementation": [
-        "Phase one trains the base policy in simulation with model-free RL. It receives the current state, previous action, and an extrinsics latent produced by an environment factor encoder, then outputs desired joint positions.",
-        "Phase two freezes the base policy and trains the adaptation module with on-policy simulation data to predict the extrinsics latent from roughly 50 steps of recent state-action history.",
-        "At deployment, no privileged environment parameters are available. The adaptation module runs around 10Hz, while the base policy runs around 100Hz using the latest predicted extrinsics.",
-        "The policy outputs desired joint positions, which are converted to torques by the A1 robot's PD controller.",
-        "Training combines terrain randomization and dynamics randomization over friction, mass, center of mass, motor strength, and related factors for zero-finetuning real-world transfer."
+        "There is no target-speed or turning command: the reward only encourages forward motion, with the forward term saturating at \\(0.35\\,\\mathrm{m/s}\\). The current state \\(x_t\\in\\mathbb R^{30}\\) contains 12 joint positions, 12 joint velocities, torso roll/pitch, and four binary foot-contact indicators, with no base linear velocity, angular velocity, or vision; the base policy additionally receives the previous action and environment latent.",
+        "The privileged simulation vector \\(e_t\\in\\mathbb R^{17}\\) contains payload mass and its body location in three dimensions total, 12 motor-strength coefficients, scalar friction, and scalar local terrain height. Local height is the maximum beneath the four feet after discretization to one decimal place. Training also randomizes \\(K_p,K_d\\), but the paper does not include them in \\(e_t\\), so the base policy must remain robust to those variations.",
+        "The environment encoder \\(\\mu\\) is a three-layer MLP with hidden sizes 256 and 128 that maps 17-dimensional \\(e_t\\) to 8-dimensional \\(z_t\\). The base policy is described as a three-layer MLP with hidden width 128; it receives \\(30+12+8=50\\) inputs and outputs 12 desired joint positions, not foot residuals or direct torque. The controller then applies \\(\\tau=K_p(\\hat q-q)+K_d(0-\\dot q)\\), with fixed hardware gains \\(K_p=55,K_d=0.8\\).",
+        "Phase 1 initializes and jointly trains \\(\\mu\\) and \\(\\pi\\): each step computes \\(z_t=\\mu(e_t)\\), then \\(a_t=\\pi(x_t,a_{t-1},z_t)\\), advances RaiSim through PD control, and backpropagates PPO through both networks. Training uses 15,000 iterations, 80,000 transitions per iteration, four minibatches and four optimization rounds, totaling about 1.2 billion simulated steps and 24 hours; the paper states only an ordinary desktop and one GPU, without exact hardware models.",
+        "Supplementary PPO details are surrogate policy loss plus \\(0.5\\) times value loss, ratio clipping to \\([0.8,1.2]\\), \\(\\gamma=0.998\\), GAE \\(\\lambda=0.95\\), and Adam with learning rate \\(5\\times10^{-4}\\), \\(\\beta=(0.9,0.999)\\), and \\(\\epsilon=10^{-8}\\). The policy uses a parameterized Gaussian action distribution, omits entropy regularization, and constrains its standard deviation to at least 0.2; critic architecture, observation normalization, action scaling, and joint-limit handling are not specified.",
+        "The ten reward terms cover forward motion, lateral velocity/yaw, mechanical work, changes in ground impact, changes in torque, action magnitude, joint speed, roll/pitch, vertical motion, and stance-foot slip, with scales 20, 21, 0.002, 0.02, 0.001, 0.07, 0.002, 1.5, 2.0, and 0.8. The item named Z Acceleration actually penalizes \\(v_z^2\\) in the formula. Penalty terms 3–10 are additionally multiplied by a fixed curriculum that grows from \\(k_0=0.03\\) toward one via \\(k_{t+1}=k_t^{0.997}\\); mass, friction, and motor-strength ranges are widened linearly, while terrain difficulty is sampled at a fixed level from the beginning and has no terrain curriculum.",
+        "RaiSim uses the A1 URDF and fractal terrain with two octaves, lacunarity 2.0, gain 0.25, and z-scale 0.27. Training ranges include friction \\([0.05,4.5]\\), \\(K_p\\) \\([50,60]\\), \\(K_d\\) \\([0.4,0.8]\\), payload \\([0,6]\\) kg, and motor strength \\([0.90,1.10]\\), with within-episode resampling probability 0.004 per step. Episodes last at most 1,000 steps and terminate if base height drops below 0.28 m, roll exceeds 0.4 rad, or pitch exceeds 0.2 rad. Reproduction warning: the text states both a 100 Hz policy and a 0.025 s simulation step, which are numerically inconsistent; Table II's center-of-mass unit and values also require code-level confirmation.",
+        "The adaptation module consumes the past 50 steps, approximately 0.5 s, of \\(x\\) and \\(a\\). Each 42-dimensional state-action pair is embedded to 32 dimensions by a two-layer MLP, followed by three 1-D CNN layers with \\([C_{in},C_{out},kernel,stride]\\) equal to \\([32,32,8,4]\\), \\([32,32,5,1]\\), and \\([32,32,5,1]\\); the flattened output is linearly projected to 8-dimensional \\(\\hat z_t\\). The paper does not explain padding or latent initialization before 50 history frames are available at episode start.",
+        "Phase 2 freezes \\(\\pi\\) and \\(\\mu\\) and randomly initializes \\(\\phi\\). Rollouts always execute \\(a_t=\\pi(x_t,a_{t-1},\\hat z_t)\\), while \\(z_t=\\mu(e_t)\\) supplies the label, and only \\(\\|\\phi(H_t)-\\mu(e_t)\\|_2^2\\) is minimized; there is no PPO, action-imitation loss, or continued base-policy update. Training uses 1,000 iterations, 80,000 samples per iteration, four minibatches, Adam at \\(5\\times10^{-4}\\), about 80 million simulated steps, and roughly three hours.",
+        "Hardware deployment removes \\(e_t\\), \\(\\mu\\), the critic, rewards, and all optimizers, retaining only \\(\\phi+\\pi+\\) fixed joint PD. Motor encoders provide joint position/velocity, the IMU provides roll/pitch, and foot sensors provide contact. \\(\\phi\\) refreshes shared \\(\\hat z\\) from recent history at 10 Hz, while \\(\\pi\\) reads the latest \\(\\hat z\\) and outputs joint targets at 100 Hz. All weights remain frozen, so online latent/state estimation is more precise than online learning.",
+        "The main simulation table averages three random initializations with 1,000 episodes each: RMA reports 73.5% success and 0.85 TTF, close to the true-\\(z_t\\) Expert at 76.2%/0.86 and above Robust domain randomization at 62.4%, SysID at 56.5%, AWR at 41.7%, and RMA without adaptation at 52.1%. This supports the value of the learned latent and adaptation module, but failures of these particular baselines do not prove that every explicit SysID, history policy, or domain-randomized policy is generally inferior.",
+        "On hardware, the same policy reports 80% on a 15 cm step-down, 100% on a memory mattress and uneven foam, 90% on an oily patch, and payload carriage up to 12 kg; outdoors it reports 70% on hiking stairs and 80% on cement/pebble piles, with no failures reported for several sand, mud, and vegetation tasks. Most indoor results use only five trials, severely failing baselines sometimes only two, and total counts are missing for some outdoor tasks. Real-world comparison is also limited to the stock A1 controller and a no-adaptation ablation, so the evidence is a strong proof of concept rather than large-sample reliability or a comprehensive state-of-the-art comparison.",
+        "The main limitations are blindness, reactivity, and a narrow task: slip, sinking, or posture change must occur before history provides evidence to change the latent, so the robot cannot anticipate steps or plan footholds. The paper trains only fixed forward locomotion, with no velocity tracking, turning, multiple gaits, cross-robot validation, or formal safety guarantee. The project page's current Code link points to a later repository derived for Cross-Modal Supervision and should not automatically be treated as a frozen, complete release of the original 2021 experiments."
       ]
     }
   },
@@ -4760,7 +4794,7 @@ const paperInstitutionOverrides = {
   "spi-active": "Carnegie Mellon University; Google DeepMind",
   "multimodal-visual-transformer-rl": "Hebei Medical University; Harbin Institute of Technology",
   "anyteleop": "UC San Diego; NVIDIA",
-  "rma-legged-robots": "UC Berkeley; Carnegie Mellon University; Facebook",
+  "rma-rapid-motor-adaptation-for-legged-robots": "University of California, Berkeley; Carnegie Mellon University; Facebook AI Research",
   "pen-spinning": "UC San Diego; Carnegie Mellon University; UC Berkeley",
   "hora-in-hand-rotation": "UC Berkeley; Meta AI",
   "bidexhands": "Peking University; University College London; Carnegie Mellon University; Beijing Institute for General Artificial Intelligence",

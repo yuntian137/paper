@@ -2412,6 +2412,96 @@
           "Key evidence shows that, at roughly matched capacity, 2.0 s of history improves tall-step traversal and rejection of sustained lateral forces; the non-privileged TCN-20 direct-TRPO baseline fails under the reported budget, which does not prove that all direct proprioceptive RL must fail; and the adaptive curriculum outperforms full-range uniform sampling. Hardware tests include a 10 kg payload, slippery surfaces, mud, snow, vegetation, rubble, and water, but the controller supports only trot, depends on classical state estimation, and provides no formal safety guarantees."
         ]
       }
+    },
+    {
+      "id": "dreamwaq",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2301.10602",
+      "project": "https://sites.google.com/view/dreamwaq",
+      "arxiv": "https://arxiv.org/abs/2301.10602",
+      "year": "2023",
+      "venue": "2023 IEEE International Conference on Robotics and Automation (ICRA)",
+      "zh": {
+        "title": "DreamWaQ: Learning Robust Quadrupedal Locomotion With Implicit Terrain Imagination via Deep Reinforcement Learning",
+        "authors": "I Made Aswin Nahrendra, Byeongho Yu, Hyun Myung",
+        "institutions": "韩国科学技术院（KAIST）电气工程学院，韩国大田",
+        "status": "全文已精读",
+        "takeaway": "DreamWaQ 的关键不是重建显式地形，而是让同一个 CENet 编码器从短时本体历史中同时估计机身速度，并通过 β-VAE 的下一观测预测任务学习隐式动力学上下文；Actor 利用二者实现接触后的快速适应。",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "Proprioception",
+          "PPO",
+          "CENet",
+          "β-VAE",
+          "AdaBoot",
+          "Asymmetric Actor-Critic",
+          "Zero-shot Sim-to-Real"
+        ],
+        "mainContent": "论文研究仅依赖 IMU 与关节编码器的四足机器人复杂地形运动控制，以降低对相机、LiDAR、高度图和两阶段 Teacher–Student 蒸馏的依赖。DreamWaQ 使用非对称 Actor–Critic：CENet 从约 100 ms 的本体历史中估计三维机身线速度并提取 16 维潜变量，Actor 据此输出关节位置目标，特权 Critic 则在训练时读取真实速度、扰动和局部高度扫描。策略在 Isaac Gym 中通过 PPO 单阶段并发训练，并零样本部署到 Unitree A1，完成了 430 m 校园路线和 465 m 山路。论文证明了该控制器具有较强的真机持续运行能力，但没有证明潜变量能够显式还原地形属性，真实路线也缺少重复次数、同场 baseline 和统计成功率。",
+        "innovations": [
+          "提出 Context-Aided Estimator Network（CENet），用同一个共享编码器联合学习可解释的三维机身速度和无显式标签的 16 维环境上下文，使状态估计与隐式动力学表征相互辅助。",
+          "把 CENet、Actor 和特权 Critic 放在同一批在线 rollout 中并发训练，避免先训练特权 Teacher、再用行为克隆训练 Student 的两阶段流程。非对称 Actor–Critic、PPO 和 β-VAE 本身均为已有组件，创新主要来自它们在本体感知 locomotion 中的系统组合。",
+          "在 CENet 内使用 β-VAE 辅助任务：潜变量用于预测下一时刻本体观测，重建损失要求其保留影响状态转移的信息，KL 正则则约束后验分布接近标准正态并限制潜变量随意记忆。VAE 并没有另一套独立编码器，承担 VAE encoder 角色的就是部署时保留的同一个 CENet 编码器。",
+          "提出 Adaptive Bootstrapping（AdaBoot），根据并行环境 episodic return 的变异系数自适应调节策略暴露于估计速度误差的程度，缓解训练早期估计器不准与部署时必须依赖估计器之间的矛盾。",
+          "提供两条长距离户外真机路线作为工程验证，这是较强的持续部署证据；但它属于实证贡献，不是新的学习算法。"
+        ],
+        "implementation": [
+          "当前本体观测包含机身角速度、机身坐标系重力方向、速度命令、12 个关节的位置与速度以及上一时刻动作。CENet 使用历史长度 H=5；按论文符号可能表示当前帧加过去 5 帧，但具体堆叠 5 帧还是 6 帧存在歧义。",
+          "CENet 只有一个共享编码器。论文图示编码器为 128→64→19，19 维输出拆为三维估计机身线速度和 16 维潜变量；VAE 解码器为 64→128→48，用潜变量重建下一时刻观测。CENet 损失由速度估计 MSE、下一观测重建 MSE 和 β 加权 KL divergence 组成。",
+          "KL 正则约束的是编码器产生的潜变量后验分布，而不是动作、真实速度或某个地形类别。重建项迫使潜变量保存预测下一观测所需的信息，KL 项则把后验限制在标准正态先验附近；论文没有给出 β、均值与方差头、重参数化方式以及部署时使用后验均值还是随机采样。",
+          "Actor 为 512→256→128→12 的 ELU MLP，输入当前本体观测、CENet 估计速度和潜变量，输出 12 个相对站立姿态的目标关节角偏置。Critic 为 512→256→128→1 的 ELU MLP，训练时额外读取仿真真实机身速度、外部扰动和局部高度扫描。",
+          "训练时先由 CENet 编码历史，Actor 输出动作，PD 与仿真器推进到下一状态；新产生的真实速度和下一观测分别作为 CENet 的监督标签与自监督重建目标。Actor、Critic 和 CENet 使用同一批 rollout 同步更新，但论文未说明 PPO 策略梯度是否继续穿过 Actor 输入回传到 CENet。",
+          "AdaBoot 使用 episodic return 的 coefficient of variation 判断训练稳定性：环境回报差异较大时减少 bootstrapping，回报趋于一致时提高 bootstrapping 概率，让 Actor 更多使用带误差的估计速度。论文没有明确真值速度与估计速度的门控表达式，也没有说明按 step、environment、episode 还是 batch 采样。",
+          "训练在 Isaac Gym 中并行运行 4,096 个 Unitree A1 环境，共 1,000 iterations。地形包括 smooth、rough、discretized 和 stairs 四类，并设置 0°–22° 的十级课程；域随机化覆盖负载、PD 增益、电机强度、质心偏移、摩擦系数和 0–15 ms 系统延迟。",
+          "PPO 超参数包括 clip ratio 0.2、折扣因子 0.99、GAE 系数 0.95；各网络使用 Adam，学习率为 0.001。作者报告在 RTX 3060 Ti 上训练约 1 小时，但没有完整给出 episode 长度、命令采样范围、动作分布、mini-batch 划分和各损失更新比例。",
+          "奖励覆盖线速度和偏航率跟踪、机身高度与姿态稳定、关节加速度、动作一阶与二阶差分、足端间隙及功率正则。作者额外引入 power distribution reward，惩罚各电机功率分布的高方差，以降低单个电机过热风险，但真机山路实验中仍因前腿电机升温而降低了命令速度。",
+          "真机部署在 Unitree A1 的 Intel NUC 上，CENet 与 Actor 以 50 Hz 同步推理，低层 PD 以 200 Hz 执行，增益为 Kp=28、Kd=0.7。部署保留历史缓存、训练得到的同一个 CENet 编码器、速度头、潜变量分支、Actor 和 PD；Critic、VAE 解码器、重建与 KL 损失、AdaBoot、仿真真速度和高度扫描均不参与部署。",
+          "完整 DreamWaQ 在仿真速度扰动测试中达到 1.121±0.164 m/s 的最大速度 kick，并在 30 分钟随机行走测试中达到 95.23±1.61% 生存率；去掉 AdaBoot 后分别为 1.015±0.121 m/s 和 90.71±1.25%，这是论文中隔离最清楚的消融。",
+          "所谓 implicit terrain imagination 只是对控制有用的隐式 belief，并非显式高度图或可供 MPC 查询的世界模型。CENet 只能在地形已经通过碰撞、滑动或负载变化影响本体响应后进行适应，无法提前感知尚未接触的台阶或障碍；论文也没有进行 latent probing 来证明潜变量分别编码高度、摩擦或恢复系数。"
+        ]
+      },
+      "en": {
+        "title": "DreamWaQ: Learning Robust Quadrupedal Locomotion With Implicit Terrain Imagination via Deep Reinforcement Learning",
+        "authors": "I Made Aswin Nahrendra, Byeongho Yu, Hyun Myung",
+        "institutions": "School of Electrical Engineering, Korea Advanced Institute of Science and Technology (KAIST), Daejeon, Republic of Korea",
+        "status": "Full paper reviewed",
+        "takeaway": "DreamWaQ does not reconstruct an explicit terrain map; instead, the same CENet encoder estimates body velocity from short proprioceptive history and learns an implicit dynamics context through a β-VAE next-observation prediction task, which the actor uses for rapid post-contact adaptation.",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "Proprioception",
+          "PPO",
+          "CENet",
+          "β-VAE",
+          "AdaBoot",
+          "Asymmetric Actor-Critic",
+          "Zero-shot Sim-to-Real"
+        ],
+        "mainContent": "The paper studies robust quadrupedal locomotion using only IMU and joint-encoder measurements, reducing dependence on cameras, LiDAR, height maps, and two-stage teacher–student distillation. DreamWaQ uses an asymmetric actor–critic architecture: CENet estimates three-dimensional body velocity and extracts a 16-dimensional latent context from roughly 100 ms of proprioceptive history, the actor outputs joint-position targets, and a privileged critic observes ground-truth velocity, disturbances, and local height scans during training. The policy is trained concurrently with PPO in Isaac Gym and transferred zero-shot to a Unitree A1, completing a 430 m campus course and a 465 m mountain course. The experiments demonstrate strong long-duration deployment capability, but they do not show that the latent representation explicitly reconstructs terrain properties, and the real-world routes lack repeated trials, on-site baselines, and statistical success rates.",
+        "innovations": [
+          "The Context-Aided Estimator Network jointly learns interpretable three-dimensional body velocity and an unlabeled 16-dimensional environmental context through one shared encoder, allowing explicit state estimation and implicit dynamics representation to support each other.",
+          "CENet, the actor, and the privileged critic are trained concurrently from the same online rollouts, avoiding a separate privileged-teacher and behavior-cloning stage. Asymmetric actor–critic learning, PPO, and β-VAE are established components; the main novelty lies in their integration for proprioceptive locomotion.",
+          "A β-VAE auxiliary objective predicts the next proprioceptive observation from the latent context. Reconstruction requires the latent to retain transition-relevant information, while KL regularization constrains its posterior toward a standard-normal prior and limits arbitrary memorization. The VAE does not use a separate encoder: its encoder is the same CENet encoder retained at deployment.",
+          "Adaptive Bootstrapping adjusts how strongly the policy is exposed to estimated-velocity errors according to the coefficient of variation of episodic returns across randomized environments, addressing the conflict between inaccurate early estimates and deployment-time dependence on the estimator.",
+          "The two long-distance outdoor robot courses provide a valuable empirical deployment contribution, although this is evidence rather than a new learning algorithm."
+        ],
+        "implementation": [
+          "The current proprioceptive observation contains body angular velocity, projected gravity, velocity commands, positions and velocities of 12 joints, and the previous action. CENet uses a history length of H=5; the notation may mean the current frame plus five past frames, but the paper does not resolve whether five or six samples are stacked.",
+          "CENet has only one shared encoder. The figure specifies an encoder of 128→64→19, with its 19-dimensional output divided into three estimated body-velocity dimensions and a 16-dimensional latent context. A 64→128→48 VAE decoder reconstructs the next observation. The CENet objective combines velocity-estimation MSE, next-observation reconstruction MSE, and a β-weighted KL-divergence term.",
+          "KL regularization constrains the posterior distribution produced by the encoder rather than the action, ground-truth velocity, or a terrain class. Reconstruction forces the latent to retain information needed for next-observation prediction, while KL keeps the posterior near a standard-normal prior. The paper does not specify β, the mean and variance heads, reparameterization details, or whether inference uses posterior means or samples.",
+          "The actor is a 512→256→128→12 ELU MLP that takes the current observation, CENet velocity estimate, and latent context and outputs 12 desired joint-angle offsets from a standing pose. The critic is a 512→256→128→1 ELU MLP with additional access to ground-truth body velocity, external disturbances, and local terrain-height scans during training.",
+          "During training, CENet first encodes the observation history, the actor outputs an action, and the PD controller and simulator advance the environment. The resulting ground-truth velocity and next observation serve as supervised and self-supervised CENet targets. The actor, critic, and CENet are updated synchronously from the same rollouts, but the paper does not state whether PPO gradients propagate through the actor inputs into CENet.",
+          "AdaBoot uses the coefficient of variation of episodic returns as a learning-stability signal: bootstrapping is reduced when return variation is high and increased once returns become more consistent, exposing the actor to estimated-velocity errors. The paper does not specify the ground-truth-versus-estimated-velocity gate or whether sampling occurs per step, environment, episode, or batch.",
+          "Training uses 4,096 parallel Unitree A1 environments in Isaac Gym for 1,000 iterations. Terrain classes include smooth, rough, discretized, and stairs, with ten curriculum levels spanning 0°–22°. Domain randomization covers payload, PD gains, motor strength, center-of-mass displacement, friction, and 0–15 ms system delay.",
+          "Reported PPO settings include a clip ratio of 0.2, discount factor of 0.99, and GAE coefficient of 0.95. All networks use Adam with a learning rate of 0.001. Training takes approximately one hour on an RTX 3060 Ti, but episode length, command-sampling ranges, action distribution, mini-batch configuration, and relative loss-update schedules are not fully specified.",
+          "The reward includes linear-velocity and yaw-rate tracking, body-height and orientation stability, joint acceleration, first- and second-order action differences, foot clearance, and power regularization. A power-distribution reward penalizes high variance in motor power to reduce individual motor overheating, although the real mountain-course experiment still required lowering the command speed because the front-leg motors heated rapidly.",
+          "On the Unitree A1, CENet and the actor run synchronously at 50 Hz on an Intel NUC, while a 200 Hz PD loop uses Kp=28 and Kd=0.7. Deployment retains the history buffer, the exact trained CENet encoder, velocity head, latent branch, actor, and PD controller. The critic, VAE decoder, reconstruction and KL losses, AdaBoot, simulator ground-truth velocity, and height scans do not participate in deployment.",
+          "Full DreamWaQ withstands a maximum simulated velocity kick of 1.121±0.164 m/s and achieves a 95.23±1.61% survival rate in a 30-minute random-walking test. Without AdaBoot, these values fall to 1.015±0.121 m/s and 90.71±1.25%, making the AdaBoot comparison the cleanest ablation in the paper.",
+          "Implicit terrain imagination should be understood as a task-relevant latent belief rather than an explicit height map or a world model that can be queried by MPC. CENet can adapt only after terrain, slipping, collision, or payload changes affect proprioceptive responses; it cannot anticipate an unseen step before contact. The paper also provides no latent probing to verify separate representations of height, friction, or restitution."
+        ]
+      }
     }
   ]
 }
