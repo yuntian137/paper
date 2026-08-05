@@ -2502,6 +2502,90 @@
           "Implicit terrain imagination should be understood as a task-relevant latent belief rather than an explicit height map or a world model that can be queried by MPC. CENet can adapt only after terrain, slipping, collision, or payload changes affect proprioceptive responses; it cannot anticipate an unseen step before contact. The paper also provides no latent probing to verify separate representations of height, friction, or restitution."
         ]
       }
+    },
+    {
+      "id": "himloco",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2312.11460",
+      "project": "https://junfeng-long.github.io/HIMLoco/",
+      "arxiv": "https://arxiv.org/abs/2312.11460",
+      "year": "2024",
+      "venue": "ICLR 2024",
+      "zh": {
+        "title": "Hybrid Internal Model: Learning Agile Legged Locomotion with Simulated Robot Response",
+        "authors": "Junfeng Long, Zirui Wang, Quanyi Li, Jiawei Gao, Liu Cao, Jiangmiao Pang",
+        "institutions": "OpenRobotLab, Shanghai AI Laboratory; Zhejiang University; Tsinghua University",
+        "status": "全文已精读",
+        "takeaway": "HIMLoco 用真实下一状态作为训练期的自监督视角，让历史编码器从短时本体观测中学出显式速度和隐式机器人响应；Actor 与 HIM 在同一 on-policy 循环中交替训练，真机只保留历史编码器、Actor 与 PD，而不需要未来状态、target encoder、prototype、Sinkhorn 或 privileged critic。",
+        "tags": [
+          "Quadruped Locomotion",
+          "HIM",
+          "HIO",
+          "Prototypical Contrastive Learning",
+          "PPO",
+          "Proprioception",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究四足机器人在不读取地形高度、摩擦系数和外力等外部状态时，如何仅凭关节编码器与 IMU 在未知地形和扰动下进行速度跟踪与稳定恢复。核心方法 HIM 从本体历史中估计三维机体速度和 16 维隐式响应，并利用同一 transition 的真实下一状态、可学习 prototype、Sinkhorn 平衡和交叉熵交换预测进行 HIO 自监督训练；同一批 on-policy rollout 同时用于 PPO 更新 Actor 与特权 Critic。论文在 Unitree A1、Aliengo 和 Go1 上给出楼梯、组合地形、变形坡和外力扰动实验，消融表明隐式响应 latent 对困难任务的贡献大于单独的速度估计。证据支持有限 benchmark 内的鲁棒性和相对 RMA 的优势，但不足以证明任意地形、任意扰动或严格的样本效率主张。",
+        "innovations": [
+          "核心创新是 HIO：不让部署 Actor 模仿读取特权环境参数的 teacher，也不回归 privileged extrinsics latent，而是把历史观测与其真实 successor state 视为同一 transition 的两个视角，用 prototype-based swapped assignment 学习可部署的响应表征。",
+          "提出 hybrid internal embedding，将具有明确物理意义的三维机体速度估计与 16 维无人工标签的隐式响应 latent 组合；前者服务速度跟踪，后者为 Actor 提供接触、负载、扰动和稳定恢复相关的上下文，但论文没有证明各 latent 维度对应具体物理参数。",
+          "Actor 在整个训练期间只使用可部署本体信息及 HIM 输出，避免先训练 privileged policy、再蒸馏 student 的独立两阶段流程；高度图和外力仍可供训练期 Critic 使用，因此这是 asymmetric actor-critic 设计，而不是完全不使用特权训练信息。",
+          "PPO、GAE、SwAV 式交换分配、Sinkhorn-Knopp、asymmetric critic、domain randomization、terrain curriculum 和 PD 位置控制均为已有组件；论文的新意主要在于把 successor-response 表征学习嵌入四足 on-policy 控制闭环，而不是提出新的 RL 优化器或经典世界模型。"
+        ],
+        "implementation": [
+          "部署观测包含速度命令、关节角、关节速度、机体角速度、机体系重力方向和上一动作；Actor 不直接读取机体线速度、地形高度、摩擦或外力。对 12-DoF 四足，按论文各项计数，单帧 Actor 观测为 45 维，动作是 12 维关节位置偏置。",
+          "HIM source/history encoder 接收短时观测历史，输出三维速度估计与 16 维 source latent；target encoder 接收同一 transition 的真实下一状态并输出 16 维 target latent。论文设置历史参数 \\(H=5\\)，但记号 \\(\\mathbf{o}_{t-H:t}\\) 与文字存在五帧或六帧的 off-by-one 歧义。",
+          "两个 latent 与同一组 16 个可学习 prototype 计算相似度。latent 和 prototype 先做 L2 归一化，因此点积表示余弦相似度；这只去除向量尺度而不降维。Softmax temperature 调整分配的尖锐程度，不能从分子分母中约掉。",
+          "Sinkhorn-Knopp 在整个 mini-batch 上把样本到 prototype 的相似度变成近似均衡的软伪标签，使每条样本的分配权重和固定、各 prototype 接收的总权重近似相等，从而降低所有样本坍缩到同一 prototype 的风险；它不是人工地形标签，也不是随机平均分组。",
+          "HIO 使用交换交叉熵 \\(\\operatorname{CE}(q^{t},p^{s})+\\operatorname{CE}(q^{s},p^{t})\\)：用 successor 分支的平衡分配监督 history 分支，并反向训练 target 分支。对齐的是两端的 prototype assignment，而不是强制两个 latent 数值相等；prototype 只是训练期可学习聚类锚点，不是可执行运动 primitive。",
+          "同一 on-policy 训练循环中，当前 HIM 与 Actor 先在 Isaac Gym 收集 transition；HIO 用速度真值和 history-successor 配对更新 source encoder、target encoder 与 prototype；随后冻结或 detach HIM 输出，以 PPO 更新 Actor 和 Critic。它不是先完整预训练 HIM、再从头训练 Actor 的串行两阶段方法。",
+          "Critic 在训练时额外读取外力和周围地形高度，以改善 value estimation；这些特权量不进入 Actor。训练使用 4096 个并行环境，并结合地形/命令课程及质量、摩擦、恢复系数、电机强度、PD 增益、延迟和外力等 domain randomization。",
+          "Actor 输出动作后生成目标关节角 \\(\\boldsymbol{\\theta}^{\\mathrm{target}}_t=\\boldsymbol{\\theta}_0+k\\mathbf{a}_t\\)，再由 PD 跟踪；论文未给出动作缩放 \\(k\\) 的具体值。真机策略频率为 50 Hz，PD 频率为 500 Hz。",
+          "部署只保留 history/source encoder、Actor 与低层 PD：历史本体观测经 HIM 得到速度估计和响应 latent，Actor 再输出关节目标。target encoder、prototype、Sinkhorn、交叉监督损失、successor state、Critic 和所有训练期特权输入均删除；Actor 功能上可从 latent 生成动作，但它是 RL policy，不是自编码器 decoder。",
+          "真机每项基准进行 20 次试验；代表性结果包括 A1 短楼梯成功率 100%（RMA 60%）、Aliengo 长楼梯连续 176.5±7.81 级（RMA 75.35±19.98）、变形坡成功率 55%（RMA 10%）和 42 cm 缺台阶后保持平衡 100%（RMA 0%）。拖拽物最大重量与 RMA 同为 10 kg，因此不能概括为所有指标都严格优于 RMA。",
+          "复现需注意论文与公开代码默认值存在差异：论文写 HIM MLP 隐藏层 512/256/128、prototype 数量 16；公开代码默认 estimator 隐藏层 128/64、prototype 数量 32、temperature 3、Sinkhorn 3 次。论文还存在 200M frames 与 rollout 配置算术不一致、\\(H=5\\) 帧数歧义，以及 target 更新、temperature 和 Sinkhorn 细节未完整说明等问题。"
+        ]
+      },
+      "en": {
+        "title": "Hybrid Internal Model: Learning Agile Legged Locomotion with Simulated Robot Response",
+        "authors": "Junfeng Long, Zirui Wang, Quanyi Li, Jiawei Gao, Liu Cao, Jiangmiao Pang",
+        "institutions": "OpenRobotLab, Shanghai AI Laboratory; Zhejiang University; Tsinghua University",
+        "status": "Full paper reviewed",
+        "takeaway": "HIMLoco uses the real successor state as a training-only self-supervised view so that a history encoder can infer explicit velocity and implicit robot response from short proprioceptive history; HIM and the Actor are alternately optimized in the same on-policy loop, while deployment retains only the history encoder, Actor, and PD controller, without the future state, target encoder, prototypes, Sinkhorn, or privileged Critic.",
+        "tags": [
+          "Quadruped Locomotion",
+          "HIM",
+          "HIO",
+          "Prototypical Contrastive Learning",
+          "PPO",
+          "Proprioception",
+          "Sim-to-Real"
+        ],
+        "mainContent": "This paper studies velocity tracking and balance recovery on unknown terrain and under disturbances using only joint encoders and an IMU, without exposing the deployable policy to terrain height, friction, or external force. HIM estimates three-dimensional base velocity and a 16-dimensional implicit response from proprioceptive history, and HIO trains this representation from the real successor state of the same transition through learnable prototypes, Sinkhorn balancing, and swapped cross-entropy; the same on-policy rollouts are also used to update the Actor and privileged Critic with PPO. Experiments on Unitree A1, Aliengo, and Go1 include stairs, compositional terrain, a deformable slope, and disturbances, and ablations show that the implicit response latent is more important than velocity estimation alone on difficult tasks. The evidence supports robustness on the tested benchmarks and an advantage over RMA, but it does not establish performance on arbitrary terrain or disturbances, nor a rigorous sample-efficiency claim.",
+        "innovations": [
+          "The central contribution is HIO: instead of distilling actions from a privileged teacher or regressing a privileged extrinsics latent, it treats historical observations and the real successor state of the same transition as two views and learns a deployable response representation through prototype-based swapped assignments.",
+          "The hybrid internal embedding combines an explicitly supervised three-dimensional base-velocity estimate with a 16-dimensional implicit response latent. The former supports velocity tracking and the latter provides contact-, load-, disturbance-, and recovery-related context, although the paper does not show that individual latent dimensions correspond to identifiable physical parameters.",
+          "The Actor uses only deployable proprioceptive information and HIM outputs throughout training, avoiding a separate privileged-policy-to-student distillation pipeline. Terrain height and external force remain available to the training-only Critic, so this is an asymmetric actor-critic design rather than training with no privileged information at all.",
+          "PPO, GAE, SwAV-style swapped assignments, Sinkhorn-Knopp, the asymmetric Critic, domain randomization, terrain curriculum, and PD position control are established components. The novelty lies mainly in integrating successor-response representation learning into an on-policy quadruped-control loop, not in a new RL optimizer or a classical rollout world model."
+        ],
+        "implementation": [
+          "The deployable observation contains a velocity command, joint positions, joint velocities, body angular velocity, gravity direction in the body frame, and the previous action; the Actor does not directly observe base linear velocity, terrain height, friction, or external force. For a 12-DoF quadruped, counting the listed terms gives a 45-dimensional per-frame Actor observation and a 12-dimensional joint-position-offset action.",
+          "The HIM source/history encoder consumes a short observation history and outputs a three-dimensional velocity estimate plus a 16-dimensional source latent. The target encoder consumes the real successor state from the same transition and outputs a 16-dimensional target latent. The paper sets \\(H=5\\), but its notation \\(\\mathbf{o}_{t-H:t}\\) and prose leave an off-by-one ambiguity between five and six frames.",
+          "Both latents are compared with the same set of 16 learnable prototypes. Latents and prototypes are L2-normalized, so their dot product is cosine similarity; normalization removes vector scale but does not reduce dimensionality. A softmax temperature controls assignment sharpness and cannot be cancelled between the numerator and denominator.",
+          "Sinkhorn-Knopp transforms sample-to-prototype similarities over the full mini-batch into approximately balanced soft pseudo-labels: each sample has a fixed total assignment and every prototype receives approximately equal total mass. This discourages collapse to a single prototype; it is neither a hand-labeled terrain classifier nor random equal grouping.",
+          "HIO uses the swapped cross-entropy \\(\\operatorname{CE}(q^{t},p^{s})+\\operatorname{CE}(q^{s},p^{t})\\): the balanced successor assignment supervises the history branch, and the reverse term trains the target branch. It aligns prototype-assignment distributions rather than forcing the two latent vectors to be numerically equal; prototypes are training-time clustering anchors, not executable motion primitives.",
+          "Within the same on-policy loop, the current HIM and Actor first collect transitions in Isaac Gym; HIO updates the source encoder, target encoder, and prototypes using velocity ground truth and history-successor pairs; HIM outputs are then frozen or detached while PPO updates the Actor and Critic. This is not a serial pipeline that fully pretrains HIM and then trains a new Actor from scratch.",
+          "During training, the Critic additionally observes external force and surrounding terrain height for value estimation, while the Actor does not. Training uses 4,096 parallel environments together with terrain/command curricula and domain randomization over mass, friction, restitution, motor strength, PD gains, latency, and external force.",
+          "The Actor defines the joint target \\(\\boldsymbol{\\theta}^{\\mathrm{target}}_t=\\boldsymbol{\\theta}_0+k\\mathbf{a}_t\\), which is tracked by a PD controller; the paper does not report the exact action scale \\(k\\). The real-robot policy runs at 50 Hz and the PD loop at 500 Hz.",
+          "Deployment retains only the history/source encoder, Actor, and low-level PD loop: proprioceptive history produces velocity and response latents, after which the Actor outputs joint targets. The target encoder, prototypes, Sinkhorn, swapped loss, successor state, Critic, and all privileged training observations are removed. Although the Actor maps a latent to an action, it is an RL policy rather than an autoencoder decoder.",
+          "Each real-world benchmark uses 20 trials. Representative results include 100% success on A1 short stairs versus 60% for RMA, 176.5±7.81 consecutive Aliengo stair steps versus 75.35±19.98, 55% success on a deformable slope versus 10%, and 100% balance recovery after a 42 cm missing step versus 0%. Both HIM and RMA tow at most 10 kg, so HIM is not strictly better on every metric.",
+          "Reproduction requires care because the paper and public-code defaults differ: the paper reports 512/256/128 HIM hidden layers and 16 prototypes, whereas the public code defaults to 128/64 estimator layers, 32 prototypes, temperature 3, and three Sinkhorn iterations. The paper also has an arithmetic mismatch around 200M frames, an \\(H=5\\) history-length ambiguity, and incomplete details on target updates, temperature, and Sinkhorn."
+        ]
+      }
     }
   ]
 }
