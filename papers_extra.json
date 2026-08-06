@@ -2832,6 +2832,159 @@
           "The main ablation is trained for 6000 iterations with 3 random seeds, and the method is compared within five existing codebases before Go2 deployment. The evidence does not isolate contributions from history, critic guidance, transition prediction, negative sampling, or added model capacity, and the t-SNE visualization does not establish explicit friction or terrain semantics in the latent."
         ]
       }
+    },
+    {
+      "id": "tar-teacher-aligned-representations",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2503.20839",
+      "project": "https://amrmousa.com/TARLoco/",
+      "arxiv": "https://arxiv.org/abs/2503.20839",
+      "year": "2025",
+      "venue": "IROS 2025",
+      "zh": {
+        "title": "TAR: Teacher-Aligned Representations via Contrastive Learning for Quadrupedal Locomotion",
+        "authors": "Amr Mousa, Neil Karavis, Michele Caprio, Wei Pan, Richard Allmendinger",
+        "institutions": "The University of Manchester, United Kingdom；BAE Systems, United Kingdom",
+        "status": "全文已精读",
+        "takeaway": "把 TAR 记成 SLR 式 latent transition prediction 的“特权锚点版”：forward model 不再对齐下一时刻 student latent，而是让 \\(f_D(z_t^S,a_t)\\) 对齐共同训练的 privileged critic encoder latent \\(z_{t+1}^T\\)；部署时删除整条 critic/teacher 分支。论文证明了 TAR 整体配置的仿真优势和 zero-shot 真机可用性，但没有隔离证明 teacher alignment 本身，也没有验证真机持续微调。",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "PPO",
+          "Contrastive Learning",
+          "Privileged Learning",
+          "LSTM",
+          "Representation Learning",
+          "Sim-to-Real"
+        ],
+        "mainContent": "TAR 研究 blind quadrupedal locomotion 中的部分可观测性、传统 teacher–student 表示错位和 behavioral cloning 的 covariate shift。它在单阶段 PPO 中用 LSTM student 从本体历史生成 \\(z_t^S\\)，由 forward model 根据 \\((z_t^S,a_t)\\) 预测下一 latent，并将其与 privileged critic encoder 产生的 \\(z_{t+1}^T\\) 做 metric/triplet 对齐，同时回归基座线速度。作者报告 TAR 更早达到最佳复合指标，并在 ID/OOD 仿真和 Unitree Go2 zero-shot 部署中优于所选基线。关键限制是比较未匹配网络容量、时间信息和速度监督，真机只展示冻结策略部署，未验证论文声称的 online fine-tuning、off-policy compatibility 或 continual adaptation。",
+        "innovations": [
+          "核心方法增量：把 SLR 中作为正锚点的下一时刻 student latent \\(z_{t+1}^S\\)，替换为共同训练的 privileged critic encoder latent \\(z_{t+1}^T\\)，从而把仿真特权信息接入可部署 student 的 latent dynamics 学习。",
+          "TAR 内部没有预训练并冻结的 teacher actor，也不是两阶段 action behavioral cloning；所谓 teacher 是 critic 的 privileged encoder。其 latent 同时受 value loss 和 TAR metric loss 塑造，因此是 moving target，而不是固定真值标签。",
+          "方法把 recurrent student、显式速度估计、asymmetric actor–critic、PPO、domain randomization 和 latent transition prediction 整合为单阶段训练与可裁剪部署闭环；其中 LSTM、速度回归和 PPO 本身属于辅助或继承组件，不应单独计作核心创新。",
+          "论文提出由不同并行环境提供 task-informed negatives，并将部分提升归因于此；但官方代码没有读取摩擦、质量、地形或 environment ID 来保证跨域采样，只能确认随机选择不同 transition，因此该机制归因尚未被实现与消融充分支持。"
+        ],
+        "implementation": [
+          "可部署观测 \\(O_t\\in\\mathbb R^{45}\\) 包含 base angular velocity 3、projected gravity 3、速度指令 3、12 维关节位置、12 维关节速度和上一动作 12。训练期 privileged observation 还包含真实 base linear velocity、187 维 height scan、外力、足端接触、摩擦和质量/载荷等仿真量。",
+          "主模型中 student encoder 是 hidden size 256 的 LSTM，输出 45 维 \\(z_t^S\\)；privileged critic encoder 输出 45 维 \\(z_t^T\\)；forward model 读取 \\((z_t^S,a_t)\\)；actor/critic MLP 为 [512, 256, 128]。velocity estimator 读取 \\(z_t^S\\) 与最近 4 帧本体观测，输出 3 维基座线速度估计。",
+          "一次 rollout 前向为：\\((O_t,h_{t-1},c_{t-1})\\rightarrow z_t^S\\)，\\((z_t^S,O_{t-4:t})\\rightarrow\\hat v_t\\)，再由 actor 读取 \\((O_t,\\operatorname{sg}(z_t^S),\\operatorname{sg}(\\hat v_t))\\) 输出 12 维动作。LSTM 的 hidden/cell state 是在线递推状态而非可训练参数；其门控权重通过序列重放和 BPTT 更新，episode 终止处重置状态。",
+          "更新关系必须分开理解：PPO actor loss 只更新 actor；value loss 更新 critic encoder 与 value head；TAR metric loss 更新 student LSTM、forward model 和 privileged critic encoder，但不经过 value head；按 Algorithm 1 与官方代码，velocity MSE 还会通过未 detach 的 \\(z_t^S\\) 更新 student。actor 输入处的 stop-gradient 使 PPO 不直接反向训练 student 或 velocity estimator。",
+          "TAR 正样本关系是 \\(f_D(z_t^S,a_t)\\approx z_{t+1}^T\\)，而不是监督 critic 的最终标量 \\(V_{t+1}\\)。\\(z_{t+1}^T\\) 是 critic network 中 encoder 与 value head 之间的中间特征；TAR loss 可改变 encoder 参数，但 value head 权重只由 value loss 更新。",
+          "论文 Eq. (4) 写成相对距离的标准 triplet hinge；官方代码则实现无条件 positive MSE 加独立 negative hinge，两者不是同一个目标。代码的 negative branch 被 detach，而 positive privileged latent 未 detach，因此 privileged critic encoder 会参与正样本对齐。",
+          "论文配置使用 Adam、\\(\\gamma=0.99\\)、GAE \\(\\lambda=0.95\\)、4 个 minibatch、每批 5 个 epoch、45 维 latent、20,000 iterations；官方配置显示 4096 个并行环境、每环境每轮 24 步。论文以更少 PPO iteration 表述 sample efficiency，但没有报告匹配的 wall-clock 或 FLOPs。",
+          "zero-shot 部署只保留 normalizer、student LSTM、velocity estimator 和 actor；privileged encoder、critic value head、forward model、metric loss 与 rollout buffer 均可删除。新地形或载荷下直接递推 hidden state 并推理，不做逐实例数值优化，也不需要重新训练。",
+          "作者在 3 个 seeds 上报告主方法最终训练 return 比 fully privileged Teacher 高 4.1%；7,500 iterations 的 combined evaluation error 比 Teacher、SLR 和 HIM 分别低 74%、39.8% 和 42.2%。但该指标是归一化复合分数，评估曲线没有置信区间，主 TAR 与 SLR 在 LSTM/历史结构、latent 维度、速度输入和参数量上也未匹配，因此不能把全部差异归因于 teacher alignment。",
+          "真机实验只证明冻结策略可 zero-shot 部署到 Unitree Go2；论文未给在线参数更新曲线、真机 reward、安全机制或 SAC/off-policy 实现，并在结论中把 off-policy extension 与 real-world fine-tuning 列为 future work。另有正文—代码冲突：论文称 12 维 action 为 target joint torque，官方代码配置为 joint-position target，因此低层接口不能视为已完全核实。"
+        ]
+      },
+      "en": {
+        "title": "TAR: Teacher-Aligned Representations via Contrastive Learning for Quadrupedal Locomotion",
+        "authors": "Amr Mousa, Neil Karavis, Michele Caprio, Wei Pan, Richard Allmendinger",
+        "institutions": "The University of Manchester, United Kingdom; BAE Systems, United Kingdom",
+        "status": "Full paper reviewed",
+        "takeaway": "Remember TAR as a privileged-anchor variant of SLR-style latent transition prediction: instead of aligning the forward prediction with the next student latent, it aligns \\(f_D(z_t^S,a_t)\\) with the jointly trained privileged critic-encoder latent \\(z_{t+1}^T\\), while the entire critic/teacher branch is removed at deployment. The paper supports the full configuration's simulation advantage and zero-shot hardware viability, but it neither isolates teacher alignment itself nor demonstrates continual real-robot fine-tuning.",
+        "tags": [
+          "Quadrupedal Locomotion",
+          "PPO",
+          "Contrastive Learning",
+          "Privileged Learning",
+          "LSTM",
+          "Representation Learning",
+          "Sim-to-Real"
+        ],
+        "mainContent": "TAR addresses partial observability, teacher–student representation misalignment, and behavioral-cloning covariate shift in blind quadrupedal locomotion. In single-stage PPO training, an LSTM student produces \\(z_t^S\\) from proprioceptive history, a forward model predicts the next latent from \\((z_t^S,a_t)\\), and a metric/triplet objective aligns that prediction with \\(z_{t+1}^T\\) from a privileged critic encoder, alongside supervised base-velocity estimation. The authors report earlier attainment of the best composite metric, stronger ID/OOD simulation results, and zero-shot deployment on a Unitree Go2. Key limitations are unmatched capacity, temporal information, and velocity supervision across baselines, plus the absence of demonstrated online fine-tuning, off-policy compatibility, or continual adaptation on hardware.",
+        "innovations": [
+          "The core methodological increment replaces SLR's next-student-latent positive anchor \\(z_{t+1}^S\\) with the jointly trained privileged critic-encoder latent \\(z_{t+1}^T\\), injecting simulation-only information into latent-dynamics learning for a deployable student.",
+          "TAR contains neither a pretrained frozen teacher actor nor two-stage action behavioral cloning; its “teacher” is the critic's privileged encoder. Because this latent is shaped jointly by the value loss and TAR metric loss, it is a moving target rather than a fixed ground-truth label.",
+          "The system integrates a recurrent student, explicit velocity estimation, asymmetric actor–critic learning, PPO, domain randomization, and latent transition prediction into a single-stage training and prunable deployment pipeline. LSTM, velocity regression, and PPO are auxiliary or inherited components rather than standalone core innovations.",
+          "The paper proposes task-informed negatives from different parallel environments and attributes part of the gain to this design. However, the official code does not read friction, mass, terrain, or environment IDs to guarantee cross-domain sampling; it only confirms sampling a different random transition, so the mechanism claim is not adequately isolated or implemented as described."
+        ],
+        "implementation": [
+          "The deployable observation \\(O_t\\in\\mathbb R^{45}\\) contains 3-D base angular velocity, 3-D projected gravity, a 3-D velocity command, 12 joint positions, 12 joint velocities, and the previous 12-D action. During training, the privileged observation additionally includes true base linear velocity, a 187-D height scan, external force, foot contacts, friction, and mass/payload variables from simulation.",
+          "In the main model, the student encoder is an LSTM with hidden size 256 and a 45-D output \\(z_t^S\\); the privileged critic encoder outputs a 45-D \\(z_t^T\\); the forward model consumes \\((z_t^S,a_t)\\); and the actor/critic MLP widths are [512, 256, 128]. The velocity estimator consumes \\(z_t^S\\) and the latest four proprioceptive frames and outputs a 3-D base-linear-velocity estimate.",
+          "One rollout step is \\((O_t,h_{t-1},c_{t-1})\\rightarrow z_t^S\\), followed by \\((z_t^S,O_{t-4:t})\\rightarrow\\hat v_t\\), after which the actor consumes \\((O_t,\\operatorname{sg}(z_t^S),\\operatorname{sg}(\\hat v_t))\\) and emits a 12-D action. LSTM hidden/cell states are recurrent runtime states, not trainable parameters; its gate weights are updated through sequence replay and BPTT, with states reset at episode termination.",
+          "The update paths must be separated: the PPO actor loss updates only the actor; the value loss updates the critic encoder and value head; the TAR metric loss updates the student LSTM, forward model, and privileged critic encoder but does not pass through the value head. According to Algorithm 1 and the official code, the velocity MSE also updates the student through an undetached \\(z_t^S\\), while stop-gradient at the actor input prevents PPO from directly training the student or velocity estimator.",
+          "The TAR positive relation is \\(f_D(z_t^S,a_t)\\approx z_{t+1}^T\\); it does not supervise the critic's final scalar \\(V_{t+1}\\). The quantity \\(z_{t+1}^T\\) is the intermediate feature between the critic encoder and value head, so TAR can change encoder parameters, whereas value-head weights are updated only by the value loss.",
+          "Equation (4) presents a standard relative-distance triplet hinge, whereas the official code implements an unconditional positive MSE plus a separate negative hinge; these are not the same objective. The code detaches the negative branch but not the positive privileged latent, so the privileged critic encoder participates in positive alignment.",
+          "The paper specifies Adam, \\(\\gamma=0.99\\), GAE \\(\\lambda=0.95\\), 4 minibatches, 5 epochs per batch, a 45-D latent, and 20,000 iterations; the official configuration shows 4,096 parallel environments and 24 steps per environment per iteration. Sample efficiency is stated in terms of fewer PPO iterations, while matched wall-clock time and FLOPs are not reported.",
+          "Zero-shot deployment retains only the normalizer, student LSTM, velocity estimator, and actor; the privileged encoder, critic value head, forward model, metric loss, and rollout buffer can be removed. A new terrain or payload is handled by recurrent-state inference without per-instance numerical optimization or retraining.",
+          "Across 3 seeds, the authors report a 4.1% higher final training return than the fully privileged Teacher; at 7,500 iterations, the combined evaluation error is reported as 74%, 39.8%, and 42.2% lower than Teacher, SLR, and HIM, respectively. However, this is a normalized composite score without confidence intervals, and the main TAR and SLR configurations do not match LSTM/history structure, latent dimension, velocity input, or parameter count, so the full difference cannot be attributed to teacher alignment.",
+          "The hardware study establishes only zero-shot execution of a frozen policy on a Unitree Go2. It provides no online parameter-update curve, real-world reward, safety mechanism, or SAC/off-policy implementation, and the conclusion lists off-policy extension and real-world fine-tuning as future work. There is also a paper–code conflict: the paper calls the 12-D action a target joint torque, whereas the official code configures a joint-position target, so the low-level interface is not fully resolved."
+        ]
+      }
+    },
+    {
+      "id": "sobolev-training-neural-networks",
+      "categories": [
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/1706.04859",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/1706.04859",
+      "year": "2017",
+      "venue": "arXiv:1706.04859",
+      "zh": {
+        "title": "Sobolev Training for Neural Networks",
+        "authors": "Wojciech Marian Czarnecki, Simon Osindero, Max Jaderberg, Grzegorz Swirszcz, Razvan Pascanu",
+        "institutions": "DeepMind, London, UK",
+        "status": "全文已精读",
+        "takeaway": "Sobolev Training 在监督训练中同时匹配教师的函数值和输入导数，使学生不仅复制训练点输出，还复制局部输入响应；它不是新的 RL 或控制算法，而 Atari 实验也只证明了教师状态分布上的离线蒸馏误差改善。",
+        "tags": [
+          "Sobolev Training",
+          "Jacobian Matching",
+          "Policy Distillation",
+          "Synthetic Gradients",
+          "A3C"
+        ],
+        "mainContent": "普通监督学习只约束有限训练点上的函数值，无法唯一确定样本邻域内的斜率；本文把训练数据从 \\((x_i,f(x_i))\\) 扩展为同时包含目标输入导数 \\(D_x^j f(x_i)\\)，让学生联合匹配函数值与局部几何。为避免显式构造高维 Jacobian 或高阶导数张量，作者使用随机 directional derivative，即比较随机方向上的 vector–Jacobian product。论文在二维函数回归、Atari 策略蒸馏和 Synthetic Gradients 三类任务上展示了改进，但 Atari 只评估教师采集状态上的动作不一致率与 KL divergence，没有学生闭环 rollout 或游戏回报，因此未证明控制稳定性、扰动恢复或闭环收益。",
+        "innovations": [
+          "核心方法是统一的值—输入导数联合监督范式：学生不仅拟合目标输出，还拟合目标关于输入的一阶或高阶导数；论文并给出 ReLU/leaky-ReLU 网络的一阶 Sobolev 逼近论证，但该理论是表示存在性而非优化收敛或一般深网样本复杂度保证。",
+          "关键辅助设计是 stochastic Sobolev Training：从输出空间单位球采样随机方向 \\(v\\)，通过 \\(J(x)^\\top v\\) 比较教师与学生的 directional derivative，从而无需物化完整 Jacobian；论文未给出方向数量、方差以及 full-Jacobian 的成本或精度对照。",
+          "作者把同一监督接口应用于 policy distillation 和 Synthetic Gradients；这些是有价值的工程组合，而不是新的强化学习算法。Synthetic Gradient 场景中，loss predictor 同时拟合真实 loss value 与其对隐藏激活的梯度。"
+        ],
+        "implementation": [
+          "通用训练目标由值损失和导数损失组成：\\(\\mathcal L(\\theta)=\\sum_i[\\ell(m_\\theta(x_i),f(x_i))+\\sum_j\\ell_j(D_x^j m_\\theta(x_i),D_x^j f(x_i))]\\)。目标函数或教师提供固定标签，反向传播只更新学生参数 \\(\\theta\\) 与优化器状态；教师输出、教师导数、输入样本和随机方向都不是被优化变量。",
+          "Atari 阶段先用 A3C 训练教师 80M steps，再冻结教师并采集 100K frames，约对应 400K actual environment steps。输入是连续 4 帧、灰度、缩放到 \\(84\\times84\\) 的图像，action repeat 为 4；教师动作数在 Pong、Breakout、Space Invaders 中分别为 3、4、6。",
+          "Atari 学生是更小的 CNN：两层卷积分别为 16 个 \\(8\\times8\\)/stride 4 和 32 个 \\(4\\times4\\)/stride 2 卷积核，随后是 256 维全连接层和 softmax。每个 minibatch 含 200 个教师状态，使用 10%、20% 或 50% 的教师数据；优化目标是动作分布 KL 加上随机方向上的 \\(\\nabla_s\\langle\\log\\pi(s),v\\rangle\\) 匹配，蒸馏阶段没有环境 reward、advantage 或 A3C 更新。",
+          "Atari 蒸馏中被冻结的 A3C 教师 \\(\\pi^*(s)\\) 和学生 \\(\\pi_\\theta(s)\\) 都输出离散动作概率分布。普通标签是教师动作分布，Sobolev 标签是教师 log-policy 对像素状态的输入 Jacobian 投影；两类损失共同更新学生 CNN，而不是更新教师或重新执行强化学习。",
+          "训练结束后，回归和策略蒸馏都只保留学生网络；教师、输入导数标签和随机方向均不部署。新输入只需一次学生前向推理，不需要逐实例优化，也不需要重新计算 Jacobian；只有更换目标函数、教师或游戏时才需要重新训练或微调。",
+          "二维回归使用两层、每层 256 单元的 ReLU 学生网络，Adam learning rate 为 \\(3\\times10^{-5}\\)，训练点数量为 20、100 或 10000，并用 10000 个同域点测试。七个函数中六个的测试 MSE 明显改善，但高频 Ackley 函数在低数据区间变差，说明不充分的局部导数采样也可能误导插值。",
+          "Synthetic Gradient 场景中，主网络先产生隐藏激活 \\(h\\)，loss predictor 用预测梯度更新上游参数；完整下游稍后给出真实 loss 和 \\(\\partial L/\\partial h\\)，再监督 loss predictor。主网络同步更新，辅助模块通过 Hogwild 异步更新；最终分类推理仅保留主网络。",
+          "最关键的证据边界是：Atari 实验仅在教师生成的留出帧上报告 most-probable-action error 和 KL divergence，没有让学生运行游戏，也没有报告 score、状态分布偏移或扰动恢复。核心复现缺口还包括 Atari 导数权重 \\(\\alpha\\)、训练步数、Figure 4 横轴单位、随机种子以及随机方向的精确采样设置。"
+        ]
+      },
+      "en": {
+        "title": "Sobolev Training for Neural Networks",
+        "authors": "Wojciech Marian Czarnecki, Simon Osindero, Max Jaderberg, Grzegorz Swirszcz, Razvan Pascanu",
+        "institutions": "DeepMind, London, UK",
+        "status": "Full paper reviewed",
+        "takeaway": "Sobolev Training supervises both target values and input derivatives so that a student copies not only outputs at sampled points but also local input responses; it is not a new RL or control algorithm, and the Atari experiment establishes only improved offline distillation error on teacher-visited states.",
+        "tags": [
+          "Sobolev Training",
+          "Jacobian Matching",
+          "Policy Distillation",
+          "Synthetic Gradients",
+          "A3C"
+        ],
+        "mainContent": "Ordinary supervised learning constrains function values only at finitely many samples and leaves the slopes between them underdetermined; this paper augments \\((x_i,f(x_i))\\) with target input derivatives \\(D_x^j f(x_i)\\), training the student to match both values and local geometry. To avoid explicitly materializing high-dimensional Jacobians or higher-order derivative tensors, the method compares random directional derivatives through vector–Jacobian products. The paper reports improvements in two-dimensional regression, Atari policy distillation, and Synthetic Gradients, but the Atari study evaluates only action disagreement and KL divergence on teacher-collected states; it provides no student rollout or game return and therefore does not establish closed-loop stability, disturbance recovery, or return gains.",
+        "innovations": [
+          "The core method is a unified value-and-input-derivative supervision paradigm: the student matches both target outputs and first- or higher-order input derivatives. The paper also gives a first-order Sobolev approximation argument for ReLU/leaky-ReLU networks, but this is a representation-existence result rather than an optimization-convergence or general deep-network sample-complexity guarantee.",
+          "A key supporting design is stochastic Sobolev Training: a random direction \\(v\\) is sampled from the output-space unit sphere, and teacher and student directional derivatives are compared through \\(J(x)^\\top v\\), avoiding explicit construction of the full Jacobian. The paper does not report direction-count ablations, estimator variance, or cost/accuracy comparisons against full-Jacobian matching.",
+          "The same supervision interface is applied to policy distillation and Synthetic Gradients; these are useful engineering integrations rather than a new reinforcement-learning algorithm. In the Synthetic Gradient setting, a loss predictor is supervised on both the true loss value and its gradient with respect to hidden activations."
+        ],
+        "implementation": [
+          "The general objective combines value and derivative losses: \\(\\mathcal L(\\theta)=\\sum_i[\\ell(m_\\theta(x_i),f(x_i))+\\sum_j\\ell_j(D_x^j m_\\theta(x_i),D_x^j f(x_i))]\\). The target function or teacher supplies fixed labels, and backpropagation updates only student parameters \\(\\theta\\) and optimizer state; teacher outputs, teacher derivatives, input samples, and random directions are not optimization variables.",
+          "For Atari, the teacher is first trained with A3C for 80M steps, then frozen and used to collect 100K frames, corresponding to about 400K actual environment steps. Each input contains four consecutive grayscale frames resized to \\(84\\times84\\), with action repeat 4; Pong, Breakout, and Space Invaders use 3, 4, and 6 actions, respectively.",
+          "The Atari student is a smaller CNN with 16 \\(8\\times8\\)/stride-4 filters, 32 \\(4\\times4\\)/stride-2 filters, a 256-unit fully connected layer, and softmax output. Minibatches contain 200 teacher states, and experiments use 10%, 20%, or 50% of the teacher dataset; the objective combines policy KL with matching \\(\\nabla_s\\langle\\log\\pi(s),v\\rangle\\) along random directions, with no environment reward, advantage, or A3C update during distillation.",
+          "During Atari distillation, both the frozen A3C teacher \\(\\pi^*(s)\\) and student \\(\\pi_\\theta(s)\\) output categorical action distributions. The ordinary target is the teacher action distribution, while the Sobolev target is a projection of the teacher log-policy input Jacobian with respect to pixel observations; both losses update the student CNN rather than the teacher or an RL objective.",
+          "After training, regression and policy-distillation applications retain only the student network; the teacher, derivative labels, and random directions are discarded. A new input requires only a student forward pass, with no per-instance optimization or Jacobian recomputation; changing the target function, teacher, or game requires retraining or fine-tuning.",
+          "The two-dimensional regression study uses a ReLU student with two 256-unit hidden layers, Adam at learning rate \\(3\\times10^{-5}\\), 20, 100, or 10000 training points, and 10000 in-domain test points. Test MSE improves clearly on six of seven functions, while the high-frequency Ackley function degrades in low-data settings, showing that sparsely sampled local derivatives can also mislead interpolation.",
+          "In the Synthetic Gradient setting, the main network produces hidden activation \\(h\\), and a loss predictor supplies a predicted gradient for an immediate upstream update; the complete downstream computation later provides the true loss and \\(\\partial L/\\partial h\\) to train the predictor. Main-network updates are synchronous, auxiliary-module updates use asynchronous Hogwild, and final classification inference retains only the main network.",
+          "The central evidence boundary is that Atari results report only most-probable-action error and KL divergence on held-out teacher-generated frames; the student is never rolled out in the game, and score, state-distribution shift, and disturbance recovery are not reported. Major reproducibility gaps include the Atari derivative weight \\(\\alpha\\), training duration, the Figure 4 x-axis unit, random seeds, and the exact random-direction sampling protocol."
+        ]
+      }
     }
   ]
 }
