@@ -69,7 +69,12 @@ system identification, domain randomization, real-world finetuning
 
 ## 使用精读 Prompt
 
-页面右上角的“精读 Prompt”主要面向能读写本地文件的 Codex。把 Prompt 与论文 PDF 一起交给 Codex 后，它会生成包含 Markdown 报告和 `assets/` 图片目录的完整报告目录，并额外打包为 ZIP；图片统一使用 `assets/...` 相对路径，因此解压后可以直接显示。Codex 最终会优先交付 ZIP 链接，同时保留工作区中的 Markdown 文件。Prompt 不强制执行额外的预览或提交前复查，以免增加不必要的处理时间。
+页面右上角的“精读 Prompt v4”提供两个独立的静态复制卡片：
+
+1. “完整精读报告 Prompt”用于首次阅读。把它与论文 PDF 一起交给 ChatGPT、Codex 或其他具备文件阅读能力的模型后，模型会生成包含 Markdown 报告和 `assets/` 图片目录的完整报告目录，并额外打包为 ZIP。
+2. “导师式精读 Prompt”用于报告完成后的逐点问答、核查与纠错，推荐粘贴回生成报告的同一论文会话。
+
+网站只保存、展示和复制 Prompt，不上传或解析论文，也不调用模型。两段正文原样保存在 `reading_prompts_v4.json`；中英文站点会切换卡片标题、说明和按钮文案，但复制的 Prompt 正文保持 v4 源文不变。完整报告中的图片统一使用 `assets/...` 相对路径，因此解压后可以直接显示。
 
 默认只截取方法 pipeline、核心模块、训练/部署关系和关键实验等高信息密度图片，不截大段正文或装饰性图片，也不会生成或重绘论文中不存在的内容。若用户另行指定报告路径或图片要求，以用户指令为准。
 

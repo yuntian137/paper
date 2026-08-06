@@ -8,7 +8,7 @@
       name="description"
       content="A bilingual paper reading notebook with main content, innovations, implementation notes, categories, and links."
     />
-    <link rel="stylesheet" href="styles.css?v=20260804-card-mathfix2" />
+    <link rel="stylesheet" href="styles.css?v=20260806-prompts-v4" />
     <script>
       window.MathJax = {
         tex: {
@@ -112,21 +112,13 @@
           <button class="icon-close" type="button" data-prompt-close aria-label="close">×</button>
         </div>
         <p class="prompt-dialog-copy" data-i18n="promptModalDescription">
-          选择要复制的版本，直接粘贴给读论文的 agent。
+          先复制完整报告 Prompt 建立阅读地图，再复制导师式 Prompt 逐点追问。
         </p>
-        <pre class="prompt-preview" id="prompt-preview"></pre>
-        <div class="prompt-dialog-actions">
-          <button class="action-link primary" type="button" data-prompt-copy="zh" data-i18n="copyZhPrompt">
-            复制中文 Prompt
-          </button>
-          <button class="action-link" type="button" data-prompt-copy="en" data-i18n="copyEnPrompt">
-            Copy English Prompt
-          </button>
-        </div>
+        <div class="prompt-card-list" id="prompt-card-list"></div>
         <p class="prompt-status" id="prompt-status" aria-live="polite"></p>
       </section>
     </div>
 
-    <script src="app.js?v=20260804-card-mathfix1"></script>
+    <script src="app.js?v=20260806-prompts-v4"></script>
   </body>
 </html>

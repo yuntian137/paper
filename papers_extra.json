@@ -2666,6 +2666,172 @@
           "The paper demonstrates zero-shot Sim-to-Real behavior on A1, Aliengo, and P1 but reports no hardware success rate, fall rate, velocity error, energy use, inference latency, or hardware baseline. Without exteroception, the policy can adapt only after physical contact exposes an obstacle through proprioceptive feedback and cannot anticipate a step or hole before first contact; applying the framework separately to several platforms is not evidence that one parameter set generalizes across morphologies."
         ]
       }
+    },
+    {
+      "id": "cmoe-humanoid-terrain-adaptation",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.03067",
+      "project": "https://hoshi-no-ai.github.io/CMoE",
+      "arxiv": "https://arxiv.org/abs/2603.03067",
+      "year": "2026",
+      "venue": "arXiv:2603.03067",
+      "zh": {
+        "title": "CMoE: Contrastive Mixture of Experts for Motion Control and Terrain Adaptation of Humanoid Robots",
+        "authors": "Shihao Ma, Hongjin Chen, Zijun Xu, Yi Zhao, Ke Wu, Ruichen Yang, Leyao Zou, Zhongxue Gan, Wenchao Ding",
+        "institutions": "复旦大学智能机器人与先进制造学院（College of Intelligent Robotics and Advanced Manufacturing, Fudan University）",
+        "status": "全文已精读（含官方代码核查）",
+        "takeaway": "CMoE 的关键不是把地形硬分给专家，而是用 SwAV/Sinkhorn–Knopp 将地形表征与 gate 激活模式对齐，使 PPO 训练的 5 个软混合专家产生地形相关专化；SK 只均衡 32 个 prototype 的批内伪分配，并不直接均衡专家负载。",
+        "tags": [
+          "Humanoid Locomotion",
+          "Mixture of Experts",
+          "Contrastive Learning",
+          "Sinkhorn–Knopp",
+          "PPO",
+          "Terrain Adaptation",
+          "Elevation Map",
+          "Sim-to-Real"
+        ],
+        "mainContent": "CMoE 针对 Vanilla MoE 在多地形联合训练中 gate 激活近似均匀、专家难以专化的问题，提出一个面向 Unitree G1 的单阶段 PPO 框架，将历史状态估计、地形编码、5 专家 MoE 与地形对比学习放在同一训练流程中。其核心是把 gate 的 5 维激活权重和 elevation map 表征投影到共享 prototype 空间，通过 Sinkhorn–Knopp 生成批内均衡伪标签并做 swapped-assignment，使路由随地形变化，而不是人工规定每个专家负责哪类地形。仿真中 CMoE 在多数困难及混合地形指标上优于等参数 Base 和 Vanilla MoE，实机展示了连续 20 cm 台阶、80 cm 沟壑、30 cm 障碍与 17° 斜坡。证据仍主要来自有限基线、t-SNE、单专家移除实验和实机演示；论文没有给出实机重复试验成功率，也不能证明 32 个 prototype 各自对应固定物理地形类别。",
+        "innovations": [
+          "针对 MoE 的 lazy/uniform gating 问题，将专家激活分布本身作为需要被地形信息约束的学习对象：让同类地形产生相近 gate 模式、不同地形产生更可分的路由，从而间接促使专家专化。",
+          "提出 terrain–gate swapped-assignment：分别投影 gate 激活与 elevation map 表征，共享一组 prototype，并以 Sinkhorn–Knopp 平衡伪标签进行双向交叉监督。真正的新意是把这种 SwAV 式表征对齐用于人形多地形 MoE 路由，而不是重新发明 prototype、SK 或对比学习。",
+          "把 8 类地形、状态估计器、外部地形感知、MoE actor–critic 和对比路由约束整合为同一阶段训练，避免先训练多个地形专家再做第二阶段蒸馏。这里的贡献更偏系统与训练目标整合；PPO、β-VAE、AE、MoE、SwAV/SK 和 curriculum learning 都是已有组件。",
+          "通过 gate 激活的地形聚类、混合地形切换曲线以及移除 Expert 1 后上行能力失效而下行仍可执行的实验，为“专家出现功能专化”提供了机制证据，但尚未系统证明所有 5 个专家都有唯一、稳定且可解释的职责。"
+        ],
+        "implementation": [
+          "观测与训练规模：单帧本体观测为 \\(\\mathbf{o}_t=[\\boldsymbol{\\omega}_t,\\mathbf{g}_t,\\mathbf{c}_v^t,\\boldsymbol{\\theta}_t,\\dot{\\boldsymbol{\\theta}}_t,\\mathbf{a}_{t-1}]\\)。公开代码堆叠 10 帧、每帧 45 维本体观测，并使用 77 维 elevation map；论文给出的地图覆盖机器人周围 \\(0.7\\,\\mathrm{m}\\times1.1\\,\\mathrm{m}\\)。训练在 Isaac Gym 中并行 4096 个环境，使用 RTX 4090 训练 20,000 epochs。",
+          "历史状态估计器：10 帧历史进入 β-VAE，输出 3 维基座速度估计 \\(\\tilde{\\mathbf v}_t\\) 和 16 维隐变量 \\(\\mathbf z_t^H\\)，decoder 根据二者重建下一帧 45 维观测 \\(\\tilde{\\mathbf o}_{t+1}\\)。损失为速度真值 MSE、下一帧重建 MSE 与 KL 正则之和；公开代码的 KL 权重为 0.005。仿真器真值 \\(\\mathbf v_t\\) 和 successor observation \\(\\mathbf o_{t+1}\\) 只是 estimator 的训练标签，并不是部署时提前输入策略的未来信息。",
+          "地形估计器：77 维 elevation map 经 AE 编码为 16 维 \\(\\mathbf z_t^E\\)，再重建自身，以 MSE 训练。策略前向同时使用原始 elevation map 与该 latent；两个 estimator 在公开代码中均有独立 Adam optimizer，送入策略的输出被 detach，因此 PPO 和对比损失不会反向更新它们。",
+          "MoE 前向：当前观测、估计速度、历史 latent、原始 elevation map 和地形 latent 拼接后，同时送入 gate 与 5 个 actor 专家。gate 输出 \\(\\mathbf w_t=\\operatorname{softmax}(G(\\mathbf x_t))\\)，最终高斯动作分布的均值为 \\(\\boldsymbol\\mu_t=\\sum_{i=1}^{5}w_{t,i}\\boldsymbol\\mu_t^{(i)}\\)。这是 dense soft mixture：每个样本都经过全部专家，专家没有预设地形标签，也不存在“某类地形只训练某个专家”；各专家从该样本获得的策略梯度会受到相应 gate 权重影响。",
+          "Actor–critic 关系：每个 expert 内含一组 actor 与 critic，论文表述 actor/critic 共用同一 gate。公开代码在 value 计算中对 gate weights 执行 detach，因此 value loss 更新各 expert critic，但不通过 critic 路径更新 gate；gate 主要由 PPO surrogate policy loss 与 contrastive loss 更新。",
+          "对比学习的两个视图：5 维 gate 权重经 MLP \\(5\\rightarrow128\\rightarrow64\\rightarrow16\\) 得到 \\(\\mathbf z_i^g\\)；原始 77 维 elevation map 与 16 维地形 latent 拼接后，经 MLP \\(93\\rightarrow128\\rightarrow64\\rightarrow16\\) 得到 \\(\\mathbf z_i^e\\)。同一样本的两种表示构成配对视图。论文把同一 trajectory 称为正样本、其他 trajectory 称为负样本，但公开损失没有显式计算样本两两距离或单列负样本项；其他 batch 样本仅通过 prototype 竞争和 SK 的批内均衡约束间接发挥作用。",
+          "Prototype 与预测分布：两个 16 维投影特征和 32 个可学习的 16 维 prototype 均做 L2 归一化，得到相似度 \\(\\mathbf S^g=\\mathbf Z^g\\mathbf C^\\top\\) 与 \\(\\mathbf S^e=\\mathbf Z^e\\mathbf C^\\top\\)。再以 \\(\\tau=0.2\\) 计算可求导预测 \\(\\mathbf p=\\operatorname{softmax}(\\mathbf S/\\tau)\\)。L2 归一化只固定向量长度，不降维；32 个 prototype 既不是 32 种预定义地形，也不是 5 个 experts，其编号具有置换不变性。",
+          "Sinkhorn–Knopp：公开代码以 \\(\\varepsilon=0.05\\) 对 \\(\\exp(\\mathbf S/\\varepsilon)\\) 做 3 轮交替行列缩放，并在 no-grad 区域产生 \\(\\mathbf q^g,\\mathbf q^e\\)。缩放后每个样本的 assignment 总和为 1，每个 prototype 在 batch 中获得约 \\(B/K\\) 的总质量，从而抑制所有样本落入同一 prototype 的平凡坍缩。SK 是无可学习参数的伪标签生成算法；它平衡 32 个 prototype 的使用量，而不是 5 个 expert 的 gate 负载。",
+          "Swapped-assignment loss 为 \\(\\mathcal L_{\\mathrm{con}}=-\\tfrac12[\\mathbf q^g\\log\\mathbf p^e+\\mathbf q^e\\log\\mathbf p^g]\\)：地形分支经 SK 得到的 \\(\\mathbf q^e\\) 监督 gate 分支预测 \\(\\mathbf p^g\\)，反方向亦然。\\(\\mathbf q\\) 停止梯度；该损失通过 \\(\\mathbf p\\) 路径更新 gating network、两个 projector 和 prototype。Prototype 由普通反向传播与 Adam 更新，不是由 SK、K-means 或 EMA 直接更新；terrain/state estimator 的输出在此处已 detach。",
+          "单阶段训练的准确含义：每个 PPO minibatch 先用 estimator 各自的监督/重建目标执行独立更新，再计算 contrastive loss，并把它与 PPO surrogate、value 和 entropy 项一起送入主 optimizer。PPO policy loss 更新 gate 与 5 个 actor experts，value loss 更新 expert critics，对比损失更新 gate、projectors 和 prototypes。因此“单阶段”表示这些更新处于同一训练循环，而不是所有模块之间存在一条不间断的端到端梯度。",
+          "课程与 Sim-to-Real：8 类地形在同一阶段训练，简单/复杂分组只用于课程难度与复杂地形上的速度指令 curriculum，不是给 experts 分组。Domain randomization 包括质量与惯量、摩擦、恢复系数、电机强度、\\(k_p/k_d\\)、每 16 秒最高 30 N 扰动，以及 elevation map 的延迟、Gaussian noise、偏移、旋转、非线性 salt-and-pepper noise 与直角边倒角。",
+          "部署链路：雷达点云与机器人定位系统生成 elevation map；保留历史状态 encoder、terrain encoder、gating network 和 5 个 actor experts，输出加权动作均值。训练期的两个 decoder、gate/terrain projectors、32 个 prototypes、Sinkhorn–Knopp、critics、仿真器真值速度和下一帧观测标签均可删除。",
+          "实验能证明的内容：仿真表中 CMoE 在 gap 成功率上为 0.974、Vanilla MoE 为 0.818，在 mix1/mix2 上为 0.767/0.747、Vanilla MoE 为 0.605/0.662；t-SNE、路由随地形跳变和 Expert 1 移除实验共同支持路由更地形相关、至少部分 expert 出现专化。实机展示连续 20 cm 台阶、80 cm 沟壑、30 cm 障碍和 17° 斜坡。",
+          "实验没有证明的内容：CMoE 并非每一项都最好，例如 Base 在 discrete 成功率上为 1.000、高于 CMoE 的 0.991，Vanilla MoE 在 hurdle 平均距离上也更高；基线主要只有等参数 Base 与 Vanilla MoE。论文未报告实机重复次数/成功率，也未充分消融 expert 数量、prototype 数量、SK 参数及各 estimator，因此不能据此断言 5 个专家职责唯一、32 个 prototype 具有固定物理语义，或对比路由在所有设置下都必然收敛。"
+        ]
+      },
+      "en": {
+        "title": "CMoE: Contrastive Mixture of Experts for Motion Control and Terrain Adaptation of Humanoid Robots",
+        "authors": "Shihao Ma, Hongjin Chen, Zijun Xu, Yi Zhao, Ke Wu, Ruichen Yang, Leyao Zou, Zhongxue Gan, Wenchao Ding",
+        "institutions": "College of Intelligent Robotics and Advanced Manufacturing, Fudan University, Shanghai, China",
+        "status": "Full paper reviewed (official code checked)",
+        "takeaway": "CMoE does not hard-assign terrains to experts; it aligns terrain representations with gate activation patterns through SwAV/Sinkhorn–Knopp so that five softly mixed experts trained by PPO develop terrain-dependent specialization. SK balances minibatch assignments over 32 prototypes, not the loads of the five experts.",
+        "tags": [
+          "Humanoid Locomotion",
+          "Mixture of Experts",
+          "Contrastive Learning",
+          "Sinkhorn–Knopp",
+          "PPO",
+          "Terrain Adaptation",
+          "Elevation Map",
+          "Sim-to-Real"
+        ],
+        "mainContent": "CMoE addresses the nearly uniform gate activations and weak expert specialization observed when Vanilla MoE is jointly trained across multiple terrains. It places history-based state estimation, elevation-map encoding, a five-expert MoE, PPO, and terrain contrastive learning in one training stage; its key mechanism projects gate weights and terrain features into a shared prototype space and uses Sinkhorn–Knopp-balanced swapped assignments to make routing terrain-dependent without hand-labeling expert roles. In simulation it outperforms parameter-matched Base and Vanilla MoE on most difficult and mixed-terrain metrics, while Unitree G1 demonstrations include continuous 20 cm steps, an 80 cm gap, a 30 cm hurdle, and a 17-degree slope. The evidence is still based on limited baselines, t-SNE, one expert-removal study, and real-robot demonstrations without reported trial-level success statistics, and it does not establish fixed physical meanings for the 32 prototypes.",
+        "innovations": [
+          "Treats the lazy/uniform gating problem as an explicit learning target: terrain information constrains expert activation patterns so similar terrains yield similar routing and different terrains become more separable, indirectly encouraging expert specialization.",
+          "Introduces terrain–gate swapped assignment by projecting gate activations and elevation-map representations into a shared prototype space and applying Sinkhorn–Knopp-balanced bidirectional supervision. The novelty lies in applying SwAV-style alignment to terrain-conditioned humanoid MoE routing, not in inventing prototypes, SK, or contrastive learning.",
+          "Integrates eight-terrain training, state estimation, exteroceptive terrain perception, an MoE actor–critic, and a contrastive routing objective into a single training stage instead of first training terrain-specific teachers and then distilling them. This is largely a systems and objective-integration contribution; PPO, β-VAE, AE, MoE, SwAV/SK, and curriculum learning are existing components.",
+          "Provides mechanistic evidence for specialization through terrain clustering of gate activations, routing changes during mixed-terrain transitions, and an Expert 1 removal test that disrupts ascending behavior while preserving descending behavior. It does not systematically establish a unique, stable, interpretable role for every expert."
+        ],
+        "implementation": [
+          "Observations and scale: one proprioceptive frame is \\(\\mathbf{o}_t=[\\boldsymbol{\\omega}_t,\\mathbf{g}_t,\\mathbf{c}_v^t,\\boldsymbol{\\theta}_t,\\dot{\\boldsymbol{\\theta}}_t,\\mathbf{a}_{t-1}]\\). The released code stacks 10 frames of 45-dimensional proprioception and uses a 77-dimensional elevation map; the paper reports a \\(0.7\\,\\mathrm{m}\\times1.1\\,\\mathrm{m}\\) map around the robot. Training uses 4,096 parallel Isaac Gym environments on an RTX 4090 for 20,000 epochs.",
+          "History-state estimator: a β-VAE maps the 10-frame history to a 3-D base-velocity estimate \\(\\tilde{\\mathbf v}_t\\) and a 16-D latent \\(\\mathbf z_t^H\\); its decoder reconstructs the next 45-D observation \\(\\tilde{\\mathbf o}_{t+1}\\). The objective combines velocity MSE, next-observation reconstruction MSE, and KL regularization, with a code-level KL weight of 0.005. Simulator ground-truth velocity and successor observation are estimator training labels, not future inputs available to the deployed policy.",
+          "Terrain estimator: an AE maps the 77-D elevation map to a 16-D latent \\(\\mathbf z_t^E\\) and reconstructs the map with MSE. The policy uses both the raw elevation map and this latent. Each estimator has its own Adam optimizer, and its outputs are detached before entering the policy, so neither PPO nor the contrastive objective updates the estimators.",
+          "MoE forward pass: current observation, estimated velocity, history latent, raw elevation map, and terrain latent are concatenated for the gate and five actor experts. The gate produces \\(\\mathbf w_t=\\operatorname{softmax}(G(\\mathbf x_t))\\), and the final Gaussian action mean is \\(\\boldsymbol\\mu_t=\\sum_{i=1}^{5}w_{t,i}\\boldsymbol\\mu_t^{(i)}\\). This is a dense soft mixture: every sample passes through every expert, no terrain label is preassigned to an expert, and each expert's policy gradient from a sample is modulated by its gate weight.",
+          "Actor–critic gradient path: every expert contains an actor and a critic, and the paper describes a shared gate for actor and critic mixtures. In the released code, gate weights are detached in value computation, so value loss updates expert critics but does not update the gate through the critic path; the gate is trained primarily by PPO surrogate policy loss and contrastive loss.",
+          "Contrastive views: the 5-D gate weights pass through an MLP \\(5\\rightarrow128\\rightarrow64\\rightarrow16\\) to form \\(\\mathbf z_i^g\\). The 77-D raw elevation map and 16-D terrain latent are concatenated and passed through \\(93\\rightarrow128\\rightarrow64\\rightarrow16\\) to form \\(\\mathbf z_i^e\\). The two representations of the same sample are paired. Although the paper calls same-trajectory pairs positive and other trajectories negative, the released loss has no explicit pairwise-distance or separate negative-sample term; other minibatch samples act indirectly through prototype competition and SK batch balancing.",
+          "Prototypes and predictions: both 16-D projected features and 32 learnable 16-D prototypes are L2-normalized, giving \\(\\mathbf S^g=\\mathbf Z^g\\mathbf C^\\top\\) and \\(\\mathbf S^e=\\mathbf Z^e\\mathbf C^\\top\\). Differentiable predictions use \\(\\mathbf p=\\operatorname{softmax}(\\mathbf S/\\tau)\\) with \\(\\tau=0.2\\). L2 normalization fixes vector length but does not reduce dimension. The 32 prototypes are neither predefined terrains nor the five experts, and their indices are permutation-invariant.",
+          "Sinkhorn–Knopp: the code applies three rounds of alternating row/column scaling to \\(\\exp(\\mathbf S/\\varepsilon)\\) with \\(\\varepsilon=0.05\\), under no-grad, to produce \\(\\mathbf q^g\\) and \\(\\mathbf q^e\\). Each sample assignment sums to one and each prototype receives approximately \\(B/K\\) total minibatch mass, suppressing the trivial all-samples-to-one-prototype solution. SK has no learnable parameters and balances 32-prototype usage, not five-expert gate load.",
+          "The swapped-assignment loss is \\(\\mathcal L_{\\mathrm{con}}=-\\tfrac12[\\mathbf q^g\\log\\mathbf p^e+\\mathbf q^e\\log\\mathbf p^g]\\): terrain assignments supervise gate predictions and vice versa. The \\(\\mathbf q\\) targets are stop-gradient; the differentiable \\(\\mathbf p\\) paths update the gating network, both projectors, and prototypes. Prototypes are updated by ordinary backpropagation and Adam, not directly by SK, K-means, or EMA; terrain/state estimator outputs are detached here.",
+          "Meaning of single-stage training: in each PPO minibatch, the two estimators are first updated with their own supervised/reconstruction objectives; contrastive loss is then computed and added to PPO surrogate, value, and entropy terms for the main optimizer. PPO policy loss updates the gate and five actor experts, value loss updates expert critics, and contrastive loss updates the gate, projectors, and prototypes. Thus single-stage means a shared training schedule, not one uninterrupted end-to-end gradient through all modules.",
+          "Curriculum and Sim-to-Real: all eight terrains are trained in the same phase. The simple/complex partition only controls curriculum difficulty and velocity-command progression on complex terrains; it does not partition experts. Randomization covers mass/inertia, friction, restitution, motor strength, \\(k_p/k_d\\), disturbances up to 30 N every 16 seconds, and elevation-map delay, Gaussian noise, offset, rotation, nonlinear salt-and-pepper noise, and edge chamfering.",
+          "Deployment: radar point clouds and robot localization produce the elevation map. The history-state encoder, terrain encoder, gate, and five actor experts remain and output the weighted action mean. The two decoders, gate/terrain projectors, 32 prototypes, Sinkhorn–Knopp, critics, simulator velocity labels, and successor-observation labels are training-only and can be removed.",
+          "What the experiments support: simulation success rates are 0.974 versus 0.818 for CMoE versus Vanilla MoE on gaps, and 0.767/0.747 versus 0.605/0.662 on mix1/mix2. Together, t-SNE, terrain-dependent routing jumps, and the Expert 1 removal study support more terrain-dependent routing and at least partial expert specialization. Real-robot demonstrations show continuous 20 cm steps, an 80 cm gap, a 30 cm hurdle, and a 17-degree slope.",
+          "What the experiments do not establish: CMoE is not best on every metric—Base obtains 1.000 versus CMoE's 0.991 success on discrete terrain, and Vanilla MoE has a longer average hurdle distance. Baselines are mainly parameter-matched Base and Vanilla MoE; the paper reports no real-robot trial counts/success rates and does not thoroughly ablate expert count, prototype count, SK settings, or the estimators. The results therefore do not prove unique expert roles, fixed physical semantics for prototypes, or guaranteed convergence of contrastive routing in all settings."
+        ]
+      }
+    },
+    {
+      "id": "slr-quadruped-locomotion-without-privileged-information",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2406.04835",
+      "project": "https://11chens.github.io/SLR/",
+      "arxiv": "https://arxiv.org/abs/2406.04835",
+      "year": "2025",
+      "venue": "Proceedings of the 8th Conference on Robot Learning (CoRL 2024), PMLR 270",
+      "zh": {
+        "title": "SLR: Learning Quadruped Locomotion without Privileged Information",
+        "authors": "Shiyi Chen, Zeyu Wan, Shiyang Yan, Chun Zhang, Weiyi Zhang, Qiang Li, Debing Zhang, Fasih Ud Din Farrukh",
+        "institutions": "Tsinghua University; Shenzhen Technology University",
+        "status": "全文已精读",
+        "takeaway": "SLR 本质上是在普通 history-based PPO 上增加一套表征学习辅助目标：critic 的价值回归使 latent 与任务回报相关，latent transition 与 triplet loss 使其具有一步时序可预测性并避免坍缩；它不是世界模型，部署时 transition model 会被删除。",
+        "tags": [
+          "Quadruped Locomotion",
+          "Self-learning Latent Representation",
+          "PPO",
+          "Triplet Loss",
+          "Proprioceptive History",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文针对四足复杂地形运动中依赖人工选择 privileged information、teacher encoder 或物理参数监督的问题，尝试仅从本体观测历史中学习对控制有用的隐藏状态。最近 10 步观测经 encoder 得到 20 维 latent；actor 使用被 stop-gradient 截断的 latent，critic 以价值回归塑造其任务相关性，transition model 与 triplet loss 则约束下一 latent 可预测且不同随机时刻的表示不坍缩。作者在五套现有 locomotion 代码库和 Unitree Go2 真机上报告了多数指标提升，但没有提供仅历史网络、仅 critic、仅 transition、移除负样本或同参数量网络等关键消融，因此无法确认收益究竟来自哪一组件或额外容量。",
+        "innovations": [
+          "真正的新意是训练信号的组合与梯度接线，而不是单独提出 encoder、transition model 或 triplet loss：历史 encoder 同时接受 critic value loss 与 latent transition/triplet loss，无需 privileged observation、privileged target 或 teacher latent。",
+          "actor 前向使用 \\(\\mathbf z_t\\)，但通过 stop-gradient 阻断 PPO policy loss 到 encoder 的梯度；critic 保留到 encoder 的梯度，使 latent 倾向于保留有助于预测未来回报的信息。这里的作用是 value-predictive，而不是直接对 latent 做回报最大化。",
+          "以 \\(\\mathbf z_{t+1}\\) 为 anchor、预测的 \\(\\tilde{\\mathbf z}_{t+1}\\) 为 positive、随机时刻的 \\(\\mathbf z_{t+n}\\) 为 negative 构造 triplet loss，同时施加一步动力学一致性与防坍缩约束；这是辅助表示学习机制，不用于部署期预测或规划。",
+          "跨 MoB、RLvRL、ROA、HIM 和普通 baseline 的原始代码配置验证可插拔性，并在 Go2 上部署，是较有价值的工程性系统整合与验证，但 PPO、MLP、triplet loss、PD 控制和域随机化本身均是继承组件。"
+        ],
+        "implementation": [
+          "当前观测为 45 维，包括基座角速度、3 维速度命令、投影重力、12 维关节位置、12 维关节速度和上一时刻 12 维动作；encoder 读取最近 \\(H=10\\) 步历史，经 [256, 128] 隐层输出 20 维 \\(\\mathbf z_t\\)。",
+          "正文公式中 actor 输入当前观测与 \\(\\operatorname{sg}[\\mathbf z_t]\\)，经 [512, 256, 128] 隐层输出 12 维关节位置目标，再由 PD 控制器转成力矩；critic 以当前观测和未 detach 的 \\(\\mathbf z_t\\) 预测 value。附录 Table A3 将 actor/critic 输入写成历史观测与 latent，与正文存在不一致。",
+          "transition model 经 [256, 128] 隐层计算 \\(\\tilde{\\mathbf z}_{t+1}=\\mu(\\mathbf z_t,\\mathbf a_t)\\)。论文最小化 \\(\\mathcal L_{\\mathrm{trip}}=\\max(\\lVert\\mathbf z_{t+1}-\\tilde{\\mathbf z}_{t+1}\\rVert_2^2-\\lVert\\mathbf z_{t+1}-\\mathbf z_{t+n}\\rVert_2^2+m,0)\\)，其中 \\(m=1.0\\)；正样本项拉近真实与预测的下一 latent，负样本项要求随机时刻至少更远一个 margin。",
+          "四个网络在同一轮 on-policy PPO 中联合更新，但梯度来源不同：actor 由 PPO clipped policy loss 与 entropy 更新；critic 由 value loss 更新；encoder 由 value loss 与 triplet loss 更新，不接收 actor policy loss；transition model 只由 triplet loss 更新。rollout 中保存的动作作为辅助损失输入，论文未说明 triplet loss 会沿动作更新 actor。",
+          "论文报告 rollout buffer 为 \\(4096\\times24\\)，PPO clip 为 0.2，\\(\\gamma=0.99\\)，GAE \\(\\lambda=0.95\\)，learning rate 为 \\(10^{-3}\\)，triplet coefficient 为 1.0；Algorithm 1 每轮清空 buffer，因此不是跨迭代复用经验的 off-policy replay。",
+          "部署时仅保留 history encoder、actor 和 PD 控制器：每一步由最新本体历史重新计算 \\(\\mathbf z_t\\) 并输出动作。critic、transition model、随机负样本、triplet loss、reward、GAE 和 PPO optimizer 全部删除；网络权重不在线更新，也不会使用 \\(\\tilde{\\mathbf z}_{t+1}\\) 做多步 rollout、MPC 或地形规划。",
+          "实验在主要消融中训练 6000 iterations、使用 3 个随机种子，并在五套既有代码库内比较；Go2 真机结果证明该冻结策略可以闭环部署在多类地形上。证据不足之处是缺少能隔离历史信息、critic guidance、transition prediction、negative sample 与模型容量贡献的消融，t-SNE 可视化也不能证明 latent 具有明确的摩擦或地形语义。"
+        ]
+      },
+      "en": {
+        "title": "SLR: Learning Quadruped Locomotion without Privileged Information",
+        "authors": "Shiyi Chen, Zeyu Wan, Shiyang Yan, Chun Zhang, Weiyi Zhang, Qiang Li, Debing Zhang, Fasih Ud Din Farrukh",
+        "institutions": "Tsinghua University; Shenzhen Technology University",
+        "status": "Full paper reviewed",
+        "takeaway": "SLR is essentially a representation-learning auxiliary objective added to history-based PPO: value regression makes the latent task-relevant, while latent transition prediction and triplet learning make it one-step predictable and resistant to collapse; it is not a world model, and the transition model is discarded at deployment.",
+        "tags": [
+          "Quadruped Locomotion",
+          "Self-learning Latent Representation",
+          "PPO",
+          "Triplet Loss",
+          "Proprioceptive History",
+          "Sim-to-Real"
+        ],
+        "mainContent": "The paper addresses the reliance of quadruped locomotion methods on manually selected privileged information, teacher encoders, or supervised physical-parameter targets, and instead learns a control-relevant hidden state from proprioceptive history alone. An encoder maps the latest 10 observations to a 20-dimensional latent; the actor consumes a stop-gradient copy, value regression makes the representation task-relevant, and a transition model with triplet loss encourages one-step predictability while preventing collapse. The authors report improvements in most metrics across five existing locomotion codebases and on a Unitree Go2, but omit critical ablations for history alone, critic guidance alone, transition prediction alone, negative removal, and parameter-matched capacity, so the source of the gains cannot be isolated.",
+        "innovations": [
+          "The substantive novelty is the combination of training signals and gradient routing rather than the encoder, transition model, or triplet loss individually: the history encoder is shaped jointly by critic value loss and latent transition/triplet loss without privileged observations, privileged targets, or a teacher latent.",
+          "The actor uses \\(\\mathbf z_t\\) in its forward pass but blocks the PPO policy gradient at the encoder, whereas the critic retains the gradient path to the encoder. This makes the latent value-predictive rather than directly maximizing return with respect to the latent.",
+          "A triplet objective uses \\(\\mathbf z_{t+1}\\) as the anchor, predicted \\(\\tilde{\\mathbf z}_{t+1}\\) as the positive, and a random-time \\(\\mathbf z_{t+n}\\) as the negative, imposing one-step latent consistency and an anti-collapse constraint. This is an auxiliary representation-learning mechanism, not a deployment-time predictor or planner.",
+          "Evaluation in the original configurations of MoB, RLvRL, ROA, HIM, and a plain baseline, followed by Go2 deployment, provides useful engineering evidence of plug-in portability; PPO, MLPs, triplet loss, PD control, and domain randomization themselves are inherited components."
+        ],
+        "implementation": [
+          "The 45-dimensional current observation contains base angular velocity, a 3-D velocity command, projected gravity, 12 joint positions, 12 joint velocities, and the previous 12-D action. The encoder reads the latest \\(H=10\\) observations and uses hidden layers [256, 128] to output a 20-D \\(\\mathbf z_t\\).",
+          "In the main-text equations, the actor takes the current observation and \\(\\operatorname{sg}[\\mathbf z_t]\\), uses hidden layers [512, 256, 128], and outputs 12 joint-position targets that a PD controller converts to torques; the critic predicts value from the current observation and non-detached \\(\\mathbf z_t\\). Appendix Table A3 instead lists observation history plus latent as the actor/critic input, creating an internal inconsistency.",
+          "The transition model uses hidden layers [256, 128] to compute \\(\\tilde{\\mathbf z}_{t+1}=\\mu(\\mathbf z_t,\\mathbf a_t)\\). The paper minimizes \\(\\mathcal L_{\\mathrm{trip}}=\\max(\\lVert\\mathbf z_{t+1}-\\tilde{\\mathbf z}_{t+1}\\rVert_2^2-\\lVert\\mathbf z_{t+1}-\\mathbf z_{t+n}\\rVert_2^2+m,0)\\), with \\(m=1.0\\); the positive term aligns the actual and predicted next latent, while the negative term requires a random-time latent to be farther away by at least the margin.",
+          "All four networks are trained jointly within each on-policy PPO update, but receive different gradients: PPO clipped policy loss and entropy update the actor; value loss updates the critic; value and triplet losses update the encoder, with no actor policy gradient reaching it; and triplet loss alone updates the transition model. Rollout actions are stored inputs to the auxiliary loss, and the paper does not state that this loss differentiates through the action into the actor.",
+          "Reported hyperparameters include a \\(4096\\times24\\) rollout buffer, PPO clip 0.2, \\(\\gamma=0.99\\), GAE \\(\\lambda=0.95\\), learning rate \\(10^{-3}\\), and triplet coefficient 1.0. Algorithm 1 clears the buffer every iteration, so it is not an off-policy replay buffer reused across iterations.",
+          "Deployment retains only the history encoder, actor, and PD controller; the latest proprioceptive history is re-encoded at every step. The critic, transition model, random negatives, triplet loss, rewards, GAE, and PPO optimizer are removed, the weights are frozen, and \\(\\tilde{\\mathbf z}_{t+1}\\) is never used for multi-step rollout, MPC, or terrain planning.",
+          "The main ablation is trained for 6000 iterations with 3 random seeds, and the method is compared within five existing codebases before Go2 deployment. The evidence does not isolate contributions from history, critic guidance, transition prediction, negative sampling, or added model capacity, and the t-SNE visualization does not establish explicit friction or terrain semantics in the latent."
+        ]
+      }
     }
   ]
 }

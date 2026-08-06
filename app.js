@@ -29,12 +29,14 @@ const uiText = {
     paperLink: "论文链接",
     project: "项目主页",
     arxiv: "arXiv",
-    promptButton: "精读 Prompt",
-    promptModalTitle: "论文精读 Prompt",
-    promptModalDescription: "选择要复制的版本，直接粘贴给读论文的 agent。",
-    copyZhPrompt: "复制中文 Prompt",
-    copyEnPrompt: "Copy English Prompt",
-    promptCopied: "已复制",
+    promptButton: "精读 Prompt v4",
+    promptModalTitle: "论文精读 Prompt v4",
+    promptModalDescription: "先复制完整报告 Prompt 建立阅读地图，再复制导师式 Prompt 逐点追问。论文处理均在外部模型会话中进行。",
+    promptPreview: "预览全文",
+    copyFullPrompt: "复制全文",
+    promptCopied: "已复制全文",
+    promptLoading: "正在载入 Prompt…",
+    promptLoadFailed: "Prompt 载入失败，请刷新页面后重试。",
     hideSidebar: "隐藏分类栏",
     showSidebar: "显示分类栏",
     hideDetail: "隐藏概览",
@@ -72,12 +74,14 @@ const uiText = {
     paperLink: "Paper Link",
     project: "Project",
     arxiv: "arXiv",
-    promptButton: "Reading Prompt",
-    promptModalTitle: "Paper Reading Prompt",
-    promptModalDescription: "Choose a version to copy, then paste it into the paper-reading agent.",
-    copyZhPrompt: "复制中文 Prompt",
-    copyEnPrompt: "Copy English Prompt",
-    promptCopied: "Copied",
+    promptButton: "Reading Prompts v4",
+    promptModalTitle: "Paper Reading Prompts v4",
+    promptModalDescription: "First copy the full-report prompt to build a reading map, then use the tutor prompt for focused follow-up. All paper processing happens in an external model conversation.",
+    promptPreview: "Preview full prompt",
+    copyFullPrompt: "Copy full prompt",
+    promptCopied: "Full prompt copied",
+    promptLoading: "Loading prompts…",
+    promptLoadFailed: "Unable to load prompts. Refresh the page and try again.",
     hideSidebar: "Hide categories",
     showSidebar: "Show categories",
     hideDetail: "Hide overview",
@@ -96,632 +100,9 @@ const siteMeta = {
   },
 };
 
-const readingPrompts = {
-  zh: `你是 Codex，同时是一位资深的智能控制、机器人学习与运动规划专家，并具有顶级期刊审稿经验。请阅读我在当前任务中提供的论文（包括工作区文件、附件或链接），使用可用工具完成核查，并在当前工作区生成一份面向控制、机器人和强化学习方向研究生的中文精读报告。
-
-这份报告的目标不是逐章复述论文，也不是机械填写问题清单，而是帮助读者建立一个完整、可复述的 mental model：
-
-* 论文到底要解决什么问题；
-* 整套方法从输入到输出如何运行；
-* 每个模块为什么存在、解决了上一步留下的什么问题；
-* 哪些部分需要训练，哪些属于逐实例优化或数据预处理；
-* 真正部署时保留哪些模块；
-* 核心创新、辅助技巧和已有组件分别是什么；
-* 实验究竟证明了什么，又没有证明什么。
-
-## 一、资料与证据要求
-
-1. 分析必须优先基于论文正文、附录和补充材料。
-2. 如果使用作者主页、官方项目页或官方代码仓库补充信息，必须明确标注为“外部官方资料”，不得与论文正文混写。
-3. 不要编造论文没有给出的实现细节、超参数、训练方式或结论。
-4. 对论文未说明的内容，先明确写“论文未说明”，再根据公式、伪代码或常见实现给出合理推测，并标注“推测”。
-5. 论文明确内容可以正常叙述；只有以下情况需要特别标记：
-
-   * **[推导]**：由论文公式或算法进一步推导出的结论；
-   * **[推测]**：论文没有确认的合理实现猜测；
-   * **[外部资料]**：来自官方代码、项目页或其他论文外来源。
-6. 如果论文内部存在符号、单位、公式、图表或文字不一致，保持原文含义并单独指出，不要擅自替作者修正。
-
-## 二、最重要的叙事原则：从 Takeaway 开始
-
-报告开头必须先写一段约 300–500 字的“核心 Takeaway”。它不是摘要翻译，而是整篇报告的理解骨架，必须连贯回答：
-
-1. 论文的输入、输出和最终目标是什么；
-2. 完整 pipeline 如何从原始输入走到最终结果；
-3. 各个核心模块分别承担什么角色；
-4. 真正的创新发生在哪一个环节；
-5. 离线数据处理、逐实例求解、模型训练、在线推理和真机部署之间是什么关系；
-6. 这篇方法“不是什么”，避免把它误解成更通用或更强的问题；
-7. 最重要的实验结论和一个关键局限是什么。
-
-Takeaway 中首次出现任何缩写时，必须写出完整名称，例如：
-
-> 中文名称（English Full Name，ABBR）
-
-如果没有公认中文译名，则使用：
-
-> English Full Name（ABBR）
-
-不得在读者还不理解方法时，先堆砌一整页术语表。
-
-后续正文必须严格沿着 Takeaway 中出现概念的顺序逐层展开。不要重新组织出另一套主线，也不要在多个章节反复完整复述同一条 pipeline。
-
-## 三、正文组织方式
-
-请根据论文实际方法动态设置小节，不要为了套模板而生成不适用的空章节。建议按照以下认知顺序展开。
-
-### 1. 论文究竟在解决什么问题
-
-先用具体场景说明：
-
-* 原始输入是什么；
-* 期望输出是什么；
-* 中间最困难的瓶颈是什么；
-* 如果直接使用现有方法，会在哪一步失败；
-* 这种失败是表示能力、优化、动力学、数据、控制、泛化还是部署问题。
-
-介绍前人方法时，只解释理解本文所必需的部分。先说明前人方法原本怎样工作，再指出本文具体修改了哪一步。不要写成泛泛的 related work 罗列。
-
-### 2. 沿完整闭环逐步拆解方法
-
-沿数据流或控制流，从输入端一直讲到最终输出。每个模块都应自然回答：
-
-* 上一步留下了什么问题；
-* 本模块接收什么输入；
-* 内部执行什么操作；
-* 输出什么；
-* 输出交给下一个模块做什么；
-* 为什么这种设计可能有效；
-* 是否存在值得注意的小巧思或隐含假设。
-
-不要机械地把每个模块写成十几个字段的“模块卡片”。优先使用连续讲解；只有输入输出映射、训练/部署对比等确实适合比较的内容才使用表格。
-
-完整 pipeline 最多集中展示两次：
-
-1. 开头的 Takeaway；
-2. 正文中的一张紧凑流程图、箭头链或输入输出表。
-
-其他章节直接引用相关阶段，不要重复抄写全流程。
-
-### 3. 把核心算法讲成“实际如何运行”
-
-对于最关键的算法，不要只解释概念或罗列公式。应按照一次真实执行过程说明：
-
-1. 初始输入和初始化来自哪里；
-2. 一轮迭代、采样、rollout 或前向计算如何进行；
-3. 如何计算目标、损失、奖励或代价；
-4. 哪些变量会被更新；
-5. 更新规则是什么；
-6. 何时停止或进入下一阶段；
-7. 最终产物是什么；
-8. 这个产物之后如何被使用。
-
-必须区分：
-
-* 数据或参考目标；
-* 被直接优化的决策变量；
-* 通过梯度学习的模型参数；
-* 优化器的临时状态；
-* 环境或仿真器产生的状态；
-* 部署阶段真正运行的模型和控制器。
-
-尤其不要把“存在一个目标函数”误写成“目标函数直接映射得到模型参数”。应明确梯度更新、采样更新、动态规划、轨迹优化或其他求解过程。
-
-### 4. 公式应服务于理解，而不是独立堆放
-
-每个关键公式按照以下顺序讲解：
-
-1. 先用直觉说明公式要解决什么问题；
-2. 再给出公式；
-3. 紧接着定义全部变量；
-4. 明确哪些量固定、哪些量被优化或学习；
-5. 说明它在算法的哪一步被计算；
-6. 说明它如何影响后续结果。
-
-如果公式来自已有方法，应注明；如果是本文新增或修改的，应说明修改在哪里。
-
-只保留理解核心机制所必需的公式。次要公式、完整超参数和符号表放入技术附录。
-
-公式排版要求：
-
-* 写入 Markdown 报告文件的行内公式统一使用 $...$；
-* 写入 Markdown 报告文件的独立公式统一使用 $$...$$，开始和结束的双美元符号各自独占一行；
-* 报告文件中不要使用 \\(...\\) 或 \\[...\\] 作为公式定界符；
-* 不要把公式放入代码块；
-* 向量和矩阵使用粗体，如 $\\mathbf{x}$、$\\mathbf{R}$；
-* 保持公式分隔符、正负号、上下标、量纲和单位正确；
-* 如果改写了论文符号以保持统一，必须明确说明。
-
-### 5. 严格区分训练、求解和部署
-
-如果论文包含多个阶段，分别说明：
-
-* 数据准备或预处理；
-* 离线逐样本/逐轨迹优化；
-* 模型预训练；
-* 强化学习或监督学习训练；
-* 蒸馏、微调或后训练；
-* 仿真评估；
-* 真机在线推理与控制。
-
-对每个阶段给出：
-
-* 输入；
-* 输出；
-* 哪些参数被更新；
-* 哪些模块冻结；
-* 数据从哪里来；
-* 是否需要仿真器、专家、参考轨迹、未来信息或真实标签。
-
-最后使用一张简洁表格对比“训练时存在”和“部署时存在”的模块，特别说明哪些信息仅训练可用、哪些是部署必需。
-
-如果某个算法需要针对每个新样本重新运行，必须明确指出它是“逐实例求解器”，不能将其描述成训练后可直接泛化的模型。
-
-### 6. 区分核心创新、辅助技巧和已有组件
-
-不要把所有设计都并列称为贡献。请分成以下层次：
-
-* **核心创新**：没有它，论文的主要方法就不成立；
-* **关键辅助设计**：增强稳定性、效率、可扩展性或效果；
-* **实现小巧思**：初始化、缓存、调度、归一化、坐标表达、采样策略等容易被忽视但很实用的设计；
-* **继承组件**：直接来自已有工作的模型、优化器、控制器或训练范式；
-* **工程组合**：本身未必是新算法，但组合方式对完整系统有价值。
-
-对于每一点都解释“它为什么重要”，不要只复述作者的贡献列表。
-
-## 四、按论文类型补充必要信息
-
-只在适用时补充，不要输出无关的空栏目。
-
-### 如果是强化学习或控制策略论文
-
-说明：
-
-* observation、command、action 分别是什么；
-* actor 和 critic 各自接收什么；
-* reward 的主要组成和作用；
-* rollout、优势估计和参数更新流程；
-* 控制频率、参考窗口及低层执行方式；
-* 训练时特权信息与部署观测的差异；
-* policy 输出是力矩、位置目标、残差还是潜变量。
-
-### 如果是生成模型论文
-
-说明：
-
-* 数据表示是什么；
-* 条件信息如何注入；
-* 加噪、插值或前向过程是什么；
-* 网络预测的目标是什么；
-* 训练损失是什么；
-* 推理时如何采样或积分；
-* 生成结果如何进入后续控制器；
-* 生成模型是在线运行、离线生成，还是仅用于训练。
-
-### 如果是轨迹优化或采样优化论文
-
-说明：
-
-* 决策变量是什么；
-* 初始解如何获得；
-* 目标函数和约束是什么；
-* 每轮如何采样、rollout、筛选和更新；
-* 优化器状态是否可跨任务复用；
-* 停止条件是什么；
-* 新任务是否需要重新求解；
-* 输出的是控制序列、状态轨迹、接触序列还是参考动作。
-
-### 如果是分层规划或生成—跟踪结构
-
-必须明确：
-
-* 高层和低层分别做什么；
-* 两者输入输出如何连接；
-* 各自运行频率；
-* 高层输出是命令、关键帧、参考轨迹还是潜变量；
-* 低层是跟踪策略、优化器还是传统控制器；
-* 发生扰动后由哪一层闭环修正。
-
-## 五、实验与证据分析
-
-实验部分不要按照论文表格顺序逐项复述，而要围绕论文的核心主张组织。
-
-对每个主要主张回答：
-
-* 哪个实验用于支持它；
-* 对比基线是否合适；
-* 数据量、训练预算、模型规模、奖励和控制条件是否公平；
-* 指标实际衡量什么；
-* 改进幅度是否稳定且有实际意义；
-* 消融实验能否隔离关键组件；
-* 结果是仿真、真机、定量还是定性；
-* 是否验证了泛化、鲁棒性、效率和部署能力；
-* 还有哪些结论只是作者声称，但实验没有充分证明。
-
-重点指出：
-
-* 最有说服力的一项证据；
-* 最关键的一项消融；
-* 最薄弱或缺失的一项验证；
-* 论文结论是否超出了实验支持范围。
-
-## 六、局限性与复现判断
-
-从以下角度分析，但只写与论文相关的内容：
-
-* 方法假设；
-* 数据依赖；
-* 计算成本；
-* 优化稳定性；
-* 泛化范围；
-* sim-to-real 风险；
-* 对未来信息、人工参考或特权状态的依赖；
-* 失败案例；
-* 代码、模型和数据是否公开；
-* 论文是否给出了足够的网络结构、超参数、频率和训练细节。
-
-将“作者明确承认的局限”和“根据方法及实验判断出的局限”分开写。
-
-## 七、技术附录
-
-为了保证正文流畅，下列内容统一放在最后：
-
-* 缩写与术语表；
-* 主要符号表；
-* 次要公式；
-* 完整超参数；
-* 伪代码歧义；
-* 论文内部不一致；
-* 复现所缺失的信息；
-* 外部官方资料补充。
-
-不要让这些核查内容打断正文的理解主线。
-
-## 八、写作与排版要求
-
-1. 使用中文讲解，关键术语保留英文。
-2. 首次出现的缩写必须展开全称，之后再使用缩写。
-3. 面向已经具备机器人、控制和强化学习基础，但尚不了解该论文的研究生。
-4. 不要过度解释 PPO、PD、FK 等基础概念；但论文特有概念和容易混淆的边界必须讲透。
-5. 每一节先说明“为什么需要这一部分”，再讲“具体怎么做”。
-6. 优先使用自然段；步骤、阶段和严格对比再使用列表或表格。
-7. 不要按论文原章节顺序机械复述。
-8. 不要重复完整 pipeline、贡献和结论。
-9. 不要在开头放大段术语表、公式表或审稿清单。
-10. 正文优先保证连贯理解；完整性检查放入附录。
-11. 将最终报告写入实际的 Markdown 文件，而不是只在对话中粘贴全文。
-12. 篇幅由论文复杂度决定，不为追求长度填充重复内容。
-
-### 图片截取与文档交付（Codex）
-
-* 如果用户指定了输出位置或文件名，优先遵循；否则创建 <paper-slug>-reading-report/ 目录，在其中保存 <paper-slug>-reading-report.md，并创建 assets/ 子目录存放图片。
-* 阅读 PDF 正文和附录时，主动寻找真正帮助理解的原论文图片。优先级依次是：完整方法或系统 pipeline、核心模块或算法结构、训练与部署关系、最关键的实验结果或消融、能说明任务和硬件设置的图片。
-* 通常选取 2–5 张信息密度最高的图片，但以解释价值为准，不为凑数量插图；没有合适图片时可以不插入。
-* 使用可用的 PDF 页面截图、渲染或裁剪工具把图片保存为本地 PNG。紧密裁掉页边距和无关正文，但必须保留理解图片所需的坐标轴、图例、子图编号、标注和单位；不得修改实验数值、曲线或原图含义。
-* 报告中的图片路径统一相对于 Markdown 文件写成 assets/<filename>.png，例如：![方法总览](assets/fig-03-pipeline.png)。不要使用绝对路径、file:// URI 或依赖网络的外部图片链接；文件名使用稳定、简短、可读的英文且不含空格。
-* 图片放在正文第一次深入解释它的位置附近。每张图片后写一条简短图注，说明“读者应看什么”，并标注准确来源，例如“截自论文 Figure 3，第 6 页”；若来自项目主页或其他外部官方资料，明确标记为“外部官方资料”。
-* 不要用图片代替分析，不要截取大段纯文字或只起装饰作用的照片，也不要伪造、重绘或使用与论文无关的生成图片。无法访问、清晰截取或确认来源时，说明限制并跳过，不要留下占位图。
-* 报告和图片写完后，保留原始报告目录，并额外创建同级的 <paper-slug>-reading-report.zip。ZIP 必须包含完整的 <paper-slug>-reading-report/ 目录、Markdown 文件和 assets/ 子目录，使用户解压后无需修改路径即可看到图片；即使没有选取图片，也仍然生成 ZIP 以保持交付方式一致。
-* 最终回复先提供 ZIP 的可点击链接，再提供 Markdown 报告的可点击链接，并简要说明共保存了多少张论文截图；不要再次粘贴整篇报告。
-
-### 聊天回复中的公式格式
-
-* 本节适用于所有聊天回复，包括生成报告之前、生成过程中、报告交付时和后续问答；不要沿用报告文件的美元符号格式。
-* 聊天回复中的行内公式必须使用 \\(...\\)，独立公式必须使用 \\[...\\]，且独立公式的开始和结束定界符各自独占一行。
-* 聊天回复中禁止使用单美元符号或双美元符号作为公式定界符。只有实际写入 Markdown 报告文件的公式使用 $...$ 和 $$...$$。
-
-最终报告应当像一位真正理解论文的研究者在带领读者沿系统闭环逐层放大，而不是把论文重新整理成一份更长、更碎的论文。`,
-  en: `You are Codex and a senior expert in intelligent control, robot learning, and motion planning with experience reviewing for top-tier journals. Read the paper supplied in the current task, whether as a workspace file, attachment, or link; use the available tools to verify it; and generate an English close-reading report in the current workspace for graduate students in control, robotics, and reinforcement learning.
-
-The goal is not to paraphrase the paper section by section or mechanically fill out a checklist. Help the reader build a complete mental model that they can explain in their own words:
-
-* What problem the paper is actually trying to solve;
-* How the complete method runs from input to output;
-* Why each module exists and which problem left by the preceding stage it addresses;
-* Which parts require training and which are per-instance optimization or data preprocessing;
-* Which modules remain during real deployment;
-* Which elements are core innovations, supporting techniques, or inherited components;
-* What the experiments do and do not demonstrate.
-
-## I. Sources and Evidence
-
-1. Base the analysis primarily on the main paper, appendices, and supplementary material.
-2. If the authors' website, official project page, or official code repository supplies additional information, label it explicitly as **[External official source]** and do not blend it into claims from the paper.
-3. Do not invent implementation details, hyperparameters, training procedures, or conclusions that the paper does not provide.
-4. For anything unspecified, first write "Not specified in the paper," then provide a reasonable inference from equations, pseudocode, or common implementations only when useful, labeled **[Speculation]**.
-5. Explicitly reported material may be stated normally. Use special labels only for:
-
-   * **[Derivation]**: a conclusion derived beyond what the paper explicitly states from its equations or algorithm;
-   * **[Speculation]**: a plausible implementation guess not confirmed by the paper;
-   * **[External source]**: information from official code, a project page, or another source outside the paper.
-6. If the paper contains inconsistent symbols, units, equations, figures, tables, or prose, preserve the intended original meaning and discuss the inconsistency separately rather than silently correcting it.
-
-## II. Most Important Narrative Principle: Start with the Takeaway
-
-Open the report with a 300–500 word **Core Takeaway**. This is not a translated abstract; it is the conceptual backbone of the report and must coherently answer:
-
-1. What are the input, output, and final objective?
-2. How does the full pipeline transform raw input into the final result?
-3. What role does each core module play?
-4. At which stage does the genuine innovation occur?
-5. How do offline data processing, per-instance solving, model training, online inference, and real-robot deployment relate?
-6. What is this method *not*, so that it is not mistaken for a more general or more capable solution?
-7. What is the most important experimental conclusion, and what is one critical limitation?
-
-At the first occurrence of every abbreviation in the Takeaway, write out its full name before using the abbreviation.
-
-Do not place a full-page terminology table before the reader understands the method.
-
-The body must unfold concepts in the same order in which they appear in the Takeaway. Do not introduce a second narrative spine or repeatedly restate the complete pipeline in multiple sections.
-
-## III. Organizing the Main Discussion
-
-Choose subsections dynamically according to the actual method. Do not create empty sections merely to satisfy a template. Prefer the following cognitive order.
-
-### 1. What Problem Is the Paper Actually Solving?
-
-Begin with a concrete scenario and explain:
-
-* The raw input;
-* The desired output;
-* The most difficult intermediate bottleneck;
-* The stage at which a direct application of existing methods would fail;
-* Whether the failure concerns representation, optimization, dynamics, data, control, generalization, or deployment.
-
-When discussing prior work, explain only what is needed to understand this paper. First show how the prior method works, then identify the precise step changed here. Do not turn this section into a generic related-work list.
-
-### 2. Walk Through the Complete Closed Loop
-
-Follow the data flow or control flow from input to final output. For every module, explain naturally:
-
-* What problem remains from the preceding stage;
-* What input this module receives;
-* What operation it performs internally;
-* What it outputs;
-* How the next module uses that output;
-* Why the design may work;
-* Any subtle implementation idea or hidden assumption worth noticing.
-
-Do not force every module into a large field-by-field "module card." Prefer continuous explanation; use tables only where exact input-output mappings or training/deployment comparisons genuinely benefit from them.
-
-Show the complete pipeline in concentrated form at most twice:
-
-1. In the opening Takeaway;
-2. In one compact diagram, arrow chain, or input-output table in the body.
-
-Elsewhere, refer to the relevant stages instead of reproducing the entire pipeline.
-
-### 3. Explain the Core Algorithm as an Actual Execution
-
-For the central algorithm, do not stop at concepts or a list of equations. Describe one real execution:
-
-1. Where the initial input and initialization come from;
-2. How one iteration, sample, rollout, or forward pass proceeds;
-3. How the objective, loss, reward, or cost is computed;
-4. Which variables are updated;
-5. What update rule is used;
-6. When the procedure stops or transitions to the next stage;
-7. What artifact it ultimately produces;
-8. How that artifact is subsequently used.
-
-Strictly distinguish:
-
-* Data or reference targets;
-* Decision variables optimized directly;
-* Model parameters learned through gradients;
-* Temporary optimizer state;
-* State produced by the environment or simulator;
-* Models and controllers that actually run at deployment.
-
-In particular, do not write that an objective function "maps directly" to model parameters. State whether the solution uses gradient updates, sampling updates, dynamic programming, trajectory optimization, or another solver.
-
-### 4. Equations Must Serve Understanding
-
-Explain each key equation in this order:
-
-1. State intuitively what problem it addresses;
-2. Present the equation;
-3. Immediately define every variable;
-4. Identify which quantities are fixed and which are optimized or learned;
-5. State where in the algorithm the equation is evaluated;
-6. Explain how it affects downstream results.
-
-Identify equations inherited from prior work. For equations introduced or modified by this paper, state exactly what changed.
-
-Keep only equations necessary to understand the core mechanism. Move secondary equations, full hyperparameters, and symbol tables to the technical appendix.
-
-Equation formatting:
-
-* In the Markdown report file, use $...$ for all inline mathematics;
-* In the Markdown report file, use $$...$$ for display mathematics, with the opening and closing double dollar signs on their own lines;
-* Do not use \\(...\\) or \\[...\\] as math delimiters inside the report file;
-* Do not place equations in code blocks;
-* Typeset vectors and matrices in bold, for example $\\mathbf{x}$ and $\\mathbf{R}$;
-* Keep delimiters, signs, superscripts, subscripts, dimensions, and units correct;
-* If you rename paper notation for consistency, state that explicitly.
-
-### 5. Strictly Separate Training, Solving, and Deployment
-
-When the paper contains multiple stages, explain them separately:
-
-* Data preparation or preprocessing;
-* Offline per-sample or per-trajectory optimization;
-* Model pretraining;
-* Reinforcement or supervised learning;
-* Distillation, fine-tuning, or post-training;
-* Simulation evaluation;
-* Real-robot online inference and control.
-
-For every applicable stage, state:
-
-* Its input;
-* Its output;
-* Which parameters are updated;
-* Which modules are frozen;
-* Where the data come from;
-* Whether it requires a simulator, expert, reference trajectory, future information, or ground-truth label.
-
-Conclude with one concise table comparing the modules present during training with those present during deployment. Highlight information available only during training and inputs required at deployment.
-
-If an algorithm must run again for every new sample, identify it explicitly as a **per-instance solver** rather than describing it as a trained model that generalizes directly.
-
-### 6. Separate Core Innovations, Supporting Techniques, and Existing Components
-
-Do not call every design choice a contribution. Organize them into:
-
-* **Core innovation**: without it, the main method would not exist;
-* **Key supporting design**: improves stability, efficiency, scalability, or effectiveness;
-* **Implementation insight**: initialization, caching, scheduling, normalization, coordinate representation, sampling, or another small but practical choice;
-* **Inherited component**: a model, optimizer, controller, or training paradigm taken directly from prior work;
-* **Engineering integration**: not necessarily a new algorithm, but a combination valuable to the complete system.
-
-Explain why every item matters instead of repeating the authors' contribution list.
-
-## IV. Add Information According to the Paper Type
-
-Include only applicable material; do not emit irrelevant empty sections.
-
-### For Reinforcement-Learning or Control-Policy Papers
-
-Explain:
-
-* Observation, command, and action;
-* What the actor and critic each receive;
-* The major reward components and their roles;
-* Rollout, advantage estimation, and parameter-update procedure;
-* Control frequency, reference window, and low-level execution;
-* Differences between privileged training information and deployment observations;
-* Whether the policy outputs torque, position targets, residuals, or latent variables.
-
-### For Generative-Model Papers
-
-Explain:
-
-* The data representation;
-* How conditioning is injected;
-* The noising, interpolation, or forward process;
-* The network prediction target;
-* The training loss;
-* Sampling or integration during inference;
-* How the generated result enters the downstream controller;
-* Whether the generative model runs online, generates offline, or is used only during training.
-
-### For Trajectory-Optimization or Sampling-Based Optimization Papers
-
-Explain:
-
-* The decision variables;
-* How the initial solution is obtained;
-* The objective and constraints;
-* Sampling, rollout, selection, and update in each iteration;
-* Whether optimizer state can be reused across tasks;
-* The stopping condition;
-* Whether a new task requires solving again;
-* Whether the output is a control sequence, state trajectory, contact sequence, or reference action.
-
-### For Hierarchical Planning or Generation-and-Tracking Systems
-
-State explicitly:
-
-* What the high and low levels each do;
-* How their inputs and outputs connect;
-* Their respective execution frequencies;
-* Whether the high-level output is a command, keyframe, reference trajectory, or latent;
-* Whether the low level is a tracking policy, optimizer, or conventional controller;
-* Which level closes the loop after a disturbance.
-
-## V. Experiments and Evidence
-
-Organize the experimental discussion around the paper's central claims rather than following the order of its tables.
-
-For every main claim, answer:
-
-* Which experiment supports it?
-* Are the baselines appropriate?
-* Are data quantity, training budget, model scale, rewards, and control conditions fair?
-* What does the metric actually measure?
-* Is the improvement stable and practically meaningful?
-* Do ablations isolate the relevant component?
-* Is the evidence simulated, real-world, quantitative, or qualitative?
-* Does it validate generalization, robustness, efficiency, and deployability?
-* Which conclusions remain author claims without sufficient experimental support?
-
-Identify:
-
-* The single most convincing piece of evidence;
-* The most important ablation;
-* The weakest or most important missing validation;
-* Any conclusion that extends beyond what the experiments support.
-
-## VI. Limitations and Reproducibility
-
-Analyze only relevant dimensions:
-
-* Method assumptions;
-* Data dependence;
-* Computational cost;
-* Optimization stability;
-* Generalization scope;
-* Simulation-to-real risks;
-* Dependence on future information, manually provided references, or privileged state;
-* Failure cases;
-* Availability of code, models, and data;
-* Whether network architecture, hyperparameters, frequencies, and training details are sufficient for reproduction.
-
-Separate limitations explicitly acknowledged by the authors from limitations inferred from the method and experiments.
-
-## VII. Technical Appendix
-
-To keep the main narrative readable, move the following to the end:
-
-* Abbreviation and terminology table;
-* Main symbol table;
-* Secondary equations;
-* Complete hyperparameters;
-* Pseudocode ambiguities;
-* Internal inconsistencies in the paper;
-* Missing information required for reproduction;
-* Additions from external official sources.
-
-Do not let these verification details interrupt the explanatory thread.
-
-## VIII. Writing and Formatting
-
-1. Write in English while retaining exact technical terminology.
-2. Expand each abbreviation at first use, then use the abbreviation consistently.
-3. Write for graduate students with foundations in robotics, control, and reinforcement learning who have not read this paper.
-4. Do not over-explain basics such as PPO, PD, or FK, but fully explain paper-specific concepts and easily confused boundaries.
-5. Begin each section by explaining why it is needed, then explain how it works.
-6. Prefer prose; use lists and tables for procedures, stages, and exact comparisons.
-7. Do not mechanically follow the paper's original section order.
-8. Do not repeat the complete pipeline, contributions, or conclusions.
-9. Do not put a large terminology table, equation catalog, or reviewer checklist at the beginning.
-10. Prioritize a coherent main narrative; move completeness checks to the appendix.
-11. Write the final report to an actual Markdown file instead of pasting the entire report only into the conversation.
-12. Let the paper's complexity determine the length; never pad with repetition.
-
-### Figure Capture and Document Delivery (Codex)
-
-* Prefer any user-specified output location or filename. Otherwise, create a <paper-slug>-reading-report/ directory containing <paper-slug>-reading-report.md and an assets/ subdirectory for images.
-* While reading the main PDF and appendices, actively identify original figures that materially improve understanding. Prioritize the full method or system pipeline, core module or algorithm architecture, training-versus-deployment relationships, the most important result or ablation, and informative task or hardware setups, in that order.
-* Normally select the 2–5 highest-value figures, but use explanatory value rather than a quota. Include no figures when none would improve the report.
-* Use available PDF page capture, rendering, or cropping tools to save figures locally as PNG files. Crop page margins and unrelated prose tightly, but retain every axis, legend, panel label, annotation, and unit needed to interpret the figure. Never alter reported values, curves, or the scientific meaning of the original image.
-* Write every image path relative to the Markdown file as assets/<filename>.png, for example: ![Method overview](assets/fig-03-pipeline.png). Do not use absolute paths, file:// URIs, or network-dependent external image links. Use stable, short, descriptive English filenames without spaces.
-* Place each image close to its first substantive explanation. Follow it with a short caption stating what the reader should notice and the exact source, for example, "Captured from Figure 3, page 6 of the paper." Clearly mark images from a project page or another official source as "External official source."
-* Do not substitute images for analysis, capture long passages of prose, include merely decorative photos, fabricate or redraw figures, or use unrelated generated images. If a source cannot be accessed, captured clearly, or verified, state the limitation and omit the image instead of leaving a placeholder.
-* After writing the report and images, keep the unpacked report directory and also create a sibling <paper-slug>-reading-report.zip. The ZIP must contain the complete <paper-slug>-reading-report/ directory, its Markdown file, and its assets/ subdirectory so images work immediately after extraction. Create the ZIP even when no figures were selected, keeping delivery consistent.
-* In the final response, provide a clickable ZIP link first, followed by a clickable Markdown-report link, and briefly state how many paper figures were saved. Do not paste the full report again.
-
-### Equation Formatting in Chat Responses
-
-* This section applies to every chat response: before report generation, while working, when delivering the report, and during all follow-up questions. Do not carry the report file's dollar-sign format into chat.
-* Inline mathematics in chat responses must use \\(...\\). Display mathematics must use \\[...\\], with the opening and closing delimiters on their own lines.
-* Never use single or double dollar signs as math delimiters in chat responses. Dollar-sign delimiters are reserved exclusively for equations actually written into the Markdown report file.
-
-The final report should feel like a researcher who genuinely understands the paper is guiding the reader through the system's closed loop at progressively finer resolution—not like the paper has merely been rearranged into a longer, more fragmented document.`,
-
-};
-
+const readingPromptsPath = "reading_prompts_v4.json";
+let readingPrompts = [];
+let promptLoadFailed = false;
 const categories = [
   { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
   { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
@@ -4840,7 +4221,7 @@ const nodes = {
   langButtons: Array.from(document.querySelectorAll(".lang-button")),
   promptButton: document.querySelector("#prompt-button"),
   promptModal: document.querySelector("#prompt-modal"),
-  promptPreview: document.querySelector("#prompt-preview"),
+  promptCardList: document.querySelector("#prompt-card-list"),
   promptStatus: document.querySelector("#prompt-status"),
   sidebarToggle: document.querySelector("#sidebar-toggle"),
   sidebarRestore: document.querySelector("#sidebar-restore"),
@@ -5123,6 +4504,34 @@ async function loadSiteMeta() {
   }
 }
 
+async function loadPromptData() {
+  try {
+    const response = await fetch(readingPromptsPath, { cache: "no-cache" });
+    if (!response.ok) throw new Error("Prompt request failed.");
+    const payload = await response.json();
+    const items = payload && typeof payload === "object" && Array.isArray(payload.prompts) ? payload.prompts : [];
+
+    readingPrompts = items
+      .map((item) => ({
+        key: stringField(item && item.key),
+        version: stringField(payload.version),
+        title: item && typeof item.title === "object" ? item.title : {},
+        description: item && typeof item.description === "object" ? item.description : {},
+        usage: item && typeof item.usage === "object" ? item.usage : {},
+        body: stringField(item && item.body),
+      }))
+      .filter((item) => item.key && item.body);
+    promptLoadFailed = readingPrompts.length === 0;
+    if (!nodes.promptModal.hidden) renderPromptCards();
+    return readingPrompts.length > 0;
+  } catch {
+    readingPrompts = [];
+    promptLoadFailed = true;
+    if (!nodes.promptModal.hidden) renderPromptCards();
+    return false;
+  }
+}
+
 function localPaper(paper) {
   return paper[state.lang];
 }
@@ -5280,6 +4689,9 @@ function syncLanguage() {
     button.classList.toggle("is-active", button.dataset.lang === state.lang);
   });
   nodes.promptButton.textContent = text("promptButton");
+  if (!nodes.promptModal.hidden) {
+    renderPromptCards();
+  }
   applyLayout();
 }
 
@@ -5583,9 +4995,52 @@ nodes.paperDetail.addEventListener("click", (event) => {
   });
 });
 
+function localPromptField(prompt, field) {
+  const values = prompt && prompt[field] && typeof prompt[field] === "object" ? prompt[field] : {};
+  return stringField(values[state.lang]) || stringField(values.zh) || stringField(values.en);
+}
+
+function renderPromptCards() {
+  if (!nodes.promptCardList) return;
+
+  if (!readingPrompts.length) {
+    nodes.promptCardList.innerHTML =
+      '<p class="prompt-empty">' +
+      (promptLoadFailed ? text("promptLoadFailed") : text("promptLoading")) +
+      "</p>";
+    return;
+  }
+
+  nodes.promptCardList.innerHTML = readingPrompts
+    .map((prompt) =>
+      [
+        '<article class="prompt-card">',
+        '<div class="prompt-card-header">',
+        "<h3>" + escapeHtml(localPromptField(prompt, "title")) + "</h3>",
+        '<span class="prompt-version">' + escapeHtml(prompt.version) + "</span>",
+        "</div>",
+        '<p class="prompt-card-description">' +
+          escapeHtml(localPromptField(prompt, "description")) +
+          "</p>",
+        '<p class="prompt-card-usage">' + escapeHtml(localPromptField(prompt, "usage")) + "</p>",
+        "<details>",
+        "<summary>" + text("promptPreview") + "</summary>",
+        "<pre>" + escapeHtml(prompt.body) + "</pre>",
+        "</details>",
+        '<button class="action-link primary" type="button" data-prompt-copy="' +
+          escapeHtml(prompt.key) +
+          '">',
+        text("copyFullPrompt"),
+        "</button>",
+        "</article>",
+      ].join(""),
+    )
+    .join("");
+}
+
 function openPromptModal() {
   nodes.promptStatus.textContent = "";
-  nodes.promptPreview.textContent = readingPrompts[state.lang] || readingPrompts.zh;
+  renderPromptCards();
   nodes.promptModal.hidden = false;
 }
 
@@ -5603,11 +5058,11 @@ nodes.promptModal.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-prompt-copy]");
   if (!button) return;
 
-  const lang = button.dataset.promptCopy;
-  const prompt = readingPrompts[lang] || readingPrompts.zh;
+  const prompt = readingPrompts.find((item) => item.key === button.dataset.promptCopy);
+  if (!prompt) return;
 
   try {
-    await navigator.clipboard.writeText(prompt);
+    await navigator.clipboard.writeText(prompt.body);
     nodes.promptStatus.textContent = text("promptCopied");
   } catch {
     nodes.promptStatus.textContent = "";
@@ -5626,12 +5081,13 @@ function initialize() {
 }
 
 async function loadExternalData() {
-  const [metaLoaded, importedCount] = await Promise.all([
+  const [metaLoaded, importedCount, promptsLoaded] = await Promise.all([
     loadSiteMeta(),
     loadExternalPapers(),
+    loadPromptData(),
   ]);
   const noteCount = await loadPaperNotes();
-  if (metaLoaded || importedCount || noteCount) {
+  if (metaLoaded || importedCount || promptsLoaded || noteCount) {
     render();
   }
 }
