@@ -2586,6 +2586,86 @@
           "Reproduction requires care because the paper and public-code defaults differ: the paper reports 512/256/128 HIM hidden layers and 16 prototypes, whereas the public code defaults to 128/64 estimator layers, 32 prototypes, temperature 3, and three Sinkhorn iterations. The paper also has an arithmetic mismatch around 200M frames, an \\(H=5\\) history-length ambiguity, and incomplete details on target updates, temperature, and Sinkhorn."
         ]
       }
+    },
+    {
+      "id": "cts-concurrent-teacher-student-locomotion",
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2405.10830",
+      "project": "https://clearlab-sustech.github.io/concurrentTS/",
+      "arxiv": "https://arxiv.org/abs/2405.10830",
+      "year": "2024",
+      "venue": "IEEE Robotics and Automation Letters (RA-L), 2024",
+      "zh": {
+        "title": "CTS: Concurrent Teacher-Student Reinforcement Learning for Legged Locomotion",
+        "authors": "Hongxi Wang, Haoxiang Luo, Wei Zhang, Hua Chen",
+        "institutions": "School of System Design and Intelligent Manufacturing (SDIM), Southern University of Science and Technology; Zhejiang University-University of Illinois Urbana-Champaign Institute (ZJUI); LimX Dynamics",
+        "status": "全文已精读",
+        "takeaway": "CTS 最该记住的不是把两阶段蒸馏简单压成单阶段，而是让 student 使用自身历史编码器闭环 rollout，并让这些轨迹的 GAE/PPO 信号更新与 teacher 共享的 actor；因此 actor 在训练时就适应 student 的部署分布，但 student encoder 本身仍只由 latent 重建损失训练。",
+        "tags": [
+          "Concurrent Teacher-Student",
+          "PPO",
+          "Blind Locomotion",
+          "Proprioceptive Adaptation",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究仅依靠 IMU、关节编码器、速度指令和短历史的足式机器人盲走控制，目标是缓解 sequential teacher-student distillation 中 teacher 训练分布与 student 闭环部署分布不一致造成的 covariate shift。训练时，teacher 组由完整特权状态生成 latent，student 组由五帧本体历史生成 latent，两组使用同一个 actor/critic 并各自闭环采样；两组轨迹共同参与 PPO，而 student encoder 另用 MSE 逼近 teacher latent。相对两阶段 T-S，CTS 在四类地形上的速度跟踪指标改善 7.9%–21.85%，抗推存活率提高 4.57%–6.47%，并在 Unitree A1、Aliengo 与 LimX Dynamics P1 上进行了真机演示。实验支持 CTS 优于纯 sequential distillation，但缺少隔离 student PPO 与 latent reconstruction 作用的正交消融，真机结果也主要是定性展示。",
+        "innovations": [
+          "核心创新：将 8192 个并行环境分成 teacher 与 student 两组，让两条路径同时闭环 rollout，并把两组优势共同用于更新共享 actor；student 的失败状态和恢复需求因此会直接进入策略优化，而不再只通过监督模仿间接体现。",
+          "相对 sequential distillation 的关键改动：传统方法先在 \\(d_{\\pi_T}\\) 上训练 teacher，再让 student 模仿；CTS 直接在当前 student 诱导的 \\(d_{\\pi_S}\\) 上采样并优化任务回报，使共享 actor 在训练期就接触不完美 student latent 及其造成的状态偏移，从而缓解 covariate shift 和误差累积。",
+          "表示学习设计：privileged encoder 的 latent 由 teacher 路径的 PPO 回报塑形，不要求人工指定应估计的物理量；proprioceptive encoder 再从短历史在线追踪这一任务相关表示。两者共同演化，但论文没有给出收敛证明。",
+          "关键边界：student rollout 的 PPO 梯度只更新共享 actor 和 critic，不更新 proprioceptive encoder；student encoder 仍由 latent reconstruction loss 单独训练。因此 CTS 比纯蒸馏更强，但并不是 student 全网络端到端 RL。",
+          "工程组合而非独立算法创新：PPO、GAE、非对称 actor-critic、teacher-student latent 回归、地形课程、域随机化和低层 PD 都是继承组件；论文的新增价值主要在训练数据流和梯度路径的重组，以及在四足和点足双足上的系统验证。"
+        ],
+        "implementation": [
+          "部署 observation 为基座角速度、基座坐标系重力方向、关节位置与速度、平面线速度/偏航角速度指令以及上一动作；teacher 的完整 state 还包含基座线速度、地形高度采样、足端接触力、关节力矩和关节加速度等训练期特权信息。",
+          "Privileged encoder 输入完整 state，proprioceptive encoder 输入五帧本体 observation 历史；两个 encoder 的隐藏层均为 [512, 256]，输出 32 维并进行 \\(L_2\\) 归一化。共享 actor 输入当前 observation 与二选一的 latent，critic 输入完整 state 与当前 latent；actor 和 critic 的隐藏层均为 [512, 256, 128]，全部使用 ELU。",
+          "训练使用 Isaac Gym 中 8192 个并行环境，teacher 组 6144 个、student 组 2048 个。每轮两组分别执行 24 个控制步：teacher 使用 privileged latent，student 使用 history latent；仿真器产生各自下一状态、奖励和终止信号，因此 student 数据来自其自身误差造成的真实闭环分布。",
+          "两组 rollout 分别通过 GAE 计算 advantage 和 return，再求和形成 teacher PPO 与 student PPO 目标。Teacher 轨迹更新 privileged encoder 与共享 actor，student 轨迹更新共享 actor；两组 return 共同训练同一个 critic。GAE 中 rollout 时保存的 old value、advantage 和 return target 是固定数据，所谓 new critic 是同一 critic 经 value-loss 梯度更新后的参数版本，并非额外生成的网络。",
+          "PPO 更新后固定 teacher encoder 与 actor，用 MSE 让 proprioceptive encoder 输出逼近 stop-gradient teacher latent；student encoder 每轮训练 5 个 epoch，学习率为 \\(10^{-3}\\)。论文式 (8) 把 student 历史写成与独立 teacher 组 state 配对，按字面无法实现；合理实现应使用同一 student 环境的特权 state 生成监督 target，但论文和公开代码均未澄清。",
+          "PPO 配置为每轮 24 步、5 个 epoch、clip 0.2、折扣 \\(\\gamma=0.99\\)、GAE \\(\\lambda=0.95\\)、entropy coefficient 0.01、desired KL 0.01 和自适应学习率。训练采用 3:1 teacher/student 环境数，但两个组内平均后的 PPO 目标按公式直接相加，因此该比例不必然等价于 teacher 梯度权重为 student 的三倍。",
+          "Policy 在 50 Hz 输出驱动关节相对名义姿态的偏移，位置目标为 \\(\\mathbf{q}^{\\mathrm{ref}}_t=\\mathbf{q}^{\\mathrm{nominal}}+K\\mathbf{a}_t\\)，再由低层 PD 执行；它不是直接力矩策略。部署仅保留五帧历史缓存、proprioceptive encoder、共享 actor 与低层控制器，不需要 teacher encoder、critic、地形高度、奖励、GAE 或 PPO。",
+          "训练地形包括斜坡、粗糙斜坡、楼梯和离散障碍，并使用地形难度/速度指令课程。域随机化覆盖质量、payload、基座质心、摩擦、恢复系数、PD 增益、电机强度和 0–20 ms 动作延迟；奖励包括速度跟踪、姿态安全、能耗平滑、关节限制及足端调节，点足双足另加姿态、双脚距离和相位接触项。",
+          "定量仿真只在 Unitree A1 上进行，使用五个随机种子并在 5000 次迭代处评估。相对两阶段 T-S，CTS 在斜坡、粗糙斜坡、楼梯和离散障碍上的速度跟踪指标分别改善 17.85%、19.12%、7.9% 和 21.85%；抗推存活率分别提高 5.04%、6.47%、4.76% 和 4.57%，但 EstimatorNet 在多类地形上的抗推表现高于 CTS。",
+          "论文展示了 A1、Aliengo 和 P1 的零样本 Sim-to-Real 行为，但没有报告真机成功率、跌倒率、速度误差、能耗、推理时延或硬件基线。由于没有外感知，策略只能在足端与障碍发生接触后根据本体反馈适应，无法在首次接触前预见台阶或洞；同一框架可适配不同平台不等于一个策略参数集合能跨形态通用。"
+        ]
+      },
+      "en": {
+        "title": "CTS: Concurrent Teacher-Student Reinforcement Learning for Legged Locomotion",
+        "authors": "Hongxi Wang, Haoxiang Luo, Wei Zhang, Hua Chen",
+        "institutions": "School of System Design and Intelligent Manufacturing (SDIM), Southern University of Science and Technology; Zhejiang University-University of Illinois Urbana-Champaign Institute (ZJUI); LimX Dynamics",
+        "status": "Full paper reviewed",
+        "takeaway": "CTS should not be remembered as merely compressing two-stage distillation into one stage: the student performs closed-loop rollouts with its own history encoder, and the resulting GAE/PPO signals update the actor shared with the teacher, so the actor is trained on the student's deployment distribution, while the student encoder itself is still trained only by latent reconstruction.",
+        "tags": [
+          "Concurrent Teacher-Student",
+          "PPO",
+          "Blind Locomotion",
+          "Proprioceptive Adaptation",
+          "Sim-to-Real"
+        ],
+        "mainContent": "The paper studies blind legged locomotion using only an IMU, joint encoders, velocity commands, and a short proprioceptive history, with the goal of reducing the covariate shift between the teacher training distribution and the student's closed-loop deployment distribution in sequential teacher-student distillation. During training, the teacher group obtains a latent from the full privileged state, the student group obtains a latent from five frames of proprioceptive observations, and both groups use the same actor/critic and collect closed-loop rollouts; both trajectory sets contribute to PPO, while the student encoder separately reconstructs the teacher latent with MSE. Relative to two-stage teacher-student training, CTS improves the reported velocity-tracking metric by 7.9%–21.85% and push-survival rate by 4.57%–6.47% across four terrains, with hardware demonstrations on Unitree A1, Aliengo, and LimX Dynamics P1. The evidence supports an advantage over purely sequential distillation, but the paper lacks an orthogonal ablation separating student PPO from latent reconstruction, and its hardware evaluation is mainly qualitative.",
+        "innovations": [
+          "Core innovation: 8192 parallel environments are split into teacher and student groups that perform closed-loop rollouts concurrently, and the advantages from both paths update a shared actor; student failures and recovery requirements therefore enter policy optimization directly instead of appearing only through supervised imitation.",
+          "Key change relative to sequential distillation: conventional methods train a teacher on \\(d_{\\pi_T}\\) and then ask the student to imitate it, whereas CTS samples from the current student-induced \\(d_{\\pi_S}\\) and optimizes task return there. The shared actor is consequently exposed during training to imperfect student latents and the state deviations they cause, mitigating covariate shift and compounding error.",
+          "Representation-learning design: the privileged encoder latent is shaped by PPO return on the teacher path rather than by manually specified physical estimation targets, and the proprioceptive encoder tracks this task-relevant representation online from a short history. The two representations co-evolve, although the paper provides no convergence guarantee.",
+          "Important boundary: PPO gradients from student rollouts update the shared actor and critic but not the proprioceptive encoder; the student encoder is updated separately through latent reconstruction. CTS is therefore stronger than pure distillation but is not end-to-end RL over the entire student network.",
+          "Engineering integration rather than separate algorithmic novelty: PPO, GAE, asymmetric actor-critic, teacher-student latent regression, terrain curriculum, domain randomization, and low-level PD control are inherited components. The new contribution is mainly the reorganization of training data flow and gradient paths, plus system validation on quadrupedal and point-foot bipedal robots."
+        ],
+        "implementation": [
+          "The deployable observation contains base angular velocity, gravity projected into the base frame, joint positions and velocities, planar/yaw velocity commands, and the previous action. The teacher's full state additionally includes training-only privileged information such as base linear velocity, terrain-height samples, foot contact forces, joint torques, and joint accelerations.",
+          "The privileged encoder consumes the full state and the proprioceptive encoder consumes a five-frame observation history; both use [512, 256] hidden layers and produce an \\(L_2\\)-normalized 32-dimensional latent. The shared actor takes the current observation plus one of the two latents, while the critic takes the full state and current latent; actor and critic both use [512, 256, 128] hidden layers, and all networks use ELU activations.",
+          "Training uses 8192 Isaac Gym environments, with 6144 assigned to the teacher group and 2048 to the student group. In every iteration, each group runs 24 control steps: the teacher uses the privileged latent and the student uses the history latent. The simulator generates each group's next states, rewards, and terminations, so student data come from the closed-loop distribution induced by the student's own estimation and action errors.",
+          "GAE is applied separately to both rollout sets to compute advantages and returns, and the teacher and student PPO objectives are summed. Teacher trajectories update the privileged encoder and shared actor, student trajectories update the shared actor, and returns from both groups train the same critic. The rollout-time old values, advantages, and return targets are fixed data during optimization; the 'new critic' is simply the same critic after value-loss gradient updates, not a separately created network.",
+          "After PPO optimization, the teacher encoder and actor are held fixed while MSE trains the proprioceptive encoder toward a stop-gradient teacher latent; the student encoder is trained for five epochs per iteration with a learning rate of \\(10^{-3}\\). Equation (8) appears to pair a student history with a state from an independent teacher group, which is not directly implementable; a plausible implementation would generate the teacher target from the privileged state of the same student environment, but neither the paper nor public code resolves this ambiguity.",
+          "PPO uses 24 rollout steps per iteration, five epochs, clip 0.2, discount \\(\\gamma=0.99\\), GAE \\(\\lambda=0.95\\), entropy coefficient 0.01, desired KL 0.01, and an adaptive learning rate. Although the environment-count ratio is 3:1, the paper's equations average within each group and then add the two PPO objectives, so this ratio does not necessarily make the teacher gradient three times larger than the student gradient.",
+          "At 50 Hz, the policy outputs offsets from nominal joint poses, producing \\(\\mathbf{q}^{\\mathrm{ref}}_t=\\mathbf{q}^{\\mathrm{nominal}}+K\\mathbf{a}_t\\), which are executed by a low-level PD controller; the policy does not output joint torques directly. Deployment retains only the five-frame history buffer, proprioceptive encoder, shared actor, and low-level controller, with no teacher encoder, critic, terrain heights, rewards, GAE, or PPO.",
+          "Training covers slopes, rough slopes, stairs, and discrete obstacles with terrain-difficulty and velocity-command curricula. Domain randomization includes masses, payload, base center of mass, friction, restitution, PD gains, motor strength, and 0–20 ms action delay. Rewards cover velocity tracking, posture and safety, energy and smoothness, joint limits, and foot regulation, with additional posture, foot-distance, and phase-contact terms for the point-foot biped.",
+          "Quantitative simulation evaluation is performed only on Unitree A1 with five random seeds at iteration 5000. Relative to two-stage teacher-student training, CTS improves the velocity-tracking metric by 17.85%, 19.12%, 7.9%, and 21.85% on slopes, rough slopes, stairs, and discrete obstacles, respectively, and improves push-survival rate by 5.04%, 6.47%, 4.76%, and 4.57%; however, EstimatorNet is more push-robust than CTS on several terrains.",
+          "The paper demonstrates zero-shot Sim-to-Real behavior on A1, Aliengo, and P1 but reports no hardware success rate, fall rate, velocity error, energy use, inference latency, or hardware baseline. Without exteroception, the policy can adapt only after physical contact exposes an obstacle through proprioceptive feedback and cannot anticipate a step or hole before first contact; applying the framework separately to several platforms is not evidence that one parameter set generalizes across morphologies."
+        ]
+      }
     }
   ]
 }
