@@ -3161,6 +3161,107 @@
           "The evidence must be scoped carefully: the four real-robot tasks establish executability under predefined contact plans and some Sim-to-Real capability, but evaluation is primarily task-level demonstration; due to facility constraints, real-world Parkour only tests one or two consecutive jumps with double-foot sequences. The paper provides no automatic contact-plan generation, robust handling of unknown sequence length, failure predictor, or feasibility guarantee, and explicitly acknowledges dependence on motion-capture goals and explicit stage-switch feedback."
         ]
       }
+    },
+    {
+      "id": "x-loco-synergetic-policy-distillation",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.03733",
+      "project": "https://x-loco-humanoid.github.io",
+      "arxiv": "https://arxiv.org/abs/2603.03733",
+      "year": "2026",
+      "venue": "RSS 2026",
+      "zh": {
+        "title": "X-Loco: Towards Generalist Humanoid Locomotion Control via Synergetic Policy Distillation",
+        "authors": "Dewei Wang, Xinmiao Wang, Chenyun Zhang, Jiyuan Shi, Yingnan Zhao, Chenjia Bai, Xuelong Li",
+        "institutions": "University of Science and Technology of China; Institute of Artificial Intelligence (TeleAI), China Telecom; Harbin Engineering University",
+        "status": "全文已精读",
+        "takeaway": "先分别训练行走、跌倒恢复和全身协调三个 privileged specialist，再通过 CASS 选教师、SAR 混合推进轨迹和动作 MSE，把它们蒸馏为仅依赖本体历史、深度图和速度指令的单一视觉 generalist；三个 specialist 是冻结教师，而学生内部两个 MoE experts 是从头联合学出的子网络，二者没有一一对应关系。",
+        "tags": [
+          "Humanoid Locomotion",
+          "Policy Distillation",
+          "Mixture-of-Experts",
+          "CASS",
+          "SAR",
+          "SFI",
+          "AMP",
+          "Fall Recovery",
+          "Whole-Body Coordination",
+          "Depth Perception",
+          "Unitree G1"
+        ],
+        "mainContent": "X-Loco 解决单一人形策略难以同时覆盖视觉地形行走、跌倒恢复和接触丰富的全身协调动作的问题。方法先用 PPO 独立训练三个依赖特权信息的 specialist，再由 CASS 根据头部高度和地形类别选择当前教师，通过 SAR 逐步从教师主导 rollout 过渡到学生 rollout，并以教师动作为监督标签训练视觉 generalist。部署策略只接收本体历史、连续深度图和速度指令，不再需要 reference motion；仿真中三类任务平均成功率分别为 0.939、0.871 和 1.000，并在 Unitree G1 上展示了连续地形穿越、翻滚和跌倒后起身。证据边界是：学生仍受教师覆盖范围限制，WBC 性能低于 specialist，而且 MoE 消融只证明其在给定设置中有收益，不能排除容量增加带来的解释。",
+        "innovations": [
+          "系统层面的主要贡献是把 upright locomotion、fall recovery 与 whole-body coordination 三类动力学和目标差异明显的技能，整合到一个基于深度视觉、仅由速度指令驱动的 generalist policy 中；这更接近已有 PPO、AMP、motion tracking、behavior cloning 与 MoE 的系统组合，而不是提出新的基础 RL 算法。",
+          "Case-Adaptive Specialist Selection（CASS）根据机器人头部高度和地形类别 one-hot 选择一个 specialist 产生动作标签，使学生在不同技能区间及其切换状态获得相应教师监督。",
+          "Specialist Annealing Rollout（SAR）以退火概率混合 specialist 与 student 动作来推进环境：前期借教师到达复杂动作的后半段，后期逐渐暴露学生自身诱导的状态分布，以缓解纯 teacher-forced behavior cloning 的 covariate shift。",
+          "Stochastic Fall Injection（SFI）在行走和攀爬过程中施加情境相关外力，使训练数据包含从正常运动进入失衡、再切换到恢复的过渡状态；并通过停滞检测终止不可恢复轨迹。",
+          "工程上实现了面向大规模并行环境的 Warp 深度渲染，并将静态地形 mesh 与每个环境自身的动态机器人 mesh 分开查询，以支持视觉策略训练。"
+        ],
+        "implementation": [
+          "三个 specialist 都是预训练并在蒸馏阶段冻结的完整 Actor-Critic 教师，统一输出 23 维 action。action 通过 \\(q_t^{\\mathrm{target}}=q^{\\mathrm{default}}+\\alpha\\odot a_t\\) 转换为关节目标，再由 PD 控制器执行。",
+          "Upright locomotion specialist \\(\\pi_l\\) 通过 PPO 训练，输入十帧特权状态历史、143 维 elevation map 和速度指令；任务奖励负责速度跟踪与地形穿越，LAFAN1 动作片段只用于 AMP discriminator 产生 style reward，因此 AMP 是辅助风格约束，不是逐帧 reference tracking。",
+          "Fall recovery specialist \\(\\pi_r\\) 从加入大关节噪声的 prone（俯卧）和 supine（仰卧）姿态初始化，不使用 elevation map；PPO 奖励分为恢复任务、AMP style、regularization 和站立后的 post-task 奖励，并采用四个独立 critics。恢复 MoCap 用于 AMP 风格判别而非逐帧 BC；论文未明确给出四个 critic 与四组奖励的逐项对应及优势合成公式。",
+          "Whole-body coordination specialist \\(\\pi_w\\) 采用 reference-conditioned motion tracking，而不是 AMP。它接收当前本体状态、elevation map 和 52 维 motion command，直接用身体位置、姿态、线角速度和 anchor tracking 等逐帧奖励学习箱体攀爬与前滚等动作；reference motion 只在教师训练和蒸馏标签生成阶段使用，部署 generalist 不需要它。",
+          "必须区分 specialist 与 MoE expert：三个 specialists 是独立 PPO 预训练、随后冻结并最终删除的教师策略；两个 MoE experts 是 generalist 内部随机初始化并随学生端到端训练的子网络。论文没有规定行走、恢复或全身协调分别对应哪个 MoE expert，也没有 expert-selection 标签。",
+          "Generalist 输入为十步 proprioceptive history、连续 64×64 深度图和速度指令。CNN depth encoder 将深度序列压缩为 128 维 latent，history encoder 编码本体历史；其时间特征与视觉 latent 一起送入 MoE。gate 和每个 expert 都是三层 MLP [512, 256, 128]，采用两个 experts；论文只说明 gate 调制 expert contributions，没有公开足以确认 tensor-level 混合位置和最终 action head 连接方式的完整公式。",
+          "CASS 根据 \\(f(b_t,I_t)\\) 选择当前唯一教师：头部高度低于 1.1 m 时选 recovery，面对高平台或约 0.7 m 悬挂障碍时选对应 whole-body specialist，其余情况选 locomotion。所选 specialist 用干净的 privileged observation 输出 \\(a_t^*\\)，学生用加噪非特权观测输出动作，并最小化 \\(\\mathcal{L}_{\\mathrm{distill}}=\\mathbb{E}[\\lVert\\pi_g(o_{u,t})-a_t^*\\rVert_2^2]\\)。该 MSE 更新学生的编码器、gate、两个 MoE experts 和动作输出部分，不更新 specialists。",
+          "SAR 与 MoE 属于两个独立层面：MoE 决定学生内部怎样算出动作，SAR 决定哪个动作实际推进仿真器。每步采样 \\(b_t\\sim\\mathrm{Bernoulli}(\\rho)\\)，执行 \\(a_{\\mathrm{env}}=b_ta_t^*+(1-b_t)a_t^u\\)，但无论执行教师还是学生动作，都保存 \\((o_{u,t},a_t^*)\\) 训练学生；只有执行教师动作的步骤属于 teacher-forced rollout。",
+          "SAR 的 specialist ratio \\(\\rho\\) 以滞回规则退火：蒸馏 MSE 低于 0.005 时每轮减少 \\(10^{-4}\\)，高于 0.010 时暂停衰减。它先利用教师访问成功技能轨迹的后半段，再逐渐转向学生诱导的部署状态分布；论文未与匹配预算的标准 DAgger 做直接比较。",
+          "SFI 不只在 episode 开始时设置倒地状态，而是在高速转弯、翻滚等脆弱阶段施加外力，主动产生 locomotion/coordination 到 recovery 的切换数据；若恢复阶段连续头高方差低于阈值，认为机器人卡住并终止 episode。",
+          "训练在 Isaac Lab 中使用 4096 个并行环境。三个 specialists 分别训练 30,000、10,000 和 50,000 iterations；generalist 以 supervised behavior cloning 训练 30,000 iterations，而不是再用 PPO 更新。",
+          "部署平台为 23-DoF Unitree G1，配备 Intel RealSense D435i 和 Jetson Orin NX；policy 以 50 Hz 输出关节目标，500 Hz PD 回路执行。深度 Sim-to-Real 使用噪声、模糊、相机内外参随机化，以及真机深度 hole filling 和 Gaussian filtering。",
+          "仿真结果中 X-Loco 在 upright locomotion、WBC 和 recovery 上分别达到 0.939、0.871 和 1.000 的平均成功率。MoE-2 的总体平均成功率为 0.928，高于无 MoE 的 0.749 和 MoE-3 的 0.779；但论文没有提供参数量匹配的更宽 MLP，也没有展示 gate activation 或 expert 分工，因此不能确认收益来自技能专门化而非容量或优化差异。",
+          "作者明确限制包括窄视场相机导致感知范围有限、真实深度噪声难以完全建模，以及 behavior cloning 使 generalist 的能力上界受 specialist 性能与状态覆盖约束；WBC 从 specialist 的 1.000 降至 generalist 的 0.871，也说明复杂接触技能仍有明显蒸馏损失。"
+        ]
+      },
+      "en": {
+        "title": "X-Loco: Towards Generalist Humanoid Locomotion Control via Synergetic Policy Distillation",
+        "authors": "Dewei Wang, Xinmiao Wang, Chenyun Zhang, Jiyuan Shi, Yingnan Zhao, Chenjia Bai, Xuelong Li",
+        "institutions": "University of Science and Technology of China; Institute of Artificial Intelligence (TeleAI), China Telecom; Harbin Engineering University",
+        "status": "Full paper reviewed",
+        "takeaway": "X-Loco first trains three privileged specialists for locomotion, fall recovery, and whole-body coordination, then distills them into one vision-based generalist through CASS teacher selection, SAR mixed rollouts, and action MSE; the three specialists are frozen teachers, whereas the student's two MoE experts are jointly learned internal subnetworks with no one-to-one mapping to the specialists.",
+        "tags": [
+          "Humanoid Locomotion",
+          "Policy Distillation",
+          "Mixture-of-Experts",
+          "CASS",
+          "SAR",
+          "SFI",
+          "AMP",
+          "Fall Recovery",
+          "Whole-Body Coordination",
+          "Depth Perception",
+          "Unitree G1"
+        ],
+        "mainContent": "X-Loco addresses the difficulty of covering vision-based terrain locomotion, fall recovery, and contact-rich whole-body coordination with a single humanoid policy. It independently trains three privileged specialists with PPO, uses CASS to select the active teacher from head height and terrain context, applies SAR to transition from teacher-driven to student-driven rollouts, and supervises the vision-based generalist with the selected teacher action. At deployment, the generalist uses only proprioceptive history, sequential depth images, and a velocity command, without reference motions; simulation success rates for locomotion, whole-body coordination, and recovery are 0.939, 0.871, and 1.000, respectively, followed by demonstrations on a Unitree G1. The evidence is limited by specialist coverage, a remaining WBC gap, and a MoE ablation that does not rule out increased capacity as the source of improvement.",
+        "innovations": [
+          "The primary system-level contribution is the integration of upright locomotion, fall recovery, and whole-body coordination—three regimes with substantially different dynamics and objectives—into one depth-based, velocity-commanded generalist. This is best viewed as a system synthesis of existing PPO, AMP, motion tracking, behavior cloning, and MoE components rather than a new foundational RL algorithm.",
+          "Case-Adaptive Specialist Selection (CASS) uses robot head height and terrain category to select one specialist as the action-label provider, exposing the student to appropriate supervision within each skill regime and around transitions.",
+          "Specialist Annealing Rollout (SAR) mixes specialist and student actions with an annealed probability: early teacher control reaches later parts of complex maneuvers, while later student control exposes the learner to its deployment-induced state distribution and reduces covariate shift from pure teacher forcing.",
+          "Stochastic Fall Injection (SFI) applies context-dependent disturbances during locomotion and climbing so that training includes transitions from normal motion to imbalance and recovery, with stagnation-based termination for unrecoverable trajectories.",
+          "The system includes a Warp-based depth renderer that separately queries a shared static terrain mesh and each environment's local dynamic robot mesh for scalable visual-policy training."
+        ],
+        "implementation": [
+          "The three specialists are complete Actor-Critic teachers pretrained and then frozen during distillation, all sharing a 23-dimensional action space. The action is mapped to joint targets by \\(q_t^{\\mathrm{target}}=q^{\\mathrm{default}}+\\alpha\\odot a_t\\) and executed by a PD controller.",
+          "The upright locomotion specialist \\(\\pi_l\\) is trained with PPO from ten-step privileged state history, a 143-dimensional elevation map, and a velocity command. Task rewards define velocity tracking and terrain traversal, while LAFAN1 motion clips are used only by an AMP discriminator to produce a style reward; AMP is therefore an auxiliary prior, not frame-wise reference tracking.",
+          "The fall-recovery specialist \\(\\pi_r\\) is initialized from noisy prone and supine poses and does not use an elevation map. PPO combines recovery-task, AMP-style, regularization, and post-task standing rewards, with four independent critics. Recovery MoCap trains the AMP style discriminator rather than providing frame-wise BC targets; the paper does not specify a one-to-one mapping between the four critics and four reward groups or the exact advantage-combination formula.",
+          "The whole-body coordination specialist \\(\\pi_w\\) follows reference-conditioned motion tracking rather than AMP. It receives current proprioception, an elevation map, and a 52-dimensional motion command, and is directly rewarded for body position, orientation, linear/angular velocity, and anchor tracking when learning box climbing and forward rolls. Reference motions are used for teacher training and teacher-action generation during distillation, but not by the deployed generalist.",
+          "Specialists and MoE experts must not be conflated: the three specialists are independently PPO-pretrained teachers that are frozen and discarded after distillation; the two MoE experts are randomly initialized internal subnetworks jointly learned with the generalist. There is no locomotion/recovery/coordination-to-expert assignment and no expert-selection label.",
+          "The generalist consumes ten-step proprioceptive history, sequential 64×64 depth images, and a velocity command. A CNN depth encoder produces a 128-dimensional latent, while a history encoder processes proprioceptive history; their temporal and visual features feed the MoE. The gate and each expert are three-layer MLPs [512, 256, 128], with two experts. The paper states that the gate modulates expert contributions but does not provide enough tensor-level detail to confirm the exact mixing location and final action-head wiring.",
+          "CASS uses \\(f(b_t,I_t)\\) to choose exactly one teacher: recovery when head height is below 1.1 m, the relevant whole-body specialist for a high platform or an approximately 0.7 m overhead obstacle, and locomotion otherwise. The selected specialist produces \\(a_t^*\\) from clean privileged observations, and the student minimizes \\(\\mathcal{L}_{\\mathrm{distill}}=\\mathbb{E}[\\lVert\\pi_g(o_{u,t})-a_t^*\\rVert_2^2]\\) from noisy non-privileged observations. This MSE updates the student's encoders, gate, two MoE experts, and action-output components, while all specialists remain frozen.",
+          "SAR and MoE operate at separate levels: MoE determines how the student computes an action internally, whereas SAR determines which action advances the simulator. Each step samples \\(b_t\\sim\\mathrm{Bernoulli}(\\rho)\\) and executes \\(a_{\\mathrm{env}}=b_ta_t^*+(1-b_t)a_t^u\\), but stores \\((o_{u,t},a_t^*)\\) regardless of which action was executed. Only steps that execute the teacher action are teacher-forced rollouts.",
+          "The SAR specialist ratio \\(\\rho\\) follows hysteresis-based annealing: it decreases by \\(10^{-4}\\) per iteration when distillation MSE is below 0.005 and pauses when the loss exceeds 0.010. This first uses teacher control to reach later parts of successful trajectories and then shifts toward the student-induced deployment distribution. The paper does not compare SAR directly against a budget-matched standard DAgger baseline.",
+          "SFI applies disturbances during vulnerable contexts such as high-speed turns and rolls, instead of only initializing episodes from fallen states. During recovery, an episode terminates if the variance of recent head heights falls below a threshold, indicating that the robot is stuck.",
+          "Training uses Isaac Lab with 4,096 parallel environments. The locomotion, recovery, and whole-body specialists train for 30,000, 10,000, and 50,000 iterations, respectively; the generalist trains for 30,000 iterations using supervised behavior cloning rather than PPO.",
+          "Deployment uses a 23-DoF Unitree G1 with an Intel RealSense D435i and Jetson Orin NX. The policy outputs joint targets at 50 Hz and a 500 Hz PD loop executes them. Depth sim-to-real treatment includes noise, blur, camera intrinsic/extrinsic randomization, plus hole filling and Gaussian filtering for real depth images.",
+          "In simulation, X-Loco reaches mean success rates of 0.939, 0.871, and 1.000 on upright locomotion, WBC, and recovery. MoE-2 obtains an overall mean of 0.928 versus 0.749 without MoE and 0.779 for MoE-3. However, the paper does not include a parameter-matched wider MLP or visualize gate activations and expert roles, so the gain cannot be attributed conclusively to skill specialization rather than capacity or optimization differences.",
+          "The authors identify a narrow camera field of view, imperfect modeling of real depth noise, and the behavior-cloning ceiling imposed by specialist performance and state coverage as limitations. The WBC drop from 1.000 for the specialist to 0.871 for the generalist also shows substantial residual distillation loss for contact-rich skills."
+        ]
+      }
     }
   ]
 }
