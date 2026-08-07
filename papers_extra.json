@@ -2985,6 +2985,95 @@
           "The central evidence boundary is that Atari results report only most-probable-action error and KL divergence on held-out teacher-generated frames; the student is never rolled out in the game, and score, state-distribution shift, and disturbance recovery are not reported. Major reproducibility gaps include the Atari derivative weight \\(\\alpha\\), training duration, the Figure 4 x-axis unit, random seeds, and the exact random-direction sampling protocol."
         ]
       }
+    },
+    {
+      "id": "ahc-adaptive-humanoid-control",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2511.06371",
+      "project": "https://ahc-humanoid.github.io/",
+      "arxiv": "https://arxiv.org/abs/2511.06371",
+      "year": "2026",
+      "venue": "AAAI 2026",
+      "zh": {
+        "title": "Towards Adaptive Humanoid Control via Multi-Behavior Distillation and Reinforced Fine-Tuning",
+        "authors": "Yingnan Zhao, Xinmiao Wang, Dewei Wang, Xinzhe Liu, Dan Lu, Qilong Han, Peng Liu, Chenjia Bai",
+        "institutions": "College of Computer Science and Technology, Harbin Engineering University; Institute of Artificial Intelligence (TeleAI), China Telecom; School of Information Science and Technology, University of Science and Technology of China; School of Information Science and Technology, ShanghaiTech University; College of Computer Science and Technology, Harbin Institute of Technology; Shenzhen Research Institute of Northwestern Polytechnical University; National Engineering Laboratory for Modeling and Emulation in E-Government, Harbin Engineering University",
+        "status": "全文已精读",
+        "takeaway": "这篇论文应记成一套工程组合：两个 PPO+AMP 单行为教师经高度路由蒸馏为双专家 MoE 学生，再用 behavior-specific critics 与 PCGrad 在复杂地形联合微调；它证明了统一起身—行走策略能够工作，但没有证明 MoE 或两阶段路线不可替代。",
+        "tags": [
+          "AHC",
+          "Humanoid Locomotion",
+          "Recovery",
+          "Policy Distillation",
+          "Mixture-of-Experts",
+          "AMP",
+          "PCGrad",
+          "PPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "AHC 试图把 Unitree G1 的跌倒恢复与速度指令行走统一到一个仅依赖本体观测的控制策略中，并让其在坡面、矮障碍和离散块地形上自动完成行走—跌倒—起身—继续行走。第一阶段分别用 PPO、任务奖励和 AMP 训练 recovery/walking 特权教师，再按当前 base height 选择教师，把其动作与高斯策略分布蒸馏到一个双专家 MoE 学生；第二阶段保留同一共享 actor，用行为专属 critic 和 PCGrad 在多地形上联合 PPO 微调。Table 1 显示蒸馏策略经微调后 slope locomotion success 从 0.160 提升至 0.975，论文也展示了无需真机微调的 G1 定性部署案例。论文没有提供同架构同交互量的直接多任务 RL、参数量匹配 dense MLP、外部 FSM 或 oracle gate 基线，因此证据只说明完整 pipeline 能工作，尚未证明两阶段蒸馏、MoE 专门化或隐式切换是性能来源。",
+        "innovations": [
+          "可辩护的核心贡献是训练调度与系统接口：先得到 privileged recovery/walking teachers，再蒸馏为 proprioception-only unified actor，最后在目标地形上 reinforced fine-tuning；MoE、DAgger、AMP、PPO、multi-critic 和 PCGrad 本身均为已有组件。",
+          "蒸馏期用当前基座高度 \\(h_{\\mathrm{base}}>0.5\\,\\mathrm m\\) 选择 walking teacher，否则选择 recovery teacher，从而为同一个 student 在连续 rollout 中生成行为相关的教师标签；部署时删除该高度路由。",
+          "第二阶段把两种行为放在各自 task worker、reward 与 critic 中产生 rollout 和梯度，同时共享一套 MoE actor，并用 PCGrad 处理负内积的 actor gradients，以降低联合微调时的任务干扰。"
+        ],
+        "implementation": [
+          "完整训练分三段：两个平地 PPO+AMP teachers 各训练 10,000 iterations；冻结 teachers 后蒸馏 MoE student 4,000 iterations；再在 flat、slope、hurdle、discrete terrains 上联合 PPO fine-tune 10,000 iterations。论文采用 IsaacGym、4096 个并行环境、rollout length 32、每轮 5 epochs 和 4 minibatches；teacher/student learning rate 为 \\(10^{-3}\\)，fine-tuning 降为 \\(10^{-4}\\)。",
+          "两个 teacher 与两个 student experts 不是同一组对象。\\(\\pi_w^b\\) 和 \\(\\pi_r^b\\) 是先独立训练、蒸馏时冻结并负责给标签的完整策略；student 的两个 experts 与 learned gate 共同构成唯一的 MoE 策略 \\(\\pi^d\\)，它们不是两个 teacher 的直接复制，也没有被显式指定为一号走路、二号起身。",
+          "Student MoE 由两个 \\([512,256,128]\\) expert MLP 和一个同样为 \\([512,256,128]\\) 的 gate MLP 构成，gate 产生两个 expert action 的 mixing weights。论文只监督最终混合输出，没有 gate cross-entropy、expert identity label 或 load-balancing loss，也没有公开 gate 归一化、混合位置或 expert 权重可视化，因此不能确认两个 experts 是否真正发生 recovery/walking 专门化。",
+          "Base height 不是 student observation，也不直接进入 MoE gate 或 loss。训练器先计算 \\(m_t=\\mathbf 1[h_t^{\\mathrm{base}}>0.5\\,\\mathrm m]\\)，再由 \\(m_t\\) 选择 walking/recovery teacher；真正进入 loss 的标签是所选 teacher 的 action 和 policy distribution。等价地，height 只决定这一步向哪个老师查询答案，并不监督 student 内部应调用哪个 expert。",
+          "蒸馏环境可确认会从 fallen 或 standing posture 初始化，但论文没有说明两类 reset 的比例、supine/prone 比例、是否固定分组、成功后是否继续 episode 或具体 termination。Teacher 是按每一步当前 base height 动态选择，而非永久绑定环境组；因此同一个 recovery-reset environment 理论上可在站起超过阈值后改由 walking teacher 监督，standing environment 摔倒后也可反向切换。",
+          "作者称蒸馏为 DAgger，但 Algorithm 1 漏写 \\(\\mathrm{env.step}(a)\\)，没有说明由 student action、teacher action 还是二者混合推进状态。若由 student 主导 rollout，才符合用 learner-induced states 查询 teacher 的 DAgger 核心；现有正文只能确认迭代教师查询和监督更新，不能确认严格的数据聚合方式。",
+          "蒸馏目标为 \\(\\mathcal L=0.1\\,\\lVert a^d-a^b\\rVert_2^2+0.5\\,D_{\\mathrm{KL}}(\\pi^d\\Vert\\pi^b)\\)。这里 \\(\\pi(\\cdot\\mid s)=\\mathcal N(\\mu(s),\\operatorname{diag}(\\sigma^2))\\) 表示完整高斯动作分布，而 \\(a\\sim\\pi(\\cdot\\mid s)\\) 是一次动作样本或控制输出；MSE 对齐动作，KL 同时对齐均值与方差，二者部分重叠但不等价。论文没有说明 teacher/student action sampling 是否共享噪声；若独立采样，MSE 单独会倾向压低 student 方差，KL 才约束其匹配 teacher 方差。",
+          "Deployed actor 的输入是 69 维 \\(s_t^{\\mathrm{prop}}=[\\omega_t,g_t,c_t,q_t,\\dot q_t,a_{t-1}]\\)，其中包含机身角速度、重力方向、三维速度命令、20 维关节位置/速度和上一动作，不含 base height、显式 behavior ID 或 privileged dynamics。策略以 50 Hz 输出 20 维关节位置偏移，低层 500 Hz PD 执行；teachers、critics、AMP discriminators、reference motions、rewards、PCGrad 和高度路由全部在部署时删除。",
+          "Fine-tuning 以蒸馏后的 \\(\\pi^d\\) 初始化共享 MoE actor；walking 与 recovery 各自在独立 task worker/GPU、环境、reward、AMP reference 和 critic 上计算 rollout、GAE 与 actor gradient。若两任务梯度内积为负，main process 随机选择一个方向执行 PCGrad 投影，再更新唯一的共享 actor 并把参数广播回 workers；critics 各自更新，不进入 PCGrad。论文没有说明投影后梯度求和还是平均、critic 如何初始化或 AMP discriminator 是续训、重置还是冻结。",
+          "作者称 fine-tuning 使用 \\(10^{-3}\\) 容易 policy collapse 和 forgetting，因此降至 \\(10^{-4}\\)。结合语境，policy collapse 应理解为 PPO 更新过大后整体策略性能和 on-policy rollout 突然退化，并由坏数据继续更新形成失败闭环；它不等同于只忘掉某一技能，也不是论文已证明的 MoE gate/expert collapse。论文没有定义 collapse 指标，也没有给两种学习率的正式消融。",
+          "关键证据限制包括：没有 direct multi-task RL from scratch 的容量与总交互量匹配基线，没有单 expert 或参数量匹配 dense actor，没有 two policies + hysteresis FSM、oracle-height gate、gate weight/expert specialization 分析，也没有四项 critic/PCGrad 消融对应的最终 success 与多 seed 置信区间。因此不能把统一控制效果因果归因于 MoE、DAgger、PCGrad 或两阶段训练中的任一单独模块。",
+          "复现仍受多处正文缺口阻碍：项目页截至核查时仍标注 code coming soon；action scale、observation normalization、student history、gate normalization、reset 比例和 DAgger rollout action 未公开。Eq. (3) 的 PD 误差写成 \\(q_t^{\\mathrm{target}}-q^{\\mathrm{default}}\\) 而不是常规的 \\(q_t^{\\mathrm{target}}-q_t\\)，AMP discriminator objective 的最大化符号也与目标描述冲突，均需官方代码或作者澄清。"
+        ]
+      },
+      "en": {
+        "title": "Towards Adaptive Humanoid Control via Multi-Behavior Distillation and Reinforced Fine-Tuning",
+        "authors": "Yingnan Zhao, Xinmiao Wang, Dewei Wang, Xinzhe Liu, Dan Lu, Qilong Han, Peng Liu, Chenjia Bai",
+        "institutions": "College of Computer Science and Technology, Harbin Engineering University; Institute of Artificial Intelligence (TeleAI), China Telecom; School of Information Science and Technology, University of Science and Technology of China; School of Information Science and Technology, ShanghaiTech University; College of Computer Science and Technology, Harbin Institute of Technology; Shenzhen Research Institute of Northwestern Polytechnical University; National Engineering Laboratory for Modeling and Emulation in E-Government, Harbin Engineering University",
+        "status": "Full paper reviewed",
+        "takeaway": "Remember this paper as an engineering composition: two PPO+AMP single-behavior teachers are height-routed into a two-expert MoE student, which is then jointly fine-tuned on complex terrain with behavior-specific critics and PCGrad; the paper shows that the unified recovery-walking policy works, but does not establish that MoE or the two-stage route is irreplaceable.",
+        "tags": [
+          "AHC",
+          "Humanoid Locomotion",
+          "Recovery",
+          "Policy Distillation",
+          "Mixture-of-Experts",
+          "AMP",
+          "PCGrad",
+          "PPO",
+          "Sim-to-Real"
+        ],
+        "mainContent": "AHC aims to unify fall recovery and command-conditioned walking on Unitree G1 in a single proprioceptive controller that can complete walking-falling-recovery-resumption cycles on slopes, low hurdles, and discrete blocks. Stage one trains privileged recovery and walking teachers with PPO, task rewards, and AMP, then selects a teacher by current base height and distills its action and Gaussian policy distribution into a two-expert MoE student; stage two retains the shared actor and jointly fine-tunes it on multiple terrains with behavior-specific critics and PCGrad. Table 1 reports that fine-tuning raises slope locomotion success from 0.160 for the distilled policy to 0.975, and the paper presents qualitative G1 deployments without real-robot fine-tuning. Because it omits a matched direct multi-task RL baseline, a capacity-matched dense MLP, an external FSM, and an oracle-gate comparison, the evidence shows that the complete pipeline works but does not establish that two-stage distillation, MoE specialization, or implicit switching causes the gains.",
+        "innovations": [
+          "The defensible core contribution is the training schedule and system interface: privileged recovery/walking teachers are distilled into a proprioception-only unified actor, which is then reinforced-fine-tuned on target terrains; MoE, DAgger, AMP, PPO, multi-critic learning, and PCGrad are all inherited components.",
+          "During distillation, current base height \\(h_{\\mathrm{base}}>0.5\\,\\mathrm m\\) selects the walking teacher and otherwise selects the recovery teacher, producing behavior-dependent labels for one student along a continuous rollout; this height router is removed at deployment.",
+          "The second stage generates rollouts and gradients in separate task workers with their own rewards and critics while sharing one MoE actor, and applies PCGrad to conflicting actor gradients to reduce interference during joint fine-tuning."
+        ],
+        "implementation": [
+          "Training has three segments: two flat-ground PPO+AMP teachers are trained for 10,000 iterations each; the frozen teachers supervise MoE student distillation for 4,000 iterations; joint PPO fine-tuning then runs for 10,000 iterations on flat, slope, hurdle, and discrete terrains. The paper uses IsaacGym, 4,096 parallel environments, rollout length 32, five epochs and four minibatches per iteration; teacher/student learning rate is \\(10^{-3}\\), reduced to \\(10^{-4}\\) for fine-tuning.",
+          "The two teachers and the two student experts are different objects. \\(\\pi_w^b\\) and \\(\\pi_r^b\\) are complete independently trained policies that are frozen and queried for labels during distillation; the two experts and learned gate jointly constitute the single MoE student \\(\\pi^d\\), are not direct copies of the teachers, and are not explicitly assigned walking versus recovery roles.",
+          "The student MoE contains two \\([512,256,128]\\) expert MLPs and a \\([512,256,128]\\) gate MLP that produces mixing weights over expert actions. Only the final mixture is supervised: there is no gate cross-entropy, expert identity label, or load-balancing loss, and the paper does not disclose the gate normalization, mixture location, or gate/expert visualizations, so actual recovery/walking specialization is unverified.",
+          "Base height is neither a student observation nor a direct input to the MoE gate or loss. The trainer first computes \\(m_t=\\mathbf 1[h_t^{\\mathrm{base}}>0.5\\,\\mathrm m]\\) and uses it to select the walking or recovery teacher; the selected teacher's action and policy distribution are the labels that enter the loss. Height therefore decides which teacher answers the current query, but does not supervise which internal expert the student should use.",
+          "The paper confirms that distillation environments initialize from fallen or standing postures, but does not specify reset proportions, supine/prone proportions, fixed grouping, whether an episode continues after successful recovery, or exact termination rules. Teacher selection is recomputed from current base height at every step rather than permanently bound to an environment group, so a recovery-reset environment can in principle switch to walking supervision after standing up, and a standing environment can switch in the opposite direction after falling.",
+          "The authors call the procedure DAgger, but Algorithm 1 omits \\(\\mathrm{env.step}(a)\\) and never states whether student actions, teacher actions, or a mixture advances the simulation. Student-driven rollouts would satisfy DAgger's core requirement of querying teachers on learner-induced states; the paper as written only establishes iterative teacher querying and supervised updates, not strict data aggregation.",
+          "The distillation objective is \\(\\mathcal L=0.1\\,\\lVert a^d-a^b\\rVert_2^2+0.5\\,D_{\\mathrm{KL}}(\\pi^d\\Vert\\pi^b)\\). Here \\(\\pi(\\cdot\\mid s)=\\mathcal N(\\mu(s),\\operatorname{diag}(\\sigma^2))\\) is the full Gaussian action distribution, whereas \\(a\\sim\\pi(\\cdot\\mid s)\\) is one sampled action or control output; MSE aligns actions and KL aligns both means and variances, so the terms overlap but are not equivalent. The paper does not state whether teacher and student samples share noise; with independent sampling, MSE alone tends to suppress student variance, while KL constrains it to match the teacher variance.",
+          "The deployed actor observes the 69-D vector \\(s_t^{\\mathrm{prop}}=[\\omega_t,g_t,c_t,q_t,\\dot q_t,a_{t-1}]\\): base angular velocity, gravity direction, a 3-D velocity command, 20-D joint positions and velocities, and the previous action. It contains no base height, explicit behavior ID, or privileged dynamics. The 50 Hz policy outputs 20-D joint-position offsets for a 500 Hz PD loop; teachers, critics, AMP discriminators, reference motions, rewards, PCGrad, and the height router are all removed at deployment.",
+          "Fine-tuning initializes the shared MoE actor from \\(\\pi^d\\). Walking and recovery use separate task workers/GPUs, environments, rewards, AMP references, and critics to compute rollouts, GAE, and actor gradients. If the task-gradient inner product is negative, the main process randomly chooses one projection direction for PCGrad, updates the single shared actor, and broadcasts its parameters; critics update separately and do not enter PCGrad. The paper does not state whether projected gradients are summed or averaged, how critics are initialized, or whether AMP discriminators are continued, reset, or frozen.",
+          "The authors report that retaining \\(10^{-3}\\) during fine-tuning readily causes policy collapse and forgetting, motivating \\(10^{-4}\\). In context, policy collapse should be read as a large PPO update causing overall policy performance and on-policy rollouts to deteriorate, followed by a bad-data feedback loop; it is distinct from losing only one skill and is not evidence of MoE gate/expert collapse. The paper defines no collapse metric and provides no formal learning-rate ablation.",
+          "Key evidence gaps are the absence of a capacity- and interaction-matched direct multi-task RL baseline, a single-expert or capacity-matched dense actor, two policies plus a hysteresis FSM, an oracle-height gate, gate/expert specialization analysis, and final success with multi-seed confidence intervals for the critic/PCGrad ablations. Consequently, the unified-control result cannot be causally attributed to any one of MoE, DAgger, PCGrad, or the two-stage schedule.",
+          "Reproduction remains blocked by missing implementation details: the project page still stated code coming soon at the time of review, and action scaling, observation normalization, student history, gate normalization, reset ratios, and the DAgger rollout action were not disclosed. Eq. (3) uses \\(q_t^{\\mathrm{target}}-q^{\\mathrm{default}}\\) rather than the conventional \\(q_t^{\\mathrm{target}}-q_t\\) PD error, and the AMP discriminator objective's maximization sign conflicts with its stated target; both require official code or author clarification."
+        ]
+      }
     }
   ]
 }
