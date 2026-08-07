@@ -100,9 +100,19 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json";
+const readingPromptsPath = "reading_prompts_v4.json?v=20260807-formula-delimiters";
 let readingPrompts = [];
 let promptLoadFailed = false;
+
+const tutorFormulaRuleOld =
+  "3. 聊天中的行内公式使用 \\(...\\)，独立公式使用 \\[...\\]，禁止使用单美元符号或双美元符号作为定界符。";
+const tutorFormulaRuleNew =
+  "3. 聊天中的行内公式必须使用带反斜杠的标准定界符 \\(...\\)，独立公式必须使用 \\[...\\]。反斜杠不可省略；不得用普通的 (...) 或 [...] 充当公式定界符，也不得使用单美元符号或双美元符号作为聊天公式定界符。正确源码示例：行内公式写作 `\\(a_t=\\pi(o_t)\\)`；独立公式以 `\\[` 开始、以 `\\]` 结束，两个定界符分别独占一行。示例中的反引号只用于展示源码；实际回答不得把公式放入代码块或行内代码。";
+
+function correctedPromptBody(key, body) {
+  if (key !== "paper-reading-tutor-v4") return body;
+  return body.replace(tutorFormulaRuleOld, tutorFormulaRuleNew);
+}
 const categories = [
   { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
   { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
@@ -4518,7 +4528,10 @@ async function loadPromptData() {
         title: item && typeof item.title === "object" ? item.title : {},
         description: item && typeof item.description === "object" ? item.description : {},
         usage: item && typeof item.usage === "object" ? item.usage : {},
-        body: stringField(item && item.body),
+        body: correctedPromptBody(
+          stringField(item && item.key),
+          stringField(item && item.body),
+        ),
       }))
       .filter((item) => item.key && item.body);
     promptLoadFailed = readingPrompts.length === 0;
