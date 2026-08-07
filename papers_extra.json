@@ -3074,6 +3074,93 @@
           "Reproduction remains blocked by missing implementation details: the project page still stated code coming soon at the time of review, and action scaling, observation normalization, student history, gate normalization, reset ratios, and the DAgger rollout action were not disclosed. Eq. (3) uses \\(q_t^{\\mathrm{target}}-q^{\\mathrm{default}}\\) rather than the conventional \\(q_t^{\\mathrm{target}}-q_t\\) PD error, and the AMP discriminator objective's maximization sign conflicts with its stated target; both require official code or author clarification."
         ]
       }
+    },
+    {
+      "id": "wococo-sequential-contacts",
+      "categories": [
+        "locomotion",
+        "loco-manipulation",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2406.06005",
+      "project": "https://lecar-lab.github.io/wococo/",
+      "arxiv": "https://arxiv.org/abs/2406.06005",
+      "year": "2024",
+      "venue": "CoRL 2024 (Oral)",
+      "zh": {
+        "title": "WoCoCo: Learning Whole-Body Humanoid Control with Sequential Contacts",
+        "authors": "Chong Zhang, Wenli Xiao, Tairan He, Guanya Shi",
+        "institutions": "ETH Zurich; Carnegie Mellon University（Chong Zhang 的工作在 Carnegie Mellon University 完成）",
+        "status": "全文已精读",
+        "takeaway": "WoCoCo 不负责生成 contact plan，而是把人工或高层给定的顺序接触计划拆成离散 contact stages，让同一个端到端 RL 策略在 rollout 内依据真实接触逐 stage 推进；其核心价值是用统一的阶段表示与奖励缓解长时序接触任务的探索问题。",
+        "tags": [
+          "Whole-Body Humanoid Control",
+          "Sequential Contacts",
+          "Contact Stage",
+          "PPO",
+          "Curiosity",
+          "Sim-to-Real",
+          "Loco-Manipulation"
+        ],
+        "mainContent": "WoCoCo 研究的是：在顺序接触计划已经给定时，如何用端到端 model-free RL 控制人形机器人连续完成多阶段全身任务，而不为每段动作单独生成参考轨迹或训练独立控制器。它把任务拆成预定义的 contact stages，每个 stage 由 contact goal 与 task goal 共同定义；同一个策略根据本体观测和当前目标输出关节位置目标，环境在 rollout 内逐控制步检查真实接触与任务条件，满足后才推进 stage。Dense contact reward、stage-count reward 和基于随机网络哈希的 count-based curiosity 共同缓解稀疏接触与长时序探索，随后通过三阶段 curriculum 加入 domain randomization 和更强 regularization 完成 Sim-to-Real。作者在真机上展示了 parkour、箱体 loco-manipulation、clap-and-tap dancing 和 cliffside climbing，并在 22-DoF dinosaur 仿真任务中验证了框架可迁移性；但它不生成 contact sequence，依赖外部 goal representation 与显式接触反馈，各任务仍分别训练策略，安全性与不可行计划检测也未解决。",
+        "innovations": [
+          "把顺序接触任务统一表示为预定义 contact stages；第 \\(i\\) 个 stage 只有在 contact goal \\(g_i^{\\mathrm{con}}\\) 与 task goal \\(g_i^{\\mathrm{task}}\\) 同时满足时才完成。它统一的是任务分解和策略学习接口，不是一个 contact planner。",
+          "提出针对失败链设计的 WoCoCo reward：dense contact reward 对每个正确或错误末端接触分别计分，stage-count reward 鼓励策略离开当前安全阶段并继续完成后续阶段，从而避免只用 0-1 完成奖励时的探索失败和故意停滞。",
+          "以随机初始化并冻结的神经网络把 task-agnostic curiosity observation 哈希到离散 bucket，再用访问计数的反平方根作为 curiosity reward；相较论文对照中的 RND，它减少了对罕见但无意义危险状态的持续过度探索。",
+          "将已有的 PPO、symmetry augmentation、domain randomization 和 regularization 组织为三阶段 Sim-to-Real curriculum。该部分更准确地属于系统化训练流程整合：先解决任务探索，再处理模型误差，最后压制激进动作，而不是全新的 RL 优化算法。",
+          "同一套 contact-stage formulation 与 reward family 支撑四类差异很大的真机人形任务及一个非人形 embodiment；证据表明框架可跨任务复用，但不是一套同时覆盖所有任务的 universal multi-task policy。"
+        ],
+        "implementation": [
+          "任务输入首先是一条预定义 contact sequence。环境维护当前 stage index \\(i\\)；Actor 接收 proprioception 与 goal representation。Parkour 额外输入未来两个 stages 的目标，其他任务主要输入当前 stage；论文原型用 motion-capture system 提供目标表示，没有使用 camera 或 LiDAR。",
+          "共享本体观测包括 joint positions、joint velocities、previous actions、base linear/angular velocities 和 projected gravity；joint states 与 previous actions 堆叠最近 3 个 control steps。Actor 与 Critic 都是隐藏层为 [512, 256, 128] 的 MLP。",
+          "单个控制步的数据流是：当前观测与 stage goal \\(\\rightarrow\\) Actor \\(\\rightarrow\\) joint target positions \\(\\rightarrow\\) low-level PD \\(\\rightarrow\\) Isaac Gym 或机器人 \\(\\rightarrow\\) 新状态、末端位置与接触信息 \\(\\rightarrow\\) reward 和 stage check。一个 rollout 内同一个 Actor 可以连续经历多个 stages；并非一个 rollout 结束后才检查一次，也不会每切换一次 stage 就立刻反向传播。",
+          "Stage manager 是环境逻辑而非可学习网络。每个控制步检查当前 contact goal 和 task goal；若未完成则保持 \\(i\\)，若完成则在预定义等待时间后令 \\(i\\leftarrow i+1\\)。物理触地只表示存在接触力，正确接触还必须满足指定末端、目标区域及该任务的附加条件。",
+          "论文正文只抽象规定以 sensors 或 human observation 判断 stage fulfillment，没有给出所有任务统一的接触阈值。公开 clap-and-tap 示例代码以脚部竖直接触力大于 1 N 作为触地条件之一，再结合足端目标区域、手部接触和全身条件；成功会锁存 `current_contact_reached`，计时 0.4–0.8 s 后切换 stage，因此该示例不要求成功条件在整个等待区间持续成立。上述数值不能直接推广到 Parkour、Box 或 Cliffside。",
+          "任务无关奖励为 \\(r_{\\mathrm{WoCoCo}}=w_{\\mathrm{con}}r_{\\mathrm{con}}+w_{\\mathrm{stage}}r_{\\mathrm{stage}}+w_{\\mathrm{curi}}r_{\\mathrm{curi}}\\)。其中 \\(r_{\\mathrm{con}}=n_{\\mathrm{corr}}-n_{\\mathrm{con}}n_{\\mathrm{wrong}}\\mathbb{1}(n_{\\mathrm{stage}}>0)+2n_{\\mathrm{con}}^2F_{\\mathrm{con}}F_{\\mathrm{task}}\\)，\\(r_{\\mathrm{stage}}=n_{\\mathrm{stage}}F_{\\mathrm{task}}\\)；总奖励还加 task-specific reward 与 Sim-to-Real regularization。",
+          "Curiosity observation 包括 base 的世界系位置、姿态、线速度与角速度，以及全部末端的世界系位置和接触状态。冻结的 hash network 只有一个 32-unit hidden layer 与 16-D output；其输出符号经 BIN2DEC 形成 bucket ID，奖励为 \\(r_{\\mathrm{curi}}=1/\\sqrt{N_{\\mathrm{visit}}}\\)。Curiosity 只在训练 Phase 1 开启。",
+          "训练在 Isaac Gym 中使用并行 PPO 和左右 symmetry augmentation。各并行环境逐步收集 \\((o_t,a_t,r_t,o_{t+1})\\) 等 transition；rollout batch 收集完成后才计算 return 和 advantage，并统一更新 Actor 与 Critic，所以同一 PPO batch 可以混合不同环境和不同 contact stages 的样本。",
+          "三阶段训练从同一 checkpoint 连续续训：Phase 1 不开 domain randomization，使用 curiosity 学会任务；Phase 2 关闭 curiosity，并加入 friction、mass、base CoM、PD gain、control delay、torque disturbance、push 和 terrain 等随机化；Phase 3 保持随机化，每 2000 iterations 将 regularization 权重提高 20%，直到初始值的 2 倍。消融显示过早加入随机化会降低 Parkour progress，取消 Phase 3 会使真机动作更加 jerky 和 aggressive。",
+          "部署时保留 goal/stage manager、Actor、动作滤波、PD controller 和接触反馈，不保留 Critic、PPO、reward 或 curiosity 模块。策略以 50 Hz 更新，PD torque command 以 200 Hz 更新，PD targets 经过 4 Hz Butterworth low-pass filter。",
+          "实验结论需要限定：四个真机任务证明了预定义接触计划下的可执行性和一定 Sim-to-Real 能力，但主要是任务级展示；Parkour 真机因场地限制只测试 double-foot sequence 的 1–2 次连续跳跃。论文未提供 contact-plan 自动生成、未知序列长度下的稳健奖励处理、失败预测或可行性保证，并明确承认依赖 motion-capture goal 与显式 stage-switch feedback。"
+        ]
+      },
+      "en": {
+        "title": "WoCoCo: Learning Whole-Body Humanoid Control with Sequential Contacts",
+        "authors": "Chong Zhang, Wenli Xiao, Tairan He, Guanya Shi",
+        "institutions": "ETH Zurich; Carnegie Mellon University (Chong Zhang's work was conducted at Carnegie Mellon University)",
+        "status": "Full paper reviewed",
+        "takeaway": "WoCoCo does not generate a contact plan; it decomposes a human- or planner-provided sequential contact plan into discrete contact stages and lets one end-to-end RL policy advance through them inside a rollout using explicit contact feedback, with its main value lying in a unified stage representation and reward design for long-horizon exploration.",
+        "tags": [
+          "Whole-Body Humanoid Control",
+          "Sequential Contacts",
+          "Contact Stage",
+          "PPO",
+          "Curiosity",
+          "Sim-to-Real",
+          "Loco-Manipulation"
+        ],
+        "mainContent": "WoCoCo studies how to use end-to-end model-free RL to execute a given sequential contact plan with a humanoid, without generating a reference trajectory or training a separate controller for every motion segment. It decomposes a task into predefined contact stages, each jointly specified by a contact goal and a task goal; one policy maps proprioception and the active goal to joint-position targets, while the environment checks physical contacts and task conditions at every control step and advances the stage inside the rollout. Dense contact, stage-count, and random-network-hash count-based curiosity rewards address sparse contacts and long-horizon exploration, followed by a three-phase curriculum that introduces domain randomization and stronger regularization for Sim-to-Real. The paper demonstrates parkour, box loco-manipulation, clap-and-tap dancing, and cliffside climbing on a real humanoid, plus a 22-DoF dinosaur task in simulation; however, it does not generate contact sequences, relies on external goal representations and explicit contact feedback, trains separate task policies, and does not solve safety or infeasible-plan detection.",
+        "innovations": [
+          "A unified decomposition of sequential-contact tasks into predefined contact stages, where stage \\(i\\) is completed only when both contact goal \\(g_i^{\\mathrm{con}}\\) and task goal \\(g_i^{\\mathrm{task}}\\) hold. This unifies the task and policy interface; it is not a contact planner.",
+          "A failure-chain-oriented WoCoCo reward: dense contact rewards score every correct and incorrect end-effector contact, while stage-count rewards incentivize leaving a locally safe stage and progressing further, addressing failed exploration with binary completion rewards and deliberate stalling.",
+          "A count-based curiosity mechanism that hashes task-agnostic curiosity observations into discrete buckets with a randomly initialized frozen neural network and assigns inverse-square-root visitation bonuses; in the paper's ablation, this avoids the persistent over-exploration of rare but meaningless dangerous states observed with RND.",
+          "A three-phase Sim-to-Real curriculum that organizes existing PPO, symmetry augmentation, domain randomization, and regularization. It is best viewed as a systematic training integration—first solve exploration, then model mismatch, then aggressive actions—rather than a new RL optimizer.",
+          "The same contact-stage formulation and reward family support four substantially different real-world humanoid tasks and one non-humanoid embodiment. This supports framework reuse across tasks, but not a single universal multi-task policy."
+        ],
+        "implementation": [
+          "The task input is a predefined contact sequence. The environment maintains the active stage index \\(i\\), and the Actor receives proprioception plus a goal representation. Parkour additionally exposes the next two stages, whereas the other tasks mainly expose the current stage; the prototype uses a motion-capture system for goal representations and does not use cameras or LiDAR.",
+          "Shared proprioception includes joint positions, joint velocities, previous actions, base linear and angular velocities, and projected gravity; joint states and previous actions are stacked over the latest three control steps. Both Actor and Critic are MLPs with hidden sizes [512, 256, 128].",
+          "One control step follows: observation and stage goal \\(\\rightarrow\\) Actor \\(\\rightarrow\\) joint target positions \\(\\rightarrow\\) low-level PD \\(\\rightarrow\\) Isaac Gym or robot \\(\\rightarrow\\) next state, end-effector positions, and contacts \\(\\rightarrow\\) reward and stage check. The same Actor can traverse multiple stages within one rollout; stage checks are not deferred to rollout termination, and stage switches do not trigger immediate backpropagation.",
+          "The stage manager is environment logic, not a learned network. It checks the current contact and task goals at every control step; it keeps \\(i\\) if they are unmet and advances \\(i\\leftarrow i+1\\) after a predefined waiting period once they are met. Physical contact alone is insufficient: the specified end effector, target region, and task-specific conditions must also be correct.",
+          "The paper abstracts stage fulfillment as being checked by sensors or human observation and does not give one contact threshold shared by all tasks. In the released clap-and-tap example, a vertical foot contact force above 1 N is one contact condition, combined with target foot regions, hand-contact logic, and whole-body conditions; success latches `current_contact_reached`, and the stage changes after a 0.4–0.8 s timer, so success need not remain continuously true throughout that waiting interval. These numbers should not be generalized to Parkour, Box, or Cliffside.",
+          "The task-agnostic reward is \\(r_{\\mathrm{WoCoCo}}=w_{\\mathrm{con}}r_{\\mathrm{con}}+w_{\\mathrm{stage}}r_{\\mathrm{stage}}+w_{\\mathrm{curi}}r_{\\mathrm{curi}}\\), with \\(r_{\\mathrm{con}}=n_{\\mathrm{corr}}-n_{\\mathrm{con}}n_{\\mathrm{wrong}}\\mathbb{1}(n_{\\mathrm{stage}}>0)+2n_{\\mathrm{con}}^2F_{\\mathrm{con}}F_{\\mathrm{task}}\\) and \\(r_{\\mathrm{stage}}=n_{\\mathrm{stage}}F_{\\mathrm{task}}\\). The total reward also includes task-specific terms and Sim-to-Real regularization.",
+          "Curiosity observations contain world-frame base position, orientation, linear and angular velocity, plus all end-effector world positions and contact states. The frozen hash network has one 32-unit hidden layer and a 16-D output; output signs are converted by BIN2DEC into a bucket ID, and \\(r_{\\mathrm{curi}}=1/\\sqrt{N_{\\mathrm{visit}}}\\). Curiosity is enabled only in Phase 1.",
+          "Training uses parallel PPO in Isaac Gym with left-right symmetry augmentation. Parallel environments collect transitions such as \\((o_t,a_t,r_t,o_{t+1})\\) step by step; only after a rollout batch is collected are returns and advantages computed and Actor/Critic updated, so one PPO batch can mix environments and contact stages.",
+          "The three phases resume from the same checkpoint: Phase 1 learns the task without domain randomization and with curiosity; Phase 2 disables curiosity and adds randomization of friction, mass, base CoM, PD gains, control delay, torque disturbance, pushes, and terrain; Phase 3 keeps randomization and increases regularization weights by 20% every 2,000 iterations until they reach twice their initial values. Ablations show that early randomization reduces Parkour progress and removing Phase 3 yields jerkier, more aggressive real-world behavior.",
+          "Deployment retains the goal and stage manager, Actor, action filter, PD controller, and explicit contact feedback, but not the Critic, PPO, reward computation, or curiosity module. The policy runs at 50 Hz, PD torque commands at 200 Hz, and PD targets pass through a 4-Hz Butterworth low-pass filter.",
+          "The evidence must be scoped carefully: the four real-robot tasks establish executability under predefined contact plans and some Sim-to-Real capability, but evaluation is primarily task-level demonstration; due to facility constraints, real-world Parkour only tests one or two consecutive jumps with double-foot sequences. The paper provides no automatic contact-plan generation, robust handling of unknown sequence length, failure predictor, or feasibility guarantee, and explicitly acknowledges dependence on motion-capture goals and explicit stage-switch feedback."
+        ]
+      }
     }
   ]
 }
