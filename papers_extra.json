@@ -3262,6 +3262,167 @@
           "The authors identify a narrow camera field of view, imperfect modeling of real depth noise, and the behavior-cloning ceiling imposed by specialist performance and state coverage as limitations. The WBC drop from 1.000 for the specialist to 0.871 for the generalist also shows substantial residual distillation loss for contact-rich skills."
         ]
       }
+    },
+    {
+      "id": "tasil-taylor-series-imitation-learning",
+      "categories": [
+        "imitation-teleop",
+        "locomotion"
+      ],
+      "pdf": "https://arxiv.org/pdf/2205.14812",
+      "project": "https://github.com/unstable-zeros/TaSIL",
+      "arxiv": "https://arxiv.org/abs/2205.14812",
+      "year": "2022",
+      "venue": "NeurIPS 2022",
+      "zh": {
+        "title": "TaSIL: Taylor Series Imitation Learning",
+        "authors": "Daniel Pfrommer, Thomas T.C.K. Zhang, Stephen Tu, Nikolai Matni",
+        "institutions": "Massachusetts Institute of Technology; University of Pennsylvania; Robotics at Google（Daniel Pfrommer 的该项工作完成于 University of Pennsylvania 任职期间）",
+        "status": "全文已精读",
+        "takeaway": "TaSIL 最该被记住的不是“首次做 Jacobian 蒸馏”，而是它把策略值与输入导数的联合匹配连接到专家闭环的增量输入到状态稳定性（δ-ISS），从而为离线模仿中的轨迹误差累积给出条件化解释与上界。",
+        "tags": [
+          "Imitation Learning",
+          "Behavior Cloning",
+          "Jacobian Matching",
+          "Taylor Series",
+          "δ-ISS",
+          "Covariate Shift",
+          "DAgger",
+          "DART",
+          "MuJoCo"
+        ],
+        "mainContent": "TaSIL 研究确定性连续控制中的离线模仿：标准 Behavior Cloning 只在专家访问状态上匹配 action，学生的微小动作误差会改变后续状态分布并形成 compounding error。它在 action loss 之外匹配 expert 与 student 策略对状态的 Jacobian，必要时继续匹配 Hessian 等高阶 Taylor 项，并利用专家闭环的局部 δ-ISS 证明：在平滑性、局部稳定性和误差足够小等条件下，专家轨迹上的低 TaSIL loss 可以上界学生与专家的闭环轨迹偏差。精确版本通过自动微分获得专家导数，黑盒版本通过局部有限差分查询近似导数；该 loss 可叠加到 BC、DAgger 和 DART，部署时只保留学生策略。MuJoCo 实验支持 1-TaSIL 提高按专家轨迹条数计算的样本效率，但没有匹配 teacher query 与训练计算预算，也没有验证 SAC 专家的 δ-ISS，因此尚不能确认收益来自“继承专家鲁棒性”而非额外局部监督或正则化。",
+        "innovations": [
+          "核心创新：把 student 在自身访问状态上的 action error 改写成 expert 闭环的输入扰动，再利用 expert 的局部 δ-ISS 将该扰动上界连接到 student–expert imitation gap；Taylor 展开进一步把这一不可直接监督的误差拉回 expert 轨迹上的策略值与导数误差。",
+          "理论增量：建立 expert 鲁棒性增益、所需 Taylor 匹配最高阶数 \\(p\\) 与闭环轨迹误差之间的关系，并在可实现设定下给出按独立专家轨迹数 \\(n\\) 计的约 \\(\\widetilde O(1/n)\\) 泛化率；这些结论依赖局部 δ-ISS、策略光滑、Taylor 余项有界及 ERM 等假设。",
+          "关键辅助设计：提出不要求解析 Jacobian 的 finite-difference TaSIL，通过在 \\(x+\\delta_i\\) 处额外查询 expert 来匹配局部方向差分，并展示 TaSIL loss 可以作为插件加入 BC、DAgger 与 DART，而不改变部署接口。",
+          "新颖性边界：策略值与输入导数联合监督本身已有 Sobolev Training 和 Jacobian Matching 等前作；TaSIL 的知识增量是把它与连续控制中的 δ-ISS、闭环 imitation gap、所需导数阶数和有限样本保证系统连接，而不是首次提出 Jacobian 蒸馏。"
+        ],
+        "implementation": [
+          "数据与标签：从初始状态分布采样并用固定 expert rollout，得到 \\(x_t^\\star\\) 与 \\(u_t^\\star=\\pi^\\star(x_t^\\star)\\)；在每个训练状态缓存 expert 的 action、Jacobian，若做更高阶 TaSIL 则继续缓存 Hessian 等导数。它们是监督标签，不是环境 reward，也不是可训练参数。",
+          "一次学生更新：student 在同一 \\(x_t^\\star\\) 上输出连续 action，并通过自动微分计算 \\(\\partial_x^j\\pi_\\theta(x_t^\\star)\\)。实践 loss 为 \\(\\mathcal L_{\\mathrm{TaSIL},p}=\\frac{1}{n}\\sum_i\\sum_t\\sum_{j=0}^{p}\\lambda_j\\lVert\\operatorname{vec}(\\partial_x^j\\pi_\\theta(x_{it})-\\partial_x^j\\pi^\\star(x_{it}))\\rVert_2\\)；反向传播只更新 student 参数 \\(\\theta\\) 与 Adam 临时状态，expert、标签和环境均固定。",
+          "Jacobian 的语义：student Jacobian 是 action 输出相对输入状态的派生导数，不是一个独立网络、额外 action head 或单独优化变量。Jacobian loss 对 \\(\\theta\\) 的梯度会涉及 \\(\\partial^2\\pi_\\theta/(\\partial\\theta\\,\\partial x)\\)，但部署时无需计算任何导数。",
+          "强化学习边界：MuJoCo expert 由上游 SAC 预训练，但 TaSIL 阶段不更新 expert actor/critic；student 没有 critic，不计算 return、advantage 或 policy gradient，MuJoCo reward 只用于 rollout 评估。",
+          "MuJoCo 主实验使用 2×256 ReLU expert 与 2×512 GELU student，轨迹长度为 300，batch size 为 100，初始学习率为 \\(10^{-3}\\)，weight decay 为 0.01，训练 4500 epochs；1-TaSIL 使用 \\(\\lambda_0=1\\)、\\(\\lambda_1=0.01\\)，student action 经 tanh 和动作范围缩放后送入环境。",
+          "DAgger 版本用 expert–student 混合策略收集学生分布附近的状态并聚合数据，再为新状态生成 expert action 与 Jacobian 标签；DART 版本根据 student–expert action error covariance 给 expert action 加高斯噪声以收集恢复状态。两者都只改变训练状态来源，student 更新仍是监督 imitation loss。",
+          "有限差分版本在半径 0.01 的球面上为每个样本固定抽取扰动方向，并比较 \\(N=1,5,10,50\\) 个方向；每个方向都需要额外 expert query，因此它消除了对白盒自动微分的要求，却没有消除训练期 expert oracle 与额外信息预算。",
+          "部署闭环只有“当前 observation \\(x_t\\) → 固定 student \\(\\pi_\\theta(x_t)\\) → 连续 action \\(u_t\\) → 环境下一状态”；不保留 expert、导数标签、优化器、critic、reward、有限差分、DAgger/DART 收集器或在线数值优化。相同任务的新状态与新初值可直接推理；更换 expert、任务、机器人或输入输出接口通常需要重新生成标签并训练。",
+          "证据审计：Figure 1 在人为可调 δ-ISS 增益的合成系统中最直接支持“expert 越不稳健，所需 Taylor 阶数越高”；Figure 2 只证明加入 Jacobian loss 对最终 normalized reward 有贡献。论文缺少在相同 teacher query、局部扰动样本、训练 FLOPs 与 wall-clock 下，将 TaSIL 和普通局部数据增强 BC 进行比较的决定性基线。",
+          "复现冲突：论文称 student 使用 Batch Normalization、Adam \\(\\epsilon=10^{-4}\\)，官方代码却关闭 BatchNorm 并使用 \\(10^{-8}\\)；此外 MuJoCo expert 是 ReLU MLP，不直接满足理论所要求的连续高阶光滑假设。"
+        ]
+      },
+      "en": {
+        "title": "TaSIL: Taylor Series Imitation Learning",
+        "authors": "Daniel Pfrommer, Thomas T.C.K. Zhang, Stephen Tu, Nikolai Matni",
+        "institutions": "Massachusetts Institute of Technology; University of Pennsylvania; Robotics at Google (Daniel Pfrommer completed this work while affiliated with the University of Pennsylvania)",
+        "status": "Full paper reviewed",
+        "takeaway": "TaSIL should be remembered not as the first Jacobian-distillation method, but as a connection between joint policy-value/derivative matching and incremental input-to-state stability (δ-ISS) of the expert closed loop, yielding a conditional explanation and bound for compounding trajectory error in offline imitation.",
+        "tags": [
+          "Imitation Learning",
+          "Behavior Cloning",
+          "Jacobian Matching",
+          "Taylor Series",
+          "δ-ISS",
+          "Covariate Shift",
+          "DAgger",
+          "DART",
+          "MuJoCo"
+        ],
+        "mainContent": "TaSIL studies offline imitation in deterministic continuous control, where standard Behavior Cloning matches actions only on expert-visited states and small student action errors can shift the subsequent state distribution and compound. Beyond the action loss, it matches the Jacobian of the expert and student policies with respect to state, and, when needed, higher-order Taylor terms such as Hessians; using local δ-ISS of the expert closed loop, it proves that under smoothness, local-stability, and sufficiently-small-error assumptions, low TaSIL loss on expert trajectories can bound the closed-loop trajectory discrepancy between student and expert. The exact version obtains expert derivatives by automatic differentiation, while a black-box version approximates them through local finite-difference queries; the loss can augment BC, DAgger, and DART, and only the student policy is retained at deployment. MuJoCo results support better sample efficiency when measured by the number of expert trajectories, but teacher-query and training-compute budgets are not matched and δ-ISS of the SAC experts is not verified, so the gains cannot yet be attributed specifically to inheriting expert robustness rather than extra local supervision or regularization.",
+        "innovations": [
+          "Core innovation: rewrite the student's action error on its own visited states as an input perturbation to the expert closed loop, then use local δ-ISS of the expert to connect that perturbation bound to the student–expert imitation gap; a Taylor expansion pulls this otherwise unobservable error back to policy-value and derivative errors on expert trajectories.",
+          "Theoretical contribution: relate the expert robustness gain, the highest matched Taylor order \\(p\\), and closed-loop trajectory error, and derive an approximately \\(\\widetilde O(1/n)\\) generalization rate in the realizable setting for \\(n\\) independent expert trajectories; these statements require local δ-ISS, policy smoothness, bounded Taylor remainders, and ERM-related assumptions.",
+          "Key auxiliary design: introduce finite-difference TaSIL, which avoids requiring analytic Jacobians by querying the expert additionally at \\(x+\\delta_i\\) and matching local directional differences, and show that the TaSIL loss can plug into BC, DAgger, and DART without changing the deployment interface.",
+          "Novelty boundary: joint supervision of policy values and input derivatives predates TaSIL in Sobolev Training and Jacobian Matching; TaSIL's contribution is the systematic connection to δ-ISS, closed-loop imitation gap, required derivative order, and finite-sample guarantees in continuous control, not the first use of Jacobian distillation."
+        ],
+        "implementation": [
+          "Data and labels: sample initial states and roll out a fixed expert to obtain \\(x_t^\\star\\) and \\(u_t^\\star=\\pi^\\star(x_t^\\star)\\); cache the expert action and Jacobian at every training state, and cache Hessians or higher derivatives for higher-order TaSIL. These are supervision labels, not environment rewards or trainable parameters.",
+          "One student update: the student outputs a continuous action at the same \\(x_t^\\star\\), and automatic differentiation computes \\(\\partial_x^j\\pi_\\theta(x_t^\\star)\\). The practical loss is \\(\\mathcal L_{\\mathrm{TaSIL},p}=\\frac{1}{n}\\sum_i\\sum_t\\sum_{j=0}^{p}\\lambda_j\\lVert\\operatorname{vec}(\\partial_x^j\\pi_\\theta(x_{it})-\\partial_x^j\\pi^\\star(x_{it}))\\rVert_2\\); backpropagation updates only student parameters \\(\\theta\\) and temporary Adam state, while the expert, labels, and environment remain fixed.",
+          "Jacobian semantics: the student Jacobian is a derived derivative of the action output with respect to the input state, not an independent network, an additional action head, or a separate optimization variable. Gradients of the Jacobian loss with respect to \\(\\theta\\) involve \\(\\partial^2\\pi_\\theta/(\\partial\\theta\\,\\partial x)\\), but no derivatives are computed at deployment.",
+          "Reinforcement-learning boundary: the MuJoCo expert is pretrained upstream with SAC, but TaSIL does not update the expert actor or critic; the student has no critic and computes no return, advantage, or policy gradient, while MuJoCo reward is used only for rollout evaluation.",
+          "The main MuJoCo experiments use a 2×256 ReLU expert and a 2×512 GELU student, trajectory length 300, batch size 100, initial learning rate \\(10^{-3}\\), weight decay 0.01, and 4500 training epochs; 1-TaSIL uses \\(\\lambda_0=1\\) and \\(\\lambda_1=0.01\\), and the student action is passed through tanh and rescaled to the action range before entering the environment.",
+          "The DAgger variant collects and aggregates states near the student distribution with an expert–student mixture policy, then generates expert action and Jacobian labels for those states; the DART variant injects Gaussian noise into expert actions according to the student–expert action-error covariance to collect recovery states. Both change only the source of training states, and student updates remain supervised imitation learning.",
+          "The finite-difference variant samples fixed perturbation directions per example on a sphere of radius 0.01 and compares \\(N=1,5,10,50\\) directions; every direction requires an additional expert query, so it removes the need for white-box automatic differentiation but not the training-time expert oracle or the extra information budget.",
+          "The deployment loop is only “current observation \\(x_t\\) → fixed student \\(\\pi_\\theta(x_t)\\) → continuous action \\(u_t\\) → next environment state.” The expert, derivative labels, optimizer, critic, reward, finite differences, DAgger/DART collectors, and online numerical optimization are absent. New states and initial conditions in the same task use direct inference; changing the expert, task, robot, or input/output interface generally requires regenerating labels and retraining.",
+          "Evidence audit: Figure 1 most directly supports “a less robust expert requires a higher Taylor order” in a synthetic system with manually adjustable δ-ISS gain, while Figure 2 only shows that adding the Jacobian loss contributes to final normalized reward. A decisive baseline matching teacher queries, local perturbation examples, training FLOPs, and wall-clock between TaSIL and ordinary locally augmented BC is missing.",
+          "Reproduction conflicts: the paper states that the student uses Batch Normalization and Adam \\(\\epsilon=10^{-4}\\), whereas the official code disables BatchNorm and uses \\(10^{-8}\\); moreover, the MuJoCo expert is a ReLU MLP and therefore does not directly satisfy the continuous higher-order smoothness assumed by the theory."
+        ]
+      }
+    },
+    {
+      "id": "handoff-task-space-wbc",
+      "categories": [
+        "loco-manipulation",
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.06493",
+      "project": "https://lzyang2000.github.io/HANDOFF/",
+      "arxiv": "https://arxiv.org/abs/2606.06493",
+      "year": "2026",
+      "venue": "arXiv:2606.06493",
+      "zh": {
+        "title": "HANDOFF: Humanoid Agentic Task-Space Whole-Body Control via Distilled Complementary Teachers",
+        "authors": "Lizhi Yang, Junheng Li, Nehar Poddar, Yiling Hou, Gio Huh, Robert Griffin, Georgia Gkioxari, Aaron D. Ames",
+        "institutions": "California Institute of Technology; The Institute for Human & Machine Cognition",
+        "status": "全文已精读",
+        "takeaway": "HANDOFF 先训练三个互补 specialist teacher，再用按速度、动作切片与恢复状态分配的 KL 和 PPO 将其蒸馏进一个统一的 soft-MoE 全身控制器；VLM 只产生 10 维任务空间命令，并不负责选择 teacher 或 expert。",
+        "tags": [
+          "Multi-Teacher Distillation",
+          "Mixture of Experts",
+          "Task-Space Whole-Body Control",
+          "PPO",
+          "AMP",
+          "Unitree G1"
+        ],
+        "mainContent": "HANDOFF 解决上层 planner 难以持续生成全身密集参考的问题，将控制接口压缩为由平面速度、根高度和双腕骨盆系目标组成的 10 维 command，并由学生策略输出 29 维关节位置 action。方法先用 RL 分别训练 WBC motion-tracking、velocity locomotion 和 AMP fall-recovery 三个 specialist，再冻结教师，在学生自身驱动的 on-policy rollout 上结合 PPO、按动作切片和速度/恢复上下文加权的 KL，以及三 expert soft-MoE 路由正则训练统一学生；部署端的 VLM 只生成目标或 command，不选择 teacher 或 MoE expert。论文在 Unitree G1 上展示了速度跟踪、双腕工作空间和多种自然语言任务 rollout，但没有报告端到端任务成功率；同时核心消融把 split-KL 与 MoE 一起加入且未匹配模型容量，因此尚不能确认收益确实来自缓解教师冲突。",
+        "innovations": [
+          "提出显式、紧凑的 10 维 planner-facing task-space interface：\\([v_x,v_y,\\omega_z,z,p_L^P,p_R^P]\\)。上层无需生成控制频率下的完整关节或全身运动参考，同一接口可由脚本、几何 planner、遥操作器或 VLM 调用。",
+          "设计 action-sliced、context-weighted multi-teacher KL：普通状态下腿腰根据速度命令在 WBC 与 locomotion 教师之间连续混合，手臂由 WBC 教师约束；recovery flag 有效时改由 AMP 教师监督全身，从而避免运行时硬切换三个控制器。",
+          "将三个互补教师蒸馏到一个三 expert soft-MoE student。需要注意，学生 experts 不是三个 teacher 的权重副本：论文没有给前两个 expert 指定 WBC/locomotion 一一对应标签，仅通过 KL、PPO 和负载均衡自行分工；第三个 expert 才由 recovery routing loss 明确推向恢复状态。",
+          "关键辅助设计是对深蹲参考进行离线 CoP 可行性投影，并在部署时加入解析式 velocity-space CoP filter；这是对既有几何、Jacobian 和 barrier 投影思想的工程整合，不应与核心蒸馏方法一起泛称为全新算法。"
+        ],
+        "implementation": [
+          "三个教师独立预训练：WBC teacher 接收完整运动参考并输出 29 维全身 action；locomotion teacher 接收随机速度命令和 gait phase，只输出 15 维腿腰 action，训练时手臂由课程化动作样本外部驱动；AMP teacher 依据 4 帧本体历史输出 29 维恢复 action，并用 fall-recovery transition 与 discriminator reward 训练。",
+          "学生阶段使用一套统一仿真 MDP，而不是分别运行三套 teacher environment。学生 action 推进得到同一仿真状态后，环境将其重组为 student、WBC、locomotion 和 AMP 各自所需的 observation；冻结教师只前向产生高斯动作分布作为 KL 目标，不执行动作、不推进环境，也不接收梯度。",
+          "学生环境确实要覆盖教师擅长的状态区域，但 reset 不是固定分成 WBC、locomotion、recovery 三组。论文明确将固定 20% 环境在 reset 时置为 fallen pose 并设置 recovery flag；其余普通环境同时维护 motion reference、随机 velocity command、gait phase 和 history，WBC/locomotion 监督由每一步 command 连续加权，而不是由环境组身份决定。",
+          "非恢复样本的腿腰权重为 \\(\\alpha_t=\\sigma((\\lVert c_t^{vel}\\rVert-0.1)/0.02)\\)：低速更接近 WBC teacher，高速更接近 locomotion teacher；手臂始终锚定 WBC。恢复样本屏蔽普通切片 KL，并在全部 29 个动作维度上计算 student-to-AMP KL。论文没有完整说明真机 recovery flag 的检测、进入/退出条件及专用 termination；当前公开代码中的姿态迟滞检测与论文的 reset-time flag 口径也不完全一致。",
+          "MoE student 使用 11 帧历史的一维 temporal convolution 得到 64 维 latent；gate MLP hidden sizes 为 \\((128,64)\\)，三个 expert 均为 \\((256,128)\\) MLP，全部输出 29 维 action mean 并经 softmax 权重加权，三个 expert 共享 log-standard-deviation。学生训练采用 4096 个并行环境、每次 24 steps、5 epochs、4 minibatches，最多 30,000 updates。",
+          "部署时只保留 student actor、观测历史、内部 gait phase、在线 CoP filter 和低层关节伺服；教师、critic、AMP discriminator、KL、reward 和 optimizer 均被删除。actor 以 50 Hz 输出 29 维 joint-position action，硬件伺服以 500 Hz 跟踪；VLM/视觉规划栈运行在更低频，只把任务转成统一 10 维 command。",
+          "Table 2b 中最终 Ours+Stab 的 \\(|\\Delta v_x|,|\\Delta v_y|,|\\Delta\\omega_z|\\) 分别为 0.07、0.18、0.04，global feasibility 为 97.7%，robust workspace 为 \\(0.31\\,\\mathrm{m^3}\\)。这些结果支持最终系统能同时兼顾速度与工作空间，但 split-KL 和 MoE 被捆绑消融，且缺少等参数量 dense student、独立 MoE、独立 split-KL 与教师梯度冲突测量，因而没有直接验证作者声称的冲突缓解机制。"
+        ]
+      },
+      "en": {
+        "title": "HANDOFF: Humanoid Agentic Task-Space Whole-Body Control via Distilled Complementary Teachers",
+        "authors": "Lizhi Yang, Junheng Li, Nehar Poddar, Yiling Hou, Gio Huh, Robert Griffin, Georgia Gkioxari, Aaron D. Ames",
+        "institutions": "California Institute of Technology; The Institute for Human & Machine Cognition",
+        "status": "Full paper reviewed",
+        "takeaway": "HANDOFF first trains three complementary specialist teachers and then distills them into one unified soft-MoE whole-body controller using velocity-, action-slice-, and recovery-conditioned KL together with PPO; the VLM only produces the 10-D task-space command and does not select a teacher or expert.",
+        "tags": [
+          "Multi-Teacher Distillation",
+          "Mixture of Experts",
+          "Task-Space Whole-Body Control",
+          "PPO",
+          "AMP",
+          "Unitree G1"
+        ],
+        "mainContent": "HANDOFF addresses the mismatch between high-level planners and whole-body controllers that require dense full-body references. It compresses the interface into a 10-D command containing planar base velocity, root height, and bilateral pelvis-frame wrist targets, while the student outputs 29-D joint-position actions. Three RL specialists—WBC motion tracking, velocity locomotion, and AMP fall recovery—are frozen and queried on student-driven on-policy rollouts; PPO, action-sliced and context-weighted KL terms, and routing regularizers then train a unified three-expert soft-MoE student. Experiments on the Unitree G1 demonstrate velocity tracking, bilateral wrist workspace, and several natural-language task rollouts, but no end-to-end task success rate is reported; because split-KL and MoE are introduced together without capacity matching, the experiments do not isolate reduced teacher conflict as the cause of the gain.",
+        "innovations": [
+          "Introduces an explicit and compact 10-D planner-facing task-space interface, \\([v_x,v_y,\\omega_z,z,p_L^P,p_R^P]\\), so scripts, geometric planners, teleoperation systems, or VLMs need not synthesize a full-body reference stream at the controller rate.",
+          "Uses action-sliced, context-weighted multi-teacher KL: in normal states, body supervision smoothly blends WBC and locomotion teachers according to commanded speed, arms remain anchored to the WBC teacher, and an active recovery flag assigns full-body supervision to the AMP teacher. This removes runtime switching among three controllers.",
+          "Distills the complementary teachers into one three-expert soft-MoE student. The student experts are not copied teacher networks: the first two have no explicit one-to-one WBC/locomotion labels and specialize through KL, PPO, and load balancing, while only the third is explicitly encouraged toward recovery by a routing loss.",
+          "As a key auxiliary design, applies an offline CoP-feasibility projection to squat references and an analytic velocity-space CoP filter at deployment. This is an engineering integration of existing geometric, Jacobian, and barrier-projection ideas rather than the core new distillation algorithm."
+        ],
+        "implementation": [
+          "The three teachers are trained independently. The WBC teacher consumes a full motion reference and outputs a 29-D whole-body action; the locomotion teacher consumes randomized velocity commands and gait phase and outputs only the 15-D legs-and-waist action while curriculum-driven arm motions perturb the body during training; the AMP teacher consumes four frames of proprioceptive history, outputs a 29-D recovery action, and is trained with fall-recovery transitions and discriminator-derived rewards.",
+          "Student training uses one unified simulation MDP, not three separately advanced teacher environments. The student action advances the simulator; the resulting physical state is repackaged into the student-, WBC-, locomotion-, and AMP-specific observation schemas. Frozen teachers only produce Gaussian action distributions for KL targets, never execute the environment action, and receive no gradient.",
+          "The student environment must cover the specialists' state regions, but resets are not divided into fixed WBC, locomotion, and recovery groups. The paper sets a fixed 20% of environments to fallen poses with an active recovery flag at reset. The remaining normal environments jointly maintain a motion reference, randomized velocity command, gait phase, and history; WBC-versus-locomotion supervision is determined continuously by each step's command rather than by a permanent environment-group identity.",
+          "For non-recovery samples, the body weight is \\(\\alpha_t=\\sigma((\\lVert c_t^{vel}\\rVert-0.1)/0.02)\\): low speeds favor the WBC teacher and high speeds favor the locomotion teacher, while the arms remain anchored to WBC. Recovery samples exclude the normal sliced KL terms and use student-to-AMP KL across all 29 action dimensions. The paper does not fully specify deployment-time recovery-flag detection, mode entry/exit, or special termination; the stateful posture detector in the released code is not identical to the paper's reset-time flag description.",
+          "The MoE student encodes an 11-frame history into a 64-D latent with a 1-D temporal convolution. A gate MLP with hidden sizes \\((128,64)\\) produces three softmax weights; three \\((256,128)\\) expert MLPs each output a 29-D action mean, and all experts share the log standard deviation. Student training uses 4,096 parallel environments, 24 steps per rollout, 5 epochs, 4 minibatches, and at most 30,000 updates.",
+          "Deployment retains only the student actor, observation history, internal gait phase, online CoP filter, and low-level joint servo. Teachers, critic, AMP discriminator, KL losses, rewards, and optimizer are removed. The actor produces 29-D joint-position actions at 50 Hz, tracked by the hardware servo at 500 Hz; the VLM/vision planning stack runs more slowly and only maps tasks into the shared 10-D command.",
+          "In Table 2b, the final Ours+Stab system reports \\(|\\Delta v_x|,|\\Delta v_y|,|\\Delta\\omega_z|\\) of 0.07, 0.18, and 0.04, 97.7% global feasibility, and a \\(0.31\\,\\mathrm{m^3}\\) robust workspace. These results show that the final system can combine velocity tracking and workspace coverage, but split-KL and MoE are ablated jointly. Without a parameter-matched dense student, isolated MoE and split-KL conditions, and direct teacher-gradient conflict measurements, the claimed conflict-reduction mechanism remains unverified."
+        ]
+      }
     }
   ]
 }
