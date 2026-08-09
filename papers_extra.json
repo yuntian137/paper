@@ -3423,6 +3423,80 @@
           "In Table 2b, the final Ours+Stab system reports \\(|\\Delta v_x|,|\\Delta v_y|,|\\Delta\\omega_z|\\) of 0.07, 0.18, and 0.04, 97.7% global feasibility, and a \\(0.31\\,\\mathrm{m^3}\\) robust workspace. These results show that the final system can combine velocity tracking and workspace coverage, but split-KL and MoE are ablated jointly. Without a parameter-matched dense student, isolated MoE and split-KL conditions, and direct teacher-gradient conflict measurements, the claimed conflict-reduction mechanism remains unverified."
         ]
       }
+    },
+    {
+      "id": "npmp-neural-probabilistic-motor-primitives",
+      "categories": [
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/1811.11711",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/1811.11711",
+      "year": "2019",
+      "venue": "ICLR 2019",
+      "zh": {
+        "title": "Neural probabilistic motor primitives for humanoid control",
+        "authors": "Josh Merel, Leonard Hasenclever, Alexandre Galashov, Arun Ahuja, Vu Pham, Greg Wayne, Yee Whye Teh, Nicolas Heess",
+        "institutions": "DeepMind, London, UK",
+        "status": "全文已精读",
+        "takeaway": "NPMP 的核心是把 2707 个单动作专家离线压缩成一个带 60 维 latent 接口的共享反馈控制器：trajectory encoder 只在有参考轨迹时把未来窗口翻译成 latent，下游任务则丢弃它并由高层 RL 策略直接输出 latent；LFPC 只是利用教师 Jacobian 合成邻域动作标签，并未显式对齐学生 Jacobian。",
+        "tags": [
+          "NPMP",
+          "Humanoid Control",
+          "Motor Primitives",
+          "Policy Distillation",
+          "LFPC",
+          "Latent-Variable Policy"
+        ],
+        "mainContent": "论文要解决的是：如何把大量只能复现单条 mocap clip 的专家策略压缩成一个既能 one-shot 模仿新轨迹、又能被下游任务复用的通用低层运动模块。NPMP 使用带 AR(1) 先验的随机 latent 逆模型：trajectory encoder 根据当前至未来 5 帧的状态窗口和上一 latent 产生 \\(z_t\\)，decoder 根据真实状态 \\(s_t\\) 与 \\(z_t\\) 输出动作；二者通过离线动作蒸馏与 KL 正则联合训练。实验中，从每位专家采集 100 条 noisy rollout 的行为克隆总体最好；LFPC 用单条名义轨迹在单技能实验中可接近数百条 rollout 的行为克隆，但在 2707 专家完整压缩中略差。论文只验证 MuJoCo 仿真人形，不涉及物体交互或 Sim-to-Real，且明确承认分布外轨迹可能无法被 encoder 编码或 decoder 执行。",
+        "innovations": [
+          "提出 NPMP：以随机 latent bottleneck 连接 trajectory encoder 与状态反馈 decoder，将数千个单技能专家压缩为共享的 motor primitive embedding 和低层控制策略。",
+          "使用 AR(1) latent prior \\(z_t=\\alpha z_{t-1}+\\sqrt{1-\\alpha^2}\\,\\epsilon_t\\) 约束相邻 latent 的时间连续性，并通过信息瓶颈限制 encoder 对未来参考窗口的依赖。",
+          "提出 LFPC：在教师名义轨迹上记录动作及动作对状态的 Jacobian，用一阶线性化为扰动状态合成反馈动作标签，以减少收集大量 noisy expert rollout 的成本。严格说它不计算或直接匹配学生 Jacobian，只是拟合 Jacobian 生成的邻域函数值；在完整 encoder-decoder 中，邻域响应还可能由 latent 通路与 decoder 状态通路共同承担。",
+          "把预训练 decoder 的 latent 空间当作新的高层动作空间：有参考轨迹时可由冻结 encoder 做 one-shot imitation，无参考的下游任务则由新训练的高层策略直接选择 \\(z_t\\)。"
+        ],
+        "implementation": [
+          "数据与教师：从 CMU Mocap 数据库选取约 3000 段 2–6 秒片段，最终训练 2707 个 time-indexed 专家；专家在 MuJoCo 中以 mocap tracking reward、随机初始化参考姿态和跌倒提前终止训练，算法为 SVG(0)+Retrace，并以随机策略的均值动作作为教师。",
+          "Encoder：\\(q_\\phi(z_t\\mid z_{t-1},x_t)\\)，其中 \\(x_t=[s_t,\\ldots,s_{t+5}]\\)；网络为两层、每层 1024 hidden units 的 MLP，输出带可学习方差的多元高斯，通常使用 60 维 latent。它没有 latent 标签，动作重建误差经 decoder 反向传播来训练它。",
+          "Decoder：\\(\\pi_\\theta(a_t\\mid s_t,z_t)\\)，输入当前真实状态与 latent；网络为三层、每层 1024 hidden units 的 MLP，输出固定标准差 0.1 的高斯动作分布，动作归一化到 \\([-1,1]\\)。",
+          "联合目标是动作 log-likelihood 加权 AR(1) KL 正则；实验通常设 \\(\\alpha=0.95\\)，完整压缩中 \\(\\beta=0.1\\) 的 100-rollout 行为克隆表现最好。使用重参数化采样与 Adam，学习率 \\(10^{-4}\\)；100-rollout 模型使用 512 个长度 30 的子序列 minibatch。",
+          "LFPC 在名义点计算 \\(J_t^E=\\partial\\mu_E/\\partial s\\)，对扰动状态 \\(s_t^\\star+\\delta s_t\\) 使用 \\(a_t^\\star+J_t^E\\delta s_t\\) 作为动作标签；训练不执行学生 rollout，也不显式计算 \\(J_t^S\\)。其 minibatch 为 32 个长度 30 的子序列，每个子序列生成 5 条扰动状态序列。",
+          "阶段分工：专家训练和数据收集阶段没有 NPMP encoder；离线蒸馏阶段 encoder 与 decoder 联合更新；one-shot 模仿时二者冻结，encoder 每时刻把 6 帧参考窗口编码为一个 \\(z_t\\)；下游 go-to-target、变速和视觉障碍任务中不使用 encoder，而以 SVG(0)+Retrace 训练高层策略直接输出 \\(z_t\\)，decoder 作为预训练低层模块复用。",
+          "关键结果与边界：对 one-shot 表现低于专家 50% 的轨迹，直接优化整段 latent 后，中位相对专家性能从 43% 提升到 78%，说明一部分失败来自 encoder，但残余误差也暴露了 decoder 对稀有行为训练不足；论文没有直接测量固定 latent 下 decoder Jacobian 是否继承教师反馈律。"
+        ]
+      },
+      "en": {
+        "title": "Neural probabilistic motor primitives for humanoid control",
+        "authors": "Josh Merel, Leonard Hasenclever, Alexandre Galashov, Arun Ahuja, Vu Pham, Greg Wayne, Yee Whye Teh, Nicolas Heess",
+        "institutions": "DeepMind, London, UK",
+        "status": "Full paper reviewed",
+        "takeaway": "NPMP offline-compresses 2,707 single-clip experts into a shared feedback controller with a 60-dimensional latent interface: the trajectory encoder translates future reference windows into latents only when a reference is available, whereas downstream RL discards it and directly predicts latents; LFPC merely uses the teacher Jacobian to synthesize neighborhood action labels and does not explicitly align the student Jacobian.",
+        "tags": [
+          "NPMP",
+          "Humanoid Control",
+          "Motor Primitives",
+          "Policy Distillation",
+          "LFPC",
+          "Latent-Variable Policy"
+        ],
+        "mainContent": "The paper asks how thousands of experts, each specialized to one mocap clip, can be compressed into a reusable low-level motor module that supports both one-shot imitation and downstream task learning. NPMP is a stochastic latent inverse model with an AR(1) prior: a trajectory encoder maps the current-to-five-step-ahead state window and previous latent to \\(z_t\\), while a decoder maps the actual state \\(s_t\\) and \\(z_t\\) to an action; both are jointly trained offline with action distillation and KL regularization. Behavioral cloning from 100 noisy rollouts per expert performs best overall; LFPC from one nominal trajectory is competitive with hundreds of rollouts in single-skill tests but is somewhat worse when compressing all 2,707 experts. The evidence is limited to MuJoCo humanoids without object interaction or Sim-to-Real evaluation, and the paper explicitly notes that out-of-distribution trajectories may be neither encodable nor executable.",
+        "innovations": [
+          "NPMP introduces a stochastic latent bottleneck between a trajectory encoder and a state-feedback decoder, compressing thousands of single-skill experts into a shared motor-primitive embedding and low-level controller.",
+          "An AR(1) latent prior, \\(z_t=\\alpha z_{t-1}+\\sqrt{1-\\alpha^2}\\,\\epsilon_t\\), encourages temporal continuity between nearby latents, while the information bottleneck limits dependence on the future reference window.",
+          "LFPC records actions and action-to-state Jacobians along a teacher's nominal trajectory and uses first-order linearization to synthesize feedback action labels for perturbed states, reducing the need for many noisy expert rollouts. Strictly, it neither computes nor directly matches the student Jacobian; in the full encoder-decoder model, neighborhood response can also be shared between the latent path and the decoder's state path.",
+          "The pretrained decoder's latent space becomes a high-level action space: a frozen encoder enables one-shot imitation when a reference trajectory exists, while a newly trained high-level policy directly selects \\(z_t\\) for reference-free downstream tasks."
+        ],
+        "implementation": [
+          "Data and teachers: roughly 3,000 clips of 2–6 seconds are selected from the CMU Mocap database, yielding 2,707 time-indexed experts. Experts are trained in MuJoCo with a mocap-tracking reward, initialization across reference poses, and early termination on falls, using SVG(0)+Retrace; the mean action of each stochastic policy is used as the teacher.",
+          "Encoder: \\(q_\\phi(z_t\\mid z_{t-1},x_t)\\), where \\(x_t=[s_t,\\ldots,s_{t+5}]\\). It is a two-layer MLP with 1,024 hidden units per layer and outputs a multivariate Gaussian with learned variance, usually in a 60-dimensional latent space. There are no latent labels; it learns through action-reconstruction gradients propagated through the decoder.",
+          "Decoder: \\(\\pi_\\theta(a_t\\mid s_t,z_t)\\) takes the actual current state and latent. It is a three-layer MLP with 1,024 hidden units per layer and outputs a Gaussian action distribution with fixed standard deviation 0.1; actions are normalized to \\([-1,1]\\).",
+          "The joint objective combines action log-likelihood with a weighted AR(1) KL regularizer. Experiments normally use \\(\\alpha=0.95\\), and the best full-compression setting is 100-rollout behavioral cloning with \\(\\beta=0.1\\). Training uses reparameterized sampling and Adam at \\(10^{-4}\\); the 100-rollout models use minibatches of 512 subsequences of length 30.",
+          "LFPC computes \\(J_t^E=\\partial\\mu_E/\\partial s\\) at nominal points and labels a perturbed state \\(s_t^\\star+\\delta s_t\\) with \\(a_t^\\star+J_t^E\\delta s_t\\). Training executes no student rollouts and does not explicitly compute \\(J_t^S\\). Its minibatch contains 32 subsequences of length 30, with five perturbed state sequences generated per subsequence.",
+          "Stage roles: NPMP has no encoder during expert training or data collection; encoder and decoder are jointly updated during offline distillation; both are frozen for one-shot imitation, where the encoder emits one \\(z_t\\) per six-frame reference window; in go-to-target, variable-speed, and visual obstacle tasks, the encoder is unused and a high-level policy trained with SVG(0)+Retrace directly outputs \\(z_t\\) for the pretrained decoder.",
+          "Key result and boundary: for held-out clips whose one-shot performance is below 50% of the expert, directly optimizing the latent sequence raises median relative expert performance from 43% to 78%, indicating that some failures lie in the encoder while residual errors expose decoder undertraining on rare behaviors. The paper does not directly measure whether the decoder Jacobian at fixed latent inherits the teacher feedback law."
+        ]
+      }
     }
   ]
 }
