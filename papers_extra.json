@@ -3497,6 +3497,84 @@
           "Key result and boundary: for held-out clips whose one-shot performance is below 50% of the expert, directly optimizing the latent sequence raises median relative expert performance from 43% to 78%, indicating that some failures lie in the encoder while residual errors expose decoder undertraining on rare behaviors. The paper does not directly measure whether the decoder Jacobian at fixed latent inherits the teacher feedback law."
         ]
       }
+    },
+    {
+      "id": "sobolev-diffusion-trajectory-optimization",
+      "categories": [
+        "locomotion",
+        "manipulation"
+      ],
+      "pdf": "https://algorithmic-robotics.org/papers/WAFR_2026_Final_64.pdf",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2604.19011",
+      "year": "2026",
+      "venue": "WAFR 2026",
+      "zh": {
+        "title": "Accelerating trajectory optimization with Sobolev-trained diffusion policies",
+        "authors": "Théotime Le Hellard, Franki Nguimatsia Tiofack, Quentin Le Lidec, Justin Carpentier",
+        "institutions": "Inria; 法国巴黎高等师范学院计算机科学系（DI ENS），PSL Research University; 纽约大学 Courant Institute",
+        "status": "全文已精读",
+        "takeaway": "不要把它记成“用 diffusion 替代 TO”：本文用 ProxDDP 的局部反馈 Jacobian 对 trajectory-chunk diffusion 增加一阶监督，使其用更少的已求解轨迹生成更好的 TO warm start；需要高质量可行解时，新实例仍要由 ProxDDP 逐实例精修。",
+        "tags": [
+          "Trajectory Optimization",
+          "Diffusion Policy",
+          "Sobolev Learning",
+          "Jacobian Matching",
+          "ProxDDP",
+          "Warm Start",
+          "Compounding Error"
+        ],
+        "mainContent": "论文研究梯度型轨迹优化（TO）对初始轨迹敏感、每个新 OCP 都需独立迭代，以及普通 imitation/diffusion policy 从局部最优轨迹学习后容易因微小偏差产生 compounding error 的问题。ProxDDP 先为已采样任务求出局部最优状态—控制轨迹与 feedback gain，再将其沿闭环动力学传播为 clean trajectory chunk 对历史状态的 Jacobian 标签；conditional DDPM 同时接受轨迹数值 MSE 和该一阶导数监督。训练可通过“policy 生成初值—ProxDDP 精修—择优收集—继续监督训练”的 outer loop 迭代，部署时 diffusion 只负责生成 warm start，Sobolev 标签不再需要。仿真结果支持一阶项提高轨迹样本效率并减少后续 TO 的迭代与 solver-only 时间，但不提供全局最优、约束安全、接触任务或真机保证。",
+        "innovations": [
+          "将 ProxDDP backward pass 得到的局部 feedback gain \\(K_t=\\partial u_t/\\partial x_t\\) 与可微动力学组合并向未来传播，构造整段 clean chunk 的一阶标签 \\(G=\\partial\\tau_0/\\partial x_{\\mathrm{hist}}\\)，从而让每条已求解轨迹同时提供函数值和局部反馈规律。",
+          "在 DDPM 的 clean-chunk MSE 上加入随机投影的 Sobolev loss：对随机输出方向 \\(v\\) 比较 \\(v^\\top G\\) 与网络 clean estimate 对历史状态的向量—Jacobian 乘积，并把同一 full-process derivative target 施加到随机抽取的单个 denoising step。",
+          "提出 policy warm-start 与 TO refine 的交替闭环：插值初值和当前 policy 初值分别运行 ProxDDP，只接纳已收敛解并选择代价较低者，再用新轨迹和一阶标签继续训练 policy。",
+          "创新边界：Sobolev/Jacobian matching、DDP feedback gain、DDPM conditional U-Net、inpainting 和 DAgger-like 数据聚合思想均为已有组件；本文真正新增的是它们面向 trajectory-chunk diffusion warm-start 的具体一阶接口与 outer-loop 组合。"
+        ],
+        "implementation": [
+          "OCP 给定任务参数 \\(\\xi\\)、已知可微动力学、代价与约束；ProxDDP 更新的是当前实例的数值轨迹 \\(X,U\\)，收敛后同时输出 \\(K_t\\)。由 \\(F_t^{\\mathrm{cl}}=f_{x,t}+f_{u,t}K_t\\) 及链式传播得到 chunk Jacobian \\(G\\)；这些都是冻结的监督标签，不是可训练网络。",
+          "一次 diffusion 更新从 solver 轨迹切出 clean chunk \\(\\tau_0\\)，随机采样噪声等级 \\(k\\) 与高斯噪声得到 \\(\\tau_k\\)，conditional U-Net 输入 \\(\\tau_k,k,\\xi,o_{\\mathrm{hist}}\\) 并直接预测 clean chunk。总损失由 clean-chunk MSE 与随机投影的一阶 Jacobian MSE 构成，只更新 U-Net 参数 \\(\\theta\\)；因为还要对输入梯度再求参数梯度，训练涉及 mixed second-order autodiff。",
+          "diffusion 不是“一阶监督本身”，而是被零阶轨迹标签与一阶 Jacobian 标签联合训练的生成模型；部署时它仍输出未来 trajectory/action chunk，并不会显式输出 Jacobian，也不再需要 \\(K_t\\)、\\(G\\) 或 Sobolev loss。",
+          "默认实现使用 PyTorch conditional U-Net，hidden dimensions 为 [24, 24, 32, 32]、约 300k 参数；采用 square-cosine DDPM scheduler，固定 \\(K=5\\) 个 diffusion steps，默认 \\(T_h=32\\)、\\(T_o=1\\)、\\(T_a=31\\)，随机投影数 \\(n_{\\mathrm{proj}}=1\\)。Sob+Diff 每个 epoch 约为普通 Diff 的 2 倍训练时间。",
+          "推理从高斯噪声 chunk 开始做完整反向去噪，每一步用 inpainting 固定已知历史，只执行生成 chunk 的前 \\(T_a\\) 个未来动作后重新规划。若生成变量就是控制 \\(u_t\\) 则直接使用；UR5 等 state-control 设置需经 RNEA/inverse mapping 得到力矩，但论文没有完整给出由预测状态或速度构造逆动力学输入的离散公式。",
+          "训练 outer loop 对插值初值与 policy 初值各运行一次 ProxDDP，若两者都未在 \\(n_{\\max}=1000\\) 次内收敛便丢弃该任务实例，否则选择代价较低的收敛解；作者默认每轮清空数据 buffer，但保留并继续更新同一组网络参数。该过程没有 reward、critic、advantage 或 PPO，不属于 RL。",
+          "实验覆盖单/双倒立摆、四种 UR5 目标到达变体及含 0、1、3、9 个固定柱障碍的 quadrotor，共 3 类任务、8 个变体；结果以 5 个随机种子和每个种子 50 个测试实例评估。作者报告 Sob+Diff 通常比无一阶项的 Diff 少用 5–10 倍轨迹，并使 TO refinement 的 solver-only 时间缩短约 2×–20×；但在双摆的近 20× solver 加速设置中，加入 diffusion rollout 后的端到端时间并不一定更快。",
+          "证据边界：所有实验都固定 \\(K=5\\)，实际 sweep 的是 prediction/action horizon 与 replanning 频率，因此论文没有直接验证“更少 denoising steps”；Eq. (11) 对齐单个 denoising step 的 clean estimate Jacobian，而不严格等于完整 reverse sampler 的最终 Jacobian。实验也没有真机、接触丰富任务、模型失配、受控扰动恢复或数值化约束违反评估。"
+        ]
+      },
+      "en": {
+        "title": "Accelerating trajectory optimization with Sobolev-trained diffusion policies",
+        "authors": "Théotime Le Hellard, Franki Nguimatsia Tiofack, Quentin Le Lidec, Justin Carpentier",
+        "institutions": "Inria; Département d’Informatique de l’École normale supérieure, PSL Research University, France; Courant Institute, New York University, USA",
+        "status": "Full paper reviewed",
+        "takeaway": "Do not remember this as replacing TO with diffusion: the paper adds first-order supervision from ProxDDP's local feedback Jacobians to a trajectory-chunk diffusion model so that it can produce better TO warm starts from fewer solved trajectories; high-quality feasible solutions still require instance-wise ProxDDP refinement.",
+        "tags": [
+          "Trajectory Optimization",
+          "Diffusion Policy",
+          "Sobolev Learning",
+          "Jacobian Matching",
+          "ProxDDP",
+          "Warm Start",
+          "Compounding Error"
+        ],
+        "mainContent": "The paper addresses the sensitivity of gradient-based trajectory optimization (TO) to its initial trajectory, the need to solve every new OCP independently, and the compounding errors that ordinary imitation or diffusion policies can suffer when trained only on locally optimal trajectories. ProxDDP first solves sampled tasks and supplies both locally optimal state-control trajectories and feedback gains, which are propagated through closed-loop dynamics to form Jacobian labels of clean trajectory chunks with respect to state history; a conditional DDPM is trained with both trajectory-value MSE and this first-order supervision. Training may alternate policy-generated warm starts, ProxDDP refinement, best-solution collection, and further supervised learning, while at deployment the diffusion model only generates a warm start and no Sobolev label is required. Simulations support improved trajectory sample efficiency and fewer downstream TO iterations and solver-only time, but provide no guarantee of global optimality, constraint safety, contact-rich performance, or real-robot transfer.",
+        "innovations": [
+          "It combines the local feedback gains \\(K_t=\\partial u_t/\\partial x_t\\) produced by the ProxDDP backward pass with differentiable dynamics and propagates them forward to construct a first-order label \\(G=\\partial\\tau_0/\\partial x_{\\mathrm{hist}}\\) for an entire clean chunk, so each solved trajectory provides both function values and a local feedback law.",
+          "It augments DDPM clean-chunk MSE with a stochastic-projection Sobolev loss: for a random output direction \\(v\\), it matches \\(v^\\top G\\) to the vector-Jacobian product of the network's clean estimate with respect to state history, applying the same full-process derivative target to a randomly sampled individual denoising step.",
+          "It proposes an alternating policy-warm-start and TO-refinement loop: ProxDDP is run from both interpolation and current-policy initializations, only converged solutions are admitted, the lower-cost solution is retained, and the policy is retrained on the resulting trajectories and derivative labels.",
+          "Novelty boundary: Sobolev/Jacobian matching, DDP feedback gains, conditional DDPM U-Nets, inpainting, and DAgger-like aggregation are inherited components; the contribution is their specific first-order interface and outer-loop integration for trajectory-chunk diffusion warm starts."
+        ],
+        "implementation": [
+          "An OCP supplies task parameters \\(\\xi\\), known differentiable dynamics, costs, and constraints. ProxDDP updates the instance-specific numerical trajectories \\(X,U\\) and returns \\(K_t\\) after convergence; \\(F_t^{\\mathrm{cl}}=f_{x,t}+f_{u,t}K_t\\) and chain propagation yield the chunk Jacobian \\(G\\). These quantities are fixed supervision labels, not trainable networks.",
+          "For one diffusion update, a clean chunk \\(\\tau_0\\) is cut from a solver trajectory, a noise level \\(k\\) and Gaussian noise are sampled to obtain \\(\\tau_k\\), and a conditional U-Net receives \\(\\tau_k,k,\\xi,o_{\\mathrm{hist}}\\) and directly predicts the clean chunk. The loss combines clean-chunk MSE with stochastic-projection Jacobian MSE and updates only U-Net parameters \\(\\theta\\); differentiating an input gradient with respect to parameters requires mixed second-order autodiff.",
+          "The diffusion model is not itself the 'first-order supervision'; it is a generator jointly trained with zero-order trajectory labels and first-order Jacobian labels. At deployment it still outputs a future trajectory/action chunk rather than an explicit Jacobian, and \\(K_t\\), \\(G\\), and the Sobolev loss are no longer needed.",
+          "The default implementation uses a PyTorch conditional U-Net with hidden dimensions [24, 24, 32, 32] and about 300k parameters, a square-cosine DDPM scheduler, a fixed \\(K=5\\) diffusion steps, default \\(T_h=32\\), \\(T_o=1\\), and \\(T_a=31\\), and \\(n_{\\mathrm{proj}}=1\\) stochastic projection. One Sob+Diff epoch takes roughly twice the training time of one Diff epoch.",
+          "Inference starts from a Gaussian-noise chunk and runs the full reverse denoising chain, inpainting known history at every step, then executes the first \\(T_a\\) future actions before replanning. If the generated variable is \\(u_t\\), it is used directly; state-control settings such as UR5 require RNEA or another inverse mapping to obtain torques, but the paper does not fully specify the discrete mapping from predicted states or velocities to inverse-dynamics inputs.",
+          "The outer loop runs ProxDDP once from an interpolation initialization and once from a policy initialization. If neither converges within \\(n_{\\max}=1000\\) iterations, the task instance is discarded; otherwise the lower-cost converged result is retained. The authors reset the data buffer by default between outer iterations but keep updating the same network parameters. There is no reward, critic, advantage, or PPO update, so this is not RL.",
+          "Experiments cover single and double inverted pendulums, four UR5 reaching variants, and quadrotor tasks with 0, 1, 3, or 9 fixed column obstacles, totaling three task families and eight variants; evaluation uses five random seeds and 50 test instances per seed. The authors report that Sob+Diff usually needs 5-10 times fewer trajectories than Diff without the first-order term and reduces TO-refinement solver-only time by about 2x-20x, although end-to-end time need not improve in the double-pendulum setting with nearly 20x solver acceleration once diffusion rollout time is included.",
+          "Evidence boundary: all experiments fix \\(K=5\\) and sweep prediction/action horizons and replanning frequency, so they do not directly verify 'fewer denoising steps.' Equation (11) matches the clean-estimate Jacobian at one denoising step rather than the exact final Jacobian of the full reverse sampler. The paper also lacks real-robot, contact-rich, model-mismatch, controlled-perturbation recovery, and quantitative constraint-violation evaluations."
+        ]
+      }
     }
   ]
 }
