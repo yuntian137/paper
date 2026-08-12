@@ -100,7 +100,7 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20260807-formula-delimiters";
+const readingPromptsPath = "reading_prompts_v4.json?v=20260812-closed-loop-report";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
