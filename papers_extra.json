@@ -3736,6 +3736,91 @@
           "12. The evidence boundary is important: the performance gate does not rerun the environment with \\(z=0\\), visit the resulting state distribution, or recompute returns, so \\(\\Delta J\\) estimates only a local action-preference change on privileged-policy rollouts. The paper also does not explicitly align \\(h_t^{\\mathrm{long}}\\) with \\(z_t\\); the handover is an indirect consequence of blocking the privileged channel with KL while PPO maintains return. No public arXiv or project link is provided, and many reward, PPO, and domain-randomization details are inherited from cited configurations, limiting standalone reproducibility."
         ]
       }
+    },
+    {
+      "id": "extreme-parkour",
+      "categories": [
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2309.14341",
+      "project": "https://extreme-parkour.github.io/",
+      "arxiv": "https://arxiv.org/abs/2309.14341",
+      "year": "2024",
+      "venue": "IEEE ICRA 2024",
+      "zh": {
+        "title": "Extreme Parkour with Legged Robots",
+        "authors": "Xuxin Cheng, Kexin Shi, Ananye Agarwal, Deepak Pathak",
+        "institutions": "Carnegie Mellon University",
+        "status": "全文已精读",
+        "takeaway": "先用 scandots、动力学特权信息和 waypoint oracle heading 训练极限跑酷教师，再把地形感知与越障方向连同动作一起蒸馏进深度学生；最该记住的是 obstacle-conditioned heading 接口及其训练闭环，而不是论文首次提出了视觉教师—学生蒸馏。",
+        "tags": [
+          "Quadruped Parkour",
+          "PPO",
+          "DAgger",
+          "Depth Perception",
+          "Heading Distillation",
+          "ROA",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究低成本 Unitree A1 如何仅依靠前视深度、本体感觉、速度命令和风格开关，在没有显式地形重建与在线规划的情况下输出 12 个关节位置目标并完成极限跑酷。Phase 1 在仿真中用 PPO 训练可访问 scandots、waypoint oracle heading 和动力学特权信息的教师，并通过 ROA 从本体历史恢复动力学 latent；Phase 2 让学生动作驱动 DAgger rollout，用冻结教师动作和 oracle heading 分别监督学生 actor 与 Depth ConvNet–GRU。真机展示包括约 0.5 m 高台、0.8 m 沟隙、倾斜跳台和 handstand，但 handstand 明确不依赖外感知，论文也没有证明任意自然几何或动态障碍上的泛化。最关键的证据缺口是：MTS 只有终点消融，未测 heading error、门控比例或状态分布漂移，而且公开代码的门控条件与论文公式不一致。",
+        "innovations": [
+          "核心创新：把任务命令改造成由 terrain waypoint 生成的 obstacle-conditioned world-frame heading，使教师能够为斜置跳台等障碍学习随几何变化的起跳与转向方向；部署时再从深度预测该 heading。",
+          "核心创新：在 Phase 2 同时蒸馏教师动作与 oracle heading，并提出 MTS（mixture of teacher and student）在 heading 预测不可靠时回退 oracle，以缓解随机初始化 heading predictor 引起的 student distribution drift。Table 3 支持混合训练配置有用，但没有证明 prediction-error gate 的特异机制。",
+          "关键辅助设计：world-frame 速度投影奖励抑制绕障或碰撞重试，5 cm edge-clearance penalty 为真机落脚提供几何安全裕度；前者在 NoInner 消融中贡献明显，后者主要改变 edge-contact 统计和真机成功率。",
+          "工程组合而非原创组件：scandots teacher 到 depth ConvNet–GRU student、student-rollout DAgger、PPO、terrain curriculum、ROA 和低层 PD 均继承已有工作；本文的系统价值在于将它们与 heading 接口、统一奖励和低频视觉部署接成一个极限跑酷闭环。"
+        ],
+        "implementation": [
+          "Phase 1 教师 actor 的论文级输入为本体观测 \\(\\mathbf{x}_t\\)、132 个 scandots \\(\\mathbf{m}_t\\)、由 waypoint 计算的目标 heading \\(\\hat{\\mathbf d}_t\\)、walking/style flag \\(W_t\\) 和速度命令 \\(v_t^{\\mathrm{cmd}}\\)。Waypoint 坐标本身不直接输入 actor；edge mask、接触力和完整仿真状态主要用于 reward、termination 或 critic，也不能全部算作教师 actor 输入。",
+          "ROA（Regularized Online Adaptation）处理动力学不完全可观测性：训练时 privileged encoder 用仿真环境参数 \\(e_t\\) 产生 \\(z_t^{\\mathrm{priv}}\\)，history encoder 用最近本体历史 \\(x_{t-H+1:t}\\) 产生 \\(z_t^{\\mathrm{hist}}\\)。目标 \\(\\lambda\\lVert z_t^{\\mathrm{priv}}-\\operatorname{sg}(z_t^{\\mathrm{hist}})\\rVert_2^2+\\lVert\\operatorname{sg}(z_t^{\\mathrm{priv}})-z_t^{\\mathrm{hist}}\\rVert_2^2\\) 一方面约束 privileged latent 不要包含历史无法恢复的信息，另一方面训练 history encoder 模仿它。",
+          "ROA 中 PPO reward/advantage 更新 actor、critic 及 privileged 表示；latent imitation loss 直接更新 history encoder。部署只保留 history encoder，根据最新 observation history 每步重新计算 latent；online 指在线推断和适应控制，不是在真机上反向传播或更新权重。ROA 处理质量、质心、摩擦与 motor strength 等动力学变化，不负责 scandots 到 depth 的视觉替换。",
+          "Phase 1 每个 policy step 由 actor 输出 12 维归一化 action，仿真器推进并产生下一状态、接触和 reward；PPO 根据 rollout 的 return/advantage 更新 actor 和 critic。训练地形含 tilted ramp、gap、hurdle 与 high step，并用行进距离决定课程升降级。",
+          "Phase 2 初始化时冻结 Phase 1 teacher，并用其 actor 参数 deep-copy 初始化 student；Depth ConvNet–GRU 起初未训练。每一步由 student action 真正推进仿真，冻结 teacher 在同一 student-visited state 上读取 scandots 与 oracle heading，给出动作标签；因此这是 on-policy data aggregation 的 DAgger，而不是固定离线 BC 数据集。",
+          "Phase 2 有两个监督目标：teacher 的 12 维 action 监督 student action，waypoint oracle yaw 监督 depth network 的 predicted yaw。MTS 只决定 copied actor 此刻接收 predicted heading 还是 oracle heading，并不混合或切换 teacher/student action。公开实现用 action L2 与 yaw L2 联合更新 depth encoder、GRU 和 copied student actor，teacher 与 simulator 不接收梯度。",
+          "论文给出的 MTS 判据为预测误差 \\(|\\hat\\theta_t-\\theta_t^*|<0.6\\) 时使用 predicted heading，否则使用 oracle。公开代码却检查 target yaw 与机器人当前 yaw 的差是否小于 0.6，既不是 prediction error，也没有对应的绝对值；这是论文—代码的核心复现冲突，不能擅自认定哪一版代表最终实验。",
+          "真机 D435 深度约为 \\(10\\pm2\\) Hz，裁剪 dead pixels 后降采样到 \\(58\\times87\\)；Jetson NX 上的 depth network 以 10 Hz 输出 terrain latent 与 heading，经 UDP 提供给 50 Hz base actor。训练中固定模拟约 80 ms depth latency 与 16 ms proprioceptive latency；论文未说明低层 PD servo 的实际运行频率。",
+          "部署时保留 Depth ConvNet–GRU、student actor、ROA history adaptation 和低层 PD；丢弃 scandots、waypoint/oracle heading、privileged encoder 的真实参数输入、teacher、critic、reward 与仿真器。公开代码把 action 解释为 \\(q_t^{\\mathrm{des}}=q^{\\mathrm{default}}+0.25a_t\\)，再由 PD 产生力矩，因此系统是 pixels-to-joint-target，而不是 pixels-to-torque。",
+          "[外部官方资料] 公开配置为 53 维 proprioception、132 维 scandots、9 维显式 privileged state、29 维 latent privileged information、10 帧 history 与 12 维 action；base policy 建议训练 10k–15k iterations，vision distillation 建议 5k–10k iterations。代码还显示 scandot MLP 输出 32 维、privileged/history encoder 输出 20 维、GRU hidden size 为 512，但这些实现细节不能自动视为论文最终内部 checkpoint 的完整配置。",
+          "真机极限结果证明完整视觉—heading—action—PD 闭环在作者的四类静态障碍上可行；它没有隔离 ROA 的独立贡献，也没有用等 oracle 使用量的随机 gate 或固定 schedule 对照 MTS。每个真机设置仅 5 次试验，且缺少自然场景 OOD、动态障碍、相机失效、安全恢复和完整 torque/thermal 统计。"
+        ]
+      },
+      "en": {
+        "title": "Extreme Parkour with Legged Robots",
+        "authors": "Xuxin Cheng, Kexin Shi, Ananye Agarwal, Deepak Pathak",
+        "institutions": "Carnegie Mellon University",
+        "status": "Full paper reviewed",
+        "takeaway": "Train an extreme-parkour teacher with scandots, privileged dynamics, and waypoint-derived oracle headings, then distill terrain perception, obstacle-dependent heading, and action into a depth student; the memorable contribution is the obstacle-conditioned heading interface and its training loop, not the first use of visual teacher-student distillation.",
+        "tags": [
+          "Quadruped Parkour",
+          "PPO",
+          "DAgger",
+          "Depth Perception",
+          "Heading Distillation",
+          "ROA",
+          "Sim-to-Real"
+        ],
+        "mainContent": "The paper studies how a low-cost Unitree A1 can use front-facing depth, proprioception, a speed command, and a style flag to output 12 joint-position targets for extreme parkour without explicit terrain reconstruction or online planning. Phase 1 trains a PPO teacher with scandots, waypoint-derived oracle headings, and privileged dynamics while ROA recovers a dynamics latent from proprioceptive history; Phase 2 runs DAgger under student actions and uses frozen-teacher actions and oracle headings to supervise the student actor and Depth ConvNet-GRU. Real-robot demonstrations include an approximately 0.5 m step, a 0.8 m gap, tilted ramps, and a handstand, although the handstand explicitly does not use exteroception and the paper does not establish generalization to arbitrary natural geometry or dynamic obstacles. The central evidence gap is that MTS is supported only by endpoint ablations, while heading error, gate usage, and state-distribution drift are not measured and the released gate differs from the paper's equation.",
+        "innovations": [
+          "Core innovation: reformulate the task command as an obstacle-conditioned world-frame heading generated from terrain waypoints, enabling the teacher to learn geometry-dependent takeoff and turning directions for cases such as tilted ramps; at deployment this heading is predicted from depth.",
+          "Core innovation: jointly distill teacher actions and oracle headings in Phase 2, with MTS (mixture of teacher and student) falling back to the oracle when heading prediction is unreliable to mitigate distribution drift caused by an initially random heading predictor. Table 3 supports the usefulness of mixed training but does not isolate the specific benefit of a prediction-error gate.",
+          "Key supporting designs: a world-frame projected-velocity reward discourages detours and collision retries, while a 5 cm edge-clearance penalty creates a geometric foothold margin for transfer. NoInner strongly affects progress, whereas NoClear mainly affects edge-contact statistics and real-world success.",
+          "Engineering integration rather than original components: PPO, terrain curricula, scandots-teacher to Depth ConvNet-GRU student distillation, student-rollout DAgger, ROA, and low-level PD are inherited. The system contribution is connecting them to the heading interface, unified rewards, and low-rate visual deployment for extreme parkour."
+        ],
+        "implementation": [
+          "The paper-level Phase 1 teacher-actor inputs are proprioception \\(\\mathbf{x}_t\\), 132 scandots \\(\\mathbf{m}_t\\), waypoint-derived target heading \\(\\hat{\\mathbf d}_t\\), walking/style flag \\(W_t\\), and commanded speed \\(v_t^{\\mathrm{cmd}}\\). Waypoint coordinates are not directly fed to the actor; the edge mask, contact forces, and full simulator state are mainly used by rewards, termination, or the critic and should not all be counted as teacher-actor inputs.",
+          "ROA (Regularized Online Adaptation) addresses partially observed dynamics. During training, a privileged encoder maps simulator parameters \\(e_t\\) to \\(z_t^{\\mathrm{priv}}\\), while a history encoder maps recent proprioception \\(x_{t-H+1:t}\\) to \\(z_t^{\\mathrm{hist}}\\). The objective \\(\\lambda\\lVert z_t^{\\mathrm{priv}}-\\operatorname{sg}(z_t^{\\mathrm{hist}})\\rVert_2^2+\\lVert\\operatorname{sg}(z_t^{\\mathrm{priv}})-z_t^{\\mathrm{hist}}\\rVert_2^2\\) both constrains the privileged latent to remain recoverable from history and trains the history encoder to imitate it.",
+          "In ROA, PPO rewards and advantages update the actor, critic, and privileged representation, while the latent-imitation term directly trains the history encoder. Deployment retains only the history encoder and recomputes its latent from the latest observation history; online means online inference and adaptive control, not real-robot backpropagation or weight updates. ROA handles dynamics such as mass, center of mass, friction, and motor strength, not the scandots-to-depth visual replacement.",
+          "At each Phase 1 policy step, the actor outputs a 12-D normalized action, the simulator produces the next state, contacts, and reward, and PPO updates actor and critic from rollout returns and advantages. Training terrains include tilted ramps, gaps, hurdles, and high steps, with a distance-based terrain curriculum.",
+          "Phase 2 freezes the Phase 1 teacher and deep-copies its actor into the student, while the Depth ConvNet-GRU starts untrained. Student actions advance the simulator; at each student-visited state, the frozen teacher reads scandots and the oracle heading to provide an action label. This is student-distribution DAgger rather than behavioral cloning on a fixed offline dataset.",
+          "Phase 2 has two supervision targets: the teacher's 12-D action supervises the student action, and waypoint-derived oracle yaw supervises predicted yaw. MTS only chooses whether the copied actor receives predicted or oracle heading; it does not mix or switch teacher and student actions. The released implementation jointly updates the depth encoder, GRU, and copied student actor with action-L2 and yaw-L2 losses, while the teacher and simulator receive no gradients.",
+          "The paper defines MTS to use predicted heading when \\(|\\hat\\theta_t-\\theta_t^*|<0.6\\), otherwise using the oracle. The released code instead tests whether target yaw minus current robot yaw is below 0.6; this is not prediction error and lacks the corresponding absolute value. This is a central paper-code reproducibility conflict, and the available evidence cannot establish which version generated the reported results.",
+          "The real D435 depth stream runs at approximately \\(10\\pm2\\) Hz and is cropped and downsampled to \\(58\\times87\\). On a Jetson NX, the depth network produces a terrain latent and heading at 10 Hz and sends them over UDP to a 50 Hz base actor. Training models approximately 80 ms depth latency and 16 ms proprioceptive latency; the paper does not specify the actual low-level PD servo rate.",
+          "Deployment retains the Depth ConvNet-GRU, student actor, ROA history adaptation, and low-level PD, while discarding scandots, waypoint/oracle headings, privileged simulator inputs, teacher, critic, rewards, and simulator. The released code interprets actions as \\(q_t^{\\mathrm{des}}=q^{\\mathrm{default}}+0.25a_t\\) before PD produces torque, so the system is pixels-to-joint-target rather than pixels-to-torque.",
+          "[External official material] The released configuration uses 53-D proprioception, 132 scandots, 9 explicit privileged states, 29 latent privileged variables, a 10-frame history, and 12 actions. The repository recommends 10k-15k iterations for the base policy and 5k-10k for visual distillation; it also shows a 32-D scandot latent, 20-D privileged/history latent, and GRU hidden size 512, but these details do not by themselves prove the exact configuration of the paper's final internal checkpoints.",
+          "The extreme real-robot results establish feasibility of the complete vision-heading-action-PD loop on the authors' four static obstacle families. They do not isolate ROA's independent contribution or compare MTS against random or scheduled gates with matched oracle usage. Each real-world setting has only five trials, and the paper lacks systematic natural-scene OOD, dynamic-obstacle, camera-failure, recovery, torque, and thermal evaluations."
+        ]
+      }
     }
   ]
 }
