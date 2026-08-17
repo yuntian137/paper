@@ -3821,6 +3821,75 @@
           "The extreme real-robot results establish feasibility of the complete vision-heading-action-PD loop on the authors' four static obstacle families. They do not isolate ROA's independent contribution or compare MTS against random or scheduled gates with matched oracle usage. Each real-world setting has only five trials, and the paper lacks systematic natural-scene OOD, dynamic-obstacle, camera-failure, recovery, torque, and thermal evaluations."
         ]
       }
+    },
+    {
+      "id": "pi-dropout-rl",
+      "categories": [],
+      "pdf": "https://arxiv.org/pdf/2005.09220",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2005.09220",
+      "year": "2020",
+      "venue": "ICLR 2020 Workshop: Beyond tabula rasa in RL (BeTR-RL)",
+      "zh": {
+        "title": "Privileged Information Dropout in Reinforcement Learning",
+        "authors": "Pierre-Alexandre Kamienny, Kai Arulkumaran, Feryal Behbahani, Wendelin Boehmer, Shimon Whiteson",
+        "institutions": "University of Oxford; Imperial College London",
+        "status": "全文已精读",
+        "takeaway": "这篇论文最该记住的是：PI-Dropout 不把特权信息直接作为部署策略输入，也不把它变成 teacher 标签，而是在训练时让特权信息决定普通观测隐藏特征上的乘性噪声强度，以 Information Bottleneck 风格正则化表示；测试时直接删除 PI 分支并把噪声方差设为 0。论文证明这种做法在一个小型 POMDP gridworld 中显著优于若干 PI 基线，但没有证明性能提升确实来自更好的 belief representation。",
+        "tags": ["Privileged Information", "PI-Dropout", "Information Bottleneck", "DRQN", "POMDP"],
+        "mainContent": "论文研究如何在强化学习训练期使用 privileged information \\(x^*\\)，但部署时只依赖普通观测 \\(x\\)。作者把监督学习中的 PI-Dropout 引入 RL：普通分支生成 \\(h(x)\\)，PI 分支根据 \\(x^*\\) 生成状态相关的噪声尺度，并通过 \\(z=h(x;W)\\odot\\mathrm{Lognormal}(0,h^*(x^*;W^*))\\) 对普通隐藏表示施加乘性噪声；执行时忽略 PI 分支并把噪声方差手动设为 0。实验在三房间部分可观测 gridworld 上采用 DRQN，PI-Dropout 比无 PI、辅助重建、蒸馏、Naive Dropout 和普通 Information Dropout 表现更好，并且 full-state PI 与 sub-goal PI 都能工作；但线性 probe 没有显示 PI-Dropout 的位置表征优于普通 DRQN，因此“更好的 representation 是性能提升原因”并未被论文证明。",
+        "innovations": [
+          "将 Lambert et al. (2018) 在监督学习中提出的 PI-Dropout 机制迁移到强化学习场景，使 privileged information 在训练时作为噪声分布的条件，而不是作为部署期必需输入。",
+          "构造训练期使用 PI、执行期直接去除 PI 的结构：PI 分支不直接提供 action 或 Q-value feature，而是控制普通表示上的 multiplicative log-normal noise；测试时将噪声方差设为 0，因此不需要部署 privileged sensor。",
+          "通过 auxiliary task、distillation、Naive Dropout 和 standard Information Dropout 等对照，说明在该 gridworld 中收益不能简单归结为一般 dropout regularization；但论文没有进一步闭合 representation regularization 与 exploration 中究竟哪一个机制导致性能提升。"
+        ],
+        "implementation": [
+          "环境由三个相连的 6×6 房间构成；agent 从左房间或中间房间随机位置初始化，必须在 100 步内到达最右侧目标。普通观测 \\(x\\) 是 5×5 egocentric view；默认 privileged information \\(x^*\\) 是 full state (FS)，另一种 PI 是包含当前房间并标出正确走廊的 sub-goal (SG)。每执行一步奖励 -0.1，到达目标奖励 +10。",
+          "基础 agent 使用 DRQN，即带循环记忆的 Deep Q-Network：网络由两层 convolution、一个 GRU 和两层 fully connected layer 组成，并使用 ReLU。GRU 根据当前局部观测特征和上一时刻 hidden state 累积历史，在这个 POMDP 中形成隐式 belief state；Q head 输出各离散动作的 Q-value。作者也尝试过 A3C 与 PPO，但因为 DRQN 在该环境中表现更好，后续实验以 DRQN 为主。",
+          "PI-Dropout 的核心前向为 \\(z=h(x;W)\\odot\\mathrm{Lognormal}(0,h^*(x^*;W^*))\\)。普通分支 \\(h(x;W)\\) 提取部署时可获得观测的 feature；PI 分支 \\(h^*(x^*;W^*)\\) 不输出 action 或监督标签，而是参数化乘到普通 feature 上的噪声分布。论文说明实践中在 PI 分支后使用 sigmoid，将噪声方差限制在 (0,1)。",
+          "Information Bottleneck 的作用是限制表示 \\(z\\) 对原始输入 \\(x\\) 保留过多任务无关信息。Information Dropout 通过对隐藏表示加入可学习的乘性噪声实现这种 bottleneck；PI-Dropout 的变化是由更完整的 privileged information \\(x^*\\) 来条件化噪声强度。直观上，持续受到较大噪声扰动的 representation direction 很难被下游 Q-network 精确依赖，因此训练会倾向于形成对这些扰动更不敏感的表示；但论文没有直接证明 PI 分支确实识别并抑制了 task-irrelevant feature。",
+          "PI 分支没有“正确噪声大小”的 ground-truth label。其参数 \\(W^*\\) 是可学习参数，并通过 PI-conditioned noise 进入后续 Q-network 的可微计算图；因此它与普通分支共同参与训练。论文没有完整写出 DRQN TD objective 与 PI-Dropout Information Bottleneck regularizer 合并后的总 loss、符号和具体 batch 实现，因此不能从正文恢复一条更精确的 PI 分支独立更新公式。",
+          "噪声并不是越大越好。Information Bottleneck regularization 倾向于压缩输入信息，而 RL task objective 要求加噪后的表示仍足以预测有用 Q-value；如果噪声过大并破坏关键任务信息，TD/Q-learning 性能会恶化。超参数 \\(\\beta\\) 控制这种 information compression 与 task performance 的权衡，Supplementary Figure 4 显示 full-state PI 对 \\(\\beta\\) 相当敏感，而 sub-goal PI 相对更稳定。",
+          "所有模型训练 \\(10^4\\) episodes，并使用 \\(\\epsilon\\)-greedy exploration；测试时使用 greedy policy，并对左房间和中间房间的所有可能初始位置求平均。Figure 3 报告 5 个随机种子的平均 test return ± 1 standard error。",
+          "主要基线包括：完全不用 PI 的 DRQN；利用 PI reconstruction auxiliary loss 的 AUX；由预训练 teacher 接收 \\(x^*\\)、student 只接收 \\(x\\) 的 distillation (DIS)；将 multiplicative noise 在前 3000 episodes 内从 0 手工 anneal 到 1 的 Naive Dropout；以及不使用 privileged information 的 standard Information Dropout。直接接收 full state 的 DRQN[FS,∅] 被作为 oracle upper bound。",
+          "Figure 3a 中 PI-D[5x5,FS] 明显优于其他 PI 基线，并最接近 full-state oracle。作者进一步观察到只有 PI-Dropout 和 oracle 能从所有初始位置稳定完成任务；其他方法尤其容易从距离目标最远的左侧房间失败。该实验直接支持“PI-Dropout 在这个 POMDP 上提升最终 RL 性能”，但不能单独证明提升来自作者设想的 Information Bottleneck 表征机制。",
+          "Figure 3b 用 sub-goal 替代 full state 作为 privileged information，PI-D[5x5,SG] 同样取得较高性能且收敛更快，说明同一 gridworld 中至少两种不同 PI 都能用于条件化 dropout。Standard Information Dropout 的表现与普通 DRQN 接近，因此作者据此认为增益不是仅由普通 dropout regularization 造成。",
+          "作者还用 greedy rollout 收集训练后 agent 的 GRU activation，并冻结 RL agent 后训练线性分类器预测真实位置，以检查 hidden state 是否形成更易解码的位置表示。AUX 的准确率为 94.8%，普通 DRQN 为 90.1%，PI-Dropout test-time 为 88.8%；因此“PI-Dropout 因为学到了更准确、更容易线性解码的位置 belief 才获得更好性能”并没有得到实验支持。",
+          "Supplementary Figure 5 显示 PI-Dropout 在 train-time、仍使用 PI-conditioned noise 时对精确位置的预测不确定性反而更高，但其 localisation error 保持在正确房间内部。这个结果提示它可能保留了任务更需要的 coarse room information，而不是精确坐标；不过这只是可能解释，论文没有进一步证明。",
+          "作者明确把 exploration 也列为尚未解释的可能机制。由于所有 agent 本身已经使用 \\(\\epsilon\\)-greedy，而且论文没有单独控制 PI-conditioned noise 对 state visitation 或 exploration coverage 的影响，因此不能把 PI-Dropout 简单描述成一种 exploration algorithm。",
+          "部署时 privileged information 完全不需要：论文明确说明忽略 PI subnetwork，并把 noise variance 手动设为 0，因此最终在线执行只保留普通观测分支、GRU memory 和 Q-value head。"
+        ]
+      },
+      "en": {
+        "title": "Privileged Information Dropout in Reinforcement Learning",
+        "authors": "Pierre-Alexandre Kamienny, Kai Arulkumaran, Feryal Behbahani, Wendelin Boehmer, Shimon Whiteson",
+        "institutions": "University of Oxford; Imperial College London",
+        "status": "Full paper reviewed",
+        "takeaway": "The key idea is to use privileged information neither as a deployment-time policy input nor as a teacher target, but to condition multiplicative noise on the hidden representation of regular observations during training, in the spirit of an Information Bottleneck; at test time the PI branch is removed and the noise variance is set to zero. The paper shows clear gains in a small POMDP gridworld, but does not establish that the gains are caused by a better belief representation.",
+        "tags": ["Privileged Information", "PI-Dropout", "Information Bottleneck", "DRQN", "POMDP"],
+        "mainContent": "The paper studies how to exploit privileged information \\(x^*\\) during RL training while executing with only the regular observation \\(x\\). It adapts PI-Dropout to RL: the regular branch produces \\(h(x)\\), the PI branch uses \\(x^*\\) to produce a state-dependent noise scale, and the regular representation is perturbed as \\(z=h(x;W)\\odot\\mathrm{Lognormal}(0,h^*(x^*;W^*))\\); at execution the PI branch is ignored and the noise variance is manually set to zero. In a three-room partially observed gridworld with a DRQN agent, PI-Dropout outperforms no-PI, auxiliary reconstruction, distillation, Naive Dropout, and standard Information Dropout baselines, and works with both full-state and sub-goal PI; however, a linear probe does not show a better position representation than standard DRQN, so the proposed representation mechanism is not established by the experiments.",
+        "innovations": [
+          "Adapts the PI-Dropout mechanism of Lambert et al. (2018) from supervised learning to reinforcement learning, using privileged information to condition the training-time noise distribution rather than making it a required deployment-time input.",
+          "Provides a structure in which PI can be used during training and removed at execution: the PI branch does not directly provide actions or Q-value features, but controls multiplicative log-normal noise on the regular representation; at test time the variance is set to zero and the PI branch is discarded.",
+          "Compares against auxiliary-task, distillation, Naive Dropout, and standard Information Dropout alternatives, showing that the gain in this gridworld cannot be explained by generic dropout regularization alone; the paper does not, however, close the causal mechanism through representation learning or exploration."
+        ],
+        "implementation": [
+          "The environment consists of three connected 6×6 rooms. The agent starts from a random position in the left or centre room and must reach the goal within 100 timesteps. The regular input \\(x\\) is a 5×5 egocentric view; the default privileged input \\(x^*\\) is the full state (FS), while an alternative PI is a sub-goal (SG) showing the current room and the correct corridor. Each action gives -0.1 reward and reaching the goal gives +10.",
+          "The base agent is a DRQN, i.e. a Deep Q-Network with recurrent memory. Its architecture contains two convolutional layers, a GRU, and two fully connected layers with ReLU nonlinearities. The GRU integrates the current local observation features with its previous hidden state and therefore acts as an implicit belief state in the POMDP, while the Q head outputs Q-values for the discrete actions. The authors also experimented with A3C and PPO but selected DRQN because it performed better in this environment.",
+          "The core PI-Dropout forward computation is \\(z=h(x;W)\\odot\\mathrm{Lognormal}(0,h^*(x^*;W^*))\\). The regular branch \\(h(x;W)\\) extracts features from observations available at deployment, while the PI branch \\(h^*(x^*;W^*)\\) does not output an action or a supervised target; it parameterizes the multiplicative noise distribution applied to the regular representation. In practice, a sigmoid after the PI branch restricts the noise variance to (0,1).",
+          "The Information Bottleneck motivation is to prevent the latent representation \\(z\\) from retaining excessive task-irrelevant information about \\(x\\). Information Dropout implements this idea by injecting learnable multiplicative noise into hidden features, and PI-Dropout changes the conditioning variable so that the richer privileged input \\(x^*\\) controls the noise strength. A representation direction that is persistently strongly perturbed becomes unreliable for precise downstream dependence, encouraging a less noise-sensitive representation, but the paper does not directly demonstrate that the PI branch identifies and suppresses task-irrelevant features.",
+          "There is no ground-truth label for the 'correct' noise scale. The PI-branch parameters \\(W^*\\) are learnable and enter the differentiable Q-network computation through PI-conditioned noise, so the PI branch is jointly optimized with the regular network. The paper does not provide the complete combined equation for the DRQN TD objective and the PI-Dropout Information Bottleneck regularizer, so a more precise standalone update rule for the PI branch cannot be reconstructed from the text.",
+          "More noise is not automatically better. The Information Bottleneck regularizer encourages compression, whereas the RL task objective requires the perturbed representation to remain sufficient for useful Q-value learning. Excessive noise can therefore destroy task-relevant information and hurt training. The hyperparameter \\(\\beta\\) controls this compression-versus-task trade-off; Supplementary Figure 4 shows that full-state PI is relatively sensitive to \\(\\beta\\), while sub-goal PI is less sensitive.",
+          "All models are trained for \\(10^4\\) episodes with \\(\\epsilon\\)-greedy exploration. Evaluation uses the greedy policy and averages reward over all possible starting positions in the left and centre rooms. Figure 3 reports mean test return ± 1 standard error over 5 random seeds.",
+          "Baselines include a standard DRQN without PI, AUX with PI reconstruction as an auxiliary task, DIS with a pre-trained teacher that observes \\(x^*\\) and a student that observes only \\(x\\), Naive Dropout with multiplicative noise manually annealed from 0 to 1 during the first 3000 episodes, and standard Information Dropout without privileged information. DRQN[FS,∅] is used as a full-state oracle upper bound.",
+          "In Figure 3a, PI-D[5x5,FS] outperforms the other PI baselines and comes closest to the full-state oracle. The authors further report that only PI-Dropout and the oracle consistently solve the task from every initial position, whereas the alternatives particularly struggle from the leftmost room. This directly supports improved RL performance in this POMDP, but does not by itself establish the proposed Information Bottleneck representation mechanism.",
+          "Figure 3b replaces full-state PI with sub-goal PI. PI-D[5x5,SG] also achieves high performance and converges faster, showing that at least two forms of PI can condition the dropout mechanism in the same gridworld. Standard Information Dropout performs similarly to the normal DRQN, which the authors use as evidence that the gain is not merely generic dropout regularization.",
+          "For representation analysis, the authors collect GRU activations from greedy rollouts after RL training and train linear classifiers to predict the true agent position. Accuracy is 94.8% for AUX, 90.1% for standard DRQN, and 88.8% for PI-Dropout at test time. Thus the experiments do not support the explanation that PI-Dropout succeeds because it produces a more linearly decodable exact-position belief representation.",
+          "Supplementary Figure 5 shows that train-time PI-Dropout, while more uncertain about the exact position, keeps localisation errors within the correct room. This could indicate preservation of coarse task-relevant room information rather than precise coordinates, but the paper does not establish this as the causal mechanism.",
+          "The authors also identify improved exploration as an unresolved possible mechanism. Because every agent already uses \\(\\epsilon\\)-greedy exploration and the paper does not isolate the effect of PI-conditioned noise on state visitation or exploration coverage, PI-Dropout should not be described as an exploration algorithm based on the available evidence.",
+          "At deployment, privileged information is not required: the paper explicitly states that the PI subnetwork is ignored and the noise variance is manually set to zero, leaving the regular observation branch, recurrent memory, and Q-value head for execution."
+        ]
+      }
     }
   ]
 }
