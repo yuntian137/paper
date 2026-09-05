@@ -4014,6 +4014,91 @@
         "innovations": ["Frames perception-conditioned humanoid locomotion through LCA and Diversity-Enabled Sweet Spots, emphasizing separation of information budgets and timescales.", "A simple two-stage curriculum first learns proprioceptive stabilization without actor perception, then restores perception for terrain conditioning; the paper interprets this as favorable initialization of the full non-convex optimization.", "Ablations across blind, one-stage, two-stage and MLP/LSTM/CNN variants suggest architecture affects OOD and hardware robustness more than encoder/backbone complexity.", "The contribution is architectural synthesis and empirical validation of existing components rather than a new RL algorithm, perception model, or distillation method."],
         "implementation": ["Actor input is a \\(K\\)-step history of \\(q,\\dot q,\\omega_b,g_b\\), command \\(u\\), previous action, and a noisy \\(11\\times11\\) heightmap over \\(1.0\\,\\mathrm{m}\\times1.0\\,\\mathrm{m}\\). The asymmetric critic additionally gets privileged velocity and a noise-free \\(1.5\\,\\mathrm{m}\\times1.5\\,\\mathrm{m}\\) heightmap.", "Perception is encoded by MLP or CNN (hidden layers {256, 256}); the actor backbone is MLP or LSTM ({512, 256, 128}) and outputs PD-tracked joint position setpoints. In Stage 1 actor heightmap is zeroed, then restored in Stage 2 while the critic remains privileged.", "IsaacSim training uses a single RTX 4090, 4096 parallel environments, 40000 steps, and evenly sampled stair ascent/descent, uneven terrain, and flat ground. Rewards are held fixed across architectures and include tracking, phase/contact, strike, slide, orientation, and clearance terms.", "Two D435 cameras create a 30 Hz point cloud and an \\(11\\times11\\) height grid with outlier rejection and 5 cm quantization. On Unitree G1, perception runs on Jetson Orin NX, RL runs on Ryzen 7 7840U, policy runs at 50 Hz, and PD at 1 kHz.", "Hardware task success for One-Stage MLP is 1/5, 1/5, 0/5, 0/5; Two-Stage MLP is 4/5, 5/5, 5/5, 4/5; Two-Stage CNN is 4/5, 5/5, 5/5, 5/5 across ascent, descent, hinged ledge, and soft ledge."]
       }
+    },
+    {
+      "id": "chip-hindsight-perturbation",
+      "categories": [
+        "manipulation",
+        "loco-manipulation",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2512.14689",
+      "project": "https://nvlabs.github.io/CHIP/",
+      "arxiv": "https://arxiv.org/abs/2512.14689",
+      "year": "2025",
+      "venue": "arXiv:2512.14689",
+      "zh": {
+        "title": "CHIP: Adaptive Compliance for Humanoid Control through Hindsight Perturbation",
+        "authors": "Sirui Chen, Zi-ang Cao, Zhengyi Luo, Fernando Castañeda, Chenran Li, Tingwu Wang, Ye Yuan, Linxi \"Jim\" Fan, C. Karen Liu, Yuke Zhu",
+        "institutions": "NVIDIA；Stanford University；The University of Texas at Austin",
+        "status": "全文已精读",
+        "takeaway": "CHIP 不显式实现阻抗控制器，而是在 PPO 训练时对末端施加已知外力，并把 actor 看到的目标改成与外力方向相反的 hindsight goal，同时仍用原始全身参考计算奖励，从而让部署策略仅依赖本体历史和柔顺系数就表现出可调的近似阻抗响应。",
+        "tags": [
+          "CHIP",
+          "Adaptive Compliance",
+          "Hindsight Perturbation",
+          "PPO",
+          "Humanoid Motion Tracking",
+          "3-Point Control",
+          "Teleoperation",
+          "Multi-Robot Collaboration",
+          "GR00T N1.5"
+        ],
+        "mainContent": "论文研究如何在同一个人形 motion-tracking policy 中兼顾动态动作所需的高刚度跟踪与接触操作所需的末端柔顺性。训练时，仿真器对末端施加外力 \\(\\mathbf f_t\\)，actor 观察 \\(\\mathbf g_t^{\\mathrm{hind}}=\\mathbf g_t-(1/k)\\mathbf f_t\\)，但 tracking reward 仍以未修改的原始全身参考 \\(\\mathbf g_t\\) 为目标；这使部署时输入正常目标后，真实外力能够诱导近似 \\(\\Delta\\mathbf x\\approx(1/k)\\mathbf f\\) 的让位行为。局部和全局 3-point controller 被用于 VR 遥操作、多机器人协同抓取和 GR00T N1.5 自主操作；多机器人抓取平均成功率为 0.80，对比 FALCON 的 0.05 和未做外力扰动训练策略的 0.40。论文证明了系统级任务有效性，但没有直接测量力—位移曲线或等效笛卡尔刚度，因此尚不能确认实际柔顺性严格、单调地等于命令 \\(1/k\\)。",
+        "innovations": [
+          "核心创新是 observation-side hindsight perturbation：不修改用于 dense reward 的完整参考动作，只在线修改 actor 看到的稀疏末端目标 \\(\\mathbf g-(1/k)\\mathbf f\\)，从而避免离线 IK 动作增强或额外 compliance reward tuning。",
+          "将连续柔顺系数 \\(1/k\\) 作为策略条件，使同一个 controller 可以在 stiff mode 和 compliant mode 之间在线切换；该设计受 Hooke 定律和阻抗控制启发，但不是显式 Jacobian-based impedance controller。",
+          "actor 使用本体状态和过去动作历史隐式感知外力响应，critic 在训练时额外获得仿真器真实外力作为 privileged observation；论文没有额外 force-estimation head 或力监督损失。",
+          "将局部 3-point teleoperation、全局 3-point multi-robot coordination、SpringGrasp 规划和 VLA 微调组合为完整真机系统；这些是重要工程整合，但 SpringGrasp、Fast-LIO2、GR00T N1.5 和 PPO 本身不是本文提出的组件。"
+        ],
+        "implementation": [
+          "训练闭环：motion reference 提供原始全身状态和 head/two-wrist goal；仿真器对末端施加 0–40 N、随机方向、持续 1–3 s 的梯形外力；actor 输入 hindsight goal、柔顺系数、本体历史、过去动作和可选下肢目标，critic 额外输入真实外力；原始 reference 上的 tracking reward 与 action-rate、joint-limit、undesired-contact penalty 经 PPO 更新 actor 和 critic。",
+          "目标偏移对每个末端近似为 \\(\\Delta\\mathbf g_i=-(1/k_i)\\mathbf f_i\\)：外力越大或 \\(1/k_i\\) 越大，训练目标沿外力反方向移动得越多。部署时不再计算该目标偏移，也不向 actor 输入真实外力；真实接触通过关节、本体运动和过去动作历史影响策略输出。",
+          "柔顺不等于不输出支撑力。负载越重，策略需要减小 \\(1/k\\)、提高等效刚度；Figure 7 使用空箱 0.05、约 4 lb 负载 0.03、约 7 lb 负载 0.02，并展示太硬会使空箱双手抓取失稳、太软则无法抬起重物。论文没有显式 payload estimator、重力前馈或腕部力传感器闭环。",
+          "局部策略在 root frame 跟踪头和双腕 SE(3) pose，并由 SONIC 风格运动学规划器提供下肢关节位置/速度参考；全局策略跟踪 world-frame 头部 6D pose 和双腕 3D position，并使用 0.2 s、5 帧的未来目标窗口消除走动与伸手歧义。",
+          "compliant follower 另用 \\(\\mathbf g_t=\\alpha\\mathbf x_t^{\\mathrm{eef}}+(1-\\alpha)\\mathbf g_{t-1}\\) 让高层目标跟随当前末端位置；这不是外力估计器，也不参与 PPO 参数更新，论文未报告 \\(\\alpha\\) 的数值。",
+          "所有策略训练 4 天，使用 64 张 NVIDIA L40S，每张 GPU 4096 个环境。局部策略、运动学规划器和遥操作服务通过 TensorRT 运行在 Unitree G1 的 Jetson NX；全局策略及状态估计运行在 i7-13700K 与 RTX 3090 桌面机。",
+          "多机器人抓取对每个新物体/布局先用扩展 SpringGrasp 求解两台机器人的头部和手腕目标，再生成 approach、grasp、lift 的最小曲率轨迹；这是逐实例规划，不是 CHIP actor 一次训练后自动生成的结果。",
+          "VLA 应用分别使用 400 条大白板擦拭、200 条小白板双手擦拭和 200 条箱子搬运遥操作轨迹微调独立 GR00T N1.5，20 次测试成功率分别为 60%、80% 和 90%；没有 no-CHIP 或 fixed-stiffness VLA 对照，因此不能把全部提升单独归因于 CHIP。",
+          "复现缺口包括 actor/critic 网络结构、action 的物理定义与维度、控制频率和低层执行器、PPO/GAE 超参数、柔顺系数训练采样分布、history 的准确帧数、目标偏移的归一化或限幅、termination/reset 以及 VLA 输出格式。"
+        ]
+      },
+      "en": {
+        "title": "CHIP: Adaptive Compliance for Humanoid Control through Hindsight Perturbation",
+        "authors": "Sirui Chen, Zi-ang Cao, Zhengyi Luo, Fernando Castañeda, Chenran Li, Tingwu Wang, Ye Yuan, Linxi \"Jim\" Fan, C. Karen Liu, Yuke Zhu",
+        "institutions": "NVIDIA; Stanford University; The University of Texas at Austin",
+        "status": "Full paper reviewed",
+        "takeaway": "CHIP does not implement an explicit impedance controller; instead, during PPO training it applies known end-effector forces, shifts the actor's observed goal in the opposite direction, and retains the original full-body tracking reward, enabling the deployed policy to exhibit tunable impedance-like responses from proprioceptive history and a compliance command.",
+        "tags": [
+          "CHIP",
+          "Adaptive Compliance",
+          "Hindsight Perturbation",
+          "PPO",
+          "Humanoid Motion Tracking",
+          "3-Point Control",
+          "Teleoperation",
+          "Multi-Robot Collaboration",
+          "GR00T N1.5"
+        ],
+        "mainContent": "The paper studies how a single humanoid motion-tracking policy can reconcile the high-gain tracking required for dynamic motion with end-effector compliance required for contact-rich manipulation. During training, the simulator applies an end-effector force \\(\\mathbf f_t\\), the actor observes \\(\\mathbf g_t^{\\mathrm{hind}}=\\mathbf g_t-(1/k)\\mathbf f_t\\), and the reward still tracks the unmodified full-body reference \\(\\mathbf g_t\\); this construction encourages an approximate deployed response \\(\\Delta\\mathbf x\\approx(1/k)\\mathbf f\\) under real contact. Local and global 3-point controllers support VR teleoperation, multi-robot collaborative grasping, and GR00T N1.5 autonomous manipulation; average collaborative grasp success is 0.80 versus 0.05 for FALCON and 0.40 for a policy trained without force perturbations. The paper demonstrates system-level task effectiveness but does not directly measure force-displacement curves or effective Cartesian stiffness, so it does not establish that realized compliance is strictly and monotonically calibrated to the commanded \\(1/k\\).",
+        "innovations": [
+          "The core novelty is observation-side hindsight perturbation: the dense reward reference remains unchanged while only the actor's sparse end-effector goal is modified online as \\(\\mathbf g-(1/k)\\mathbf f\\), avoiding offline IK motion augmentation and additional compliance reward tuning.",
+          "A continuous compliance coefficient \\(1/k\\) conditions one controller to switch online between stiff and compliant behaviors. The construction is inspired by Hooke's law and impedance control but is not an explicit Jacobian-based impedance controller.",
+          "The actor uses proprioceptive and past-action histories to respond implicitly to forces, while the critic additionally receives simulator ground-truth force as privileged training information; there is no separate force-estimation head or force-supervision loss.",
+          "The paper integrates local 3-point teleoperation, global 3-point multi-robot coordination, SpringGrasp planning, and VLA fine-tuning into a real-robot system. This is valuable engineering integration, while PPO, SpringGrasp, Fast-LIO2, and GR00T N1.5 are inherited components."
+        ],
+        "implementation": [
+          "Training loop: motion references provide the original full-body state and head/two-wrist goals; the simulator applies random-direction, 0–40 N end-effector forces with 1–3 s trapezoidal profiles; the actor receives the hindsight goal, compliance coefficient, proprioceptive history, past actions, and optional lower-body targets, while the critic additionally receives the true force; original-reference tracking rewards and action-rate, joint-limit, and undesired-contact penalties update actor and critic through PPO.",
+          "For each end-effector, the goal offset is approximately \\(\\Delta\\mathbf g_i=-(1/k_i)\\mathbf f_i\\): larger force or larger \\(1/k_i\\) produces a larger training-goal shift opposite to the force. At deployment this shift is not computed and the true force is not provided to the actor; contact is reflected indirectly through joint/body responses and past-action history.",
+          "Compliance does not mean zero supporting force. Heavier payloads require smaller \\(1/k\\) and higher effective stiffness: Figure 7 uses 0.05 for an empty box, 0.03 for an approximately 4 lb payload, and 0.02 for an approximately 7 lb payload; being too stiff destabilizes empty-box bimanual grasping, while being too compliant prevents lifting heavy objects. The paper provides no explicit payload estimator, gravity feedforward, or wrist force-sensor feedback loop.",
+          "The local policy tracks head and wrist SE(3) poses in the root frame and receives lower-body joint position/velocity references from a SONIC-style kinematic planner. The global policy tracks a world-frame 6D head pose and 3D wrist positions and uses a 0.2 s, five-frame future-goal window to resolve walking-versus-reaching ambiguity.",
+          "A separate compliant follower updates the high-level target using \\(\\mathbf g_t=\\alpha\\mathbf x_t^{\\mathrm{eef}}+(1-\\alpha)\\mathbf g_{t-1}\\). This is not a force estimator and does not update PPO parameters; the paper does not report the value of \\(\\alpha\\).",
+          "All policies are trained for four days on 64 NVIDIA L40S GPUs with 4096 environments per GPU. The local policy, kinematic planner, and teleoperation server run with TensorRT on the Unitree G1 Jetson NX, whereas the global policy and state estimator run on an i7-13700K/RTX 3090 desktop.",
+          "For each new collaborative object or layout, an extended SpringGrasp procedure solves for two robots' head and wrist targets, followed by a minimum-curvature approach-grasp-lift trajectory. This is per-instance planning rather than an output generated automatically by the trained CHIP actor.",
+          "Separate GR00T N1.5 policies are fine-tuned from 400 large-whiteboard wiping demonstrations, 200 small-whiteboard bimanual demonstrations, and 200 box-lifting demonstrations, achieving 60%, 80%, and 90% success over 20 trials. Without no-CHIP or fixed-stiffness VLA controls, these results cannot be attributed solely to CHIP.",
+          "Missing reproducibility details include actor/critic architectures, action semantics and dimensionality, control frequency and low-level actuation, PPO/GAE hyperparameters, the training distribution of compliance commands, the exact history length, normalization or clipping of goal offsets, termination/reset rules, and the VLA output format."
+        ]
+      }
     }
   ]
 }
