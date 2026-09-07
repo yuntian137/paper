@@ -4099,6 +4099,87 @@
           "Missing reproducibility details include actor/critic architectures, action semantics and dimensionality, control frequency and low-level actuation, PPO/GAE hyperparameters, the training distribution of compliance commands, the exact history length, normalization or clipping of goal offsets, termination/reset rules, and the VLA output format."
         ]
       }
+    },
+    {
+      "id": "wasabi-rough-partial-demonstrations",
+      "categories": [
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2206.11693",
+      "project": "https://sites.google.com/view/corl2022-wasabi/home",
+      "arxiv": "https://arxiv.org/abs/2206.11693",
+      "year": "2023",
+      "venue": "CoRL 2022 (PMLR 205, 2023)",
+      "zh": {
+        "title": "Learning Agile Skills via Adversarial Imitation of Rough Partial Demonstrations",
+        "authors": "Chenhao Li, Marin Vlastelica, Sebastian Blaes, Jonas Frey, Felix Grimminger, Georg Martius",
+        "institutions": "Max Planck Institute for Intelligent Systems; Robotic Systems Lab, ETH Zurich",
+        "status": "全文已精读",
+        "takeaway": "WASABI 可以记成“用只观察基座运动片段的 Wasserstein 型判别器代替难写的主任务奖励”：人手拿着机器人演示基座怎么运动，PPO 再在物理仿真中自行探索腿部关节应该怎样动作；已有完整可重定向参考轨迹时，常规 full-body mimic 通常更精确，而 WASABI 的价值主要在只有粗糙、部分、不可执行演示的场景。",
+        "tags": [
+          "WASABI",
+          "Adversarial Imitation Learning",
+          "Wasserstein GAN",
+          "PPO",
+          "Rough Partial Demonstrations",
+          "Quadruped Locomotion",
+          "Sim-to-Real"
+        ],
+        "mainContent": "论文研究如何在没有专家动作、完整关节参考和显式主任务奖励的条件下，仅根据人手搬动机器人得到的粗糙基座轨迹学习 leap、wave、stand-up 和 backflip。WASABI 使用连续 \\(H\\) 帧基座特征训练 Wasserstein 型判别器，将其标准化输出作为主要 imitation reward，再由 PPO 在 Isaac Gym 中探索可执行的目标关节位置。SoloStandUp 和 SoloBackFlip 的 DTW 距离分别由 LSGAN 的 \\(678.21\\pm6.71\\) 和 \\(813.76\\pm19.75\\) 降至 \\(351.13\\pm88.60\\) 和 \\(477.43\\pm56.77\\)，并在 Solo 8 真机上部署 Leap、Wave 和 BackFlip。论文证明了整套训练方案能够工作，但没有通过完全匹配的单因素实验确认优势仅来自 Wasserstein loss，也没有证明判别器输出是严格的 Wasserstein 距离。",
+        "innovations": [
+          "将 AMP/GAIL 中通常作为辅助 style reward 的判别器提升为主要 task reward，使策略无需显式的“完成后空翻”或“站起来”奖励，也能从部分 observation-only demonstrations 中学习技能。",
+          "用 Wasserstein 型线性 critic objective 替代 LSGAN 的 \\(+1/-1\\) 回归与截断奖励映射，使策略分布远离演示分布时仍能获得具有相对区分度的训练信号。",
+          "将判别器输入从短 transition 扩展为连续 \\(H\\) 帧基座片段，试图避免策略只重复参考运动中容易获得高分的局部片段；附录实验仅部分支持这一设计，尚未直接测量 mode collapse。",
+          "核心贡献属于 adversarial imitation、低维基座表示、PPO 和 Sim-to-Real 技术的系统组合，而不是完全不同于 AMP 的新训练框架；论文附录明确把 LSGAN baseline 描述为面向任务学习改造后的 AMP。"
+        ],
+        "implementation": [
+          "每条手持演示只记录机器人坐标系下的基座线速度 \\(v\\)、角速度 \\(\\omega\\)、重力投影 \\(g\\) 和基座高度 \\(z\\)，每帧共 10 维；每个技能采集 20 条轨迹，没有关节角、接触序列或专家 action。",
+          "判别器输入为连续 \\(H\\) 帧特征，维度为 \\(10H\\)，网络结构为 \\(10H\\rightarrow512\\rightarrow256\\rightarrow1\\)。其目标为 \\(\\mathcal L_D=w_D[-\\mathbb E_{d_M}D(o^H)+\\mathbb E_{d_\\pi}D(\\Phi(s^H))]+w_{GP}\\mathbb E_{d_M}\\|\\nabla D(o^H)\\|_2^2\\)，其中 \\(w_D=0.5\\)、\\(w_{GP}=5.0\\)。该损失只更新判别器参数，不通过仿真器直接反向传播到 actor。",
+          "判别器分数通过运行均值和方差标准化为 \\(r_t^I=(D(\\Phi(s_t^H))-\\hat\\mu)/\\hat\\sigma\\)。总奖励为 \\(r_t=w_I(r_t^I+r_t^T)+r_t^R\\)，其中 \\(r_t^T\\) 防止策略通过主动摔倒提前结束负回报 episode，\\(r_t^R\\) 包含动作变化、关节加速度、力矩、基座 roll/yaw 角速度和横向速度惩罚。",
+          "仿真 actor 和 critic 均接收两帧 policy observation，每帧包含 \\(v,\\omega,g,z,q,\\dot q,a_{t-1}\\)，合计 68 维。actor 为 \\(68\\rightarrow128\\rightarrow128\\rightarrow128\\rightarrow8\\) 的 ELU MLP，输出 8 个目标关节位置；critic 输出标量 value，只在 PPO 训练中使用。",
+          "策略以 50 Hz 运行，目标关节位置由 \\(K_p=5.0\\)、\\(K_d=0.1\\) 的 PD 控制器执行。训练使用 4096 个并行 Isaac Gym 环境、每轮 24 步、最多 5000 iterations、5 个随机种子；PPO clip 为 0.2，discount factor 为 0.99，entropy coefficient 为 0.01。",
+          "训练采用交替更新：先用当前策略 rollout 计算 imitation、termination 和 regularization rewards，再用 PPO 更新 actor 与 value function；随后固定策略，用演示片段和策略片段更新判别器。actor 接收的是标量 reward，而不是演示动作标签。",
+          "Sim-to-Real 训练加入基座质量随机化和周期性随机推力。真机策略改为只使用当前单帧 34 维 observation，由 100 Hz Vicon 提供 root-state estimation；部署时仅保留 actor 与 PD 控制器，删除演示数据、判别器和 critic。",
+          "WASABI 不是 full-body mimic 的完全上位方法：如果已有完整且可执行的 retargeted reference，phase/reference-conditioned mimic 能获得更明确的全身跟踪监督。WASABI 的优势是无需关节参考，但代价是只能约束低维基座运动，关节姿态和接触行为存在多解。",
+          "关键证据缺口是 WASABI 与 LSGAN 的 optimizer、learning rate、判别器时域 \\(H\\) 和 imitation reward 权重 \\(w_I\\) 同时不同，因此现有实验支持整套 WASABI recipe，而不能将性能提升单独归因于 Wasserstein loss。"
+        ]
+      },
+      "en": {
+        "title": "Learning Agile Skills via Adversarial Imitation of Rough Partial Demonstrations",
+        "authors": "Chenhao Li, Marin Vlastelica, Sebastian Blaes, Jonas Frey, Felix Grimminger, Georg Martius",
+        "institutions": "Max Planck Institute for Intelligent Systems; Robotic Systems Lab, ETH Zurich",
+        "status": "Full paper reviewed",
+        "takeaway": "WASABI can be remembered as replacing a difficult-to-design task reward with a Wasserstein-style discriminator that observes only short base-motion segments: a human demonstrates how the base should move, while PPO discovers dynamically feasible leg actions; when complete retargetable references are available, full-body mimic is usually more precise, whereas WASABI is useful for rough, partial, and physically incompatible demonstrations.",
+        "tags": [
+          "WASABI",
+          "Adversarial Imitation Learning",
+          "Wasserstein GAN",
+          "PPO",
+          "Rough Partial Demonstrations",
+          "Quadruped Locomotion",
+          "Sim-to-Real"
+        ],
+        "mainContent": "The paper studies how to learn leap, wave, stand-up, and backflip skills from rough hand-held base trajectories without expert actions, complete joint references, or an explicit primary task reward. WASABI trains a Wasserstein-style discriminator on \\(H\\)-frame base-feature segments, normalizes its output into an imitation reward, and lets PPO discover feasible target joint positions in Isaac Gym. For SoloStandUp and SoloBackFlip, the DTW distances decrease from the LSGAN results of \\(678.21\\pm6.71\\) and \\(813.76\\pm19.75\\) to \\(351.13\\pm88.60\\) and \\(477.43\\pm56.77\\), and Leap, Wave, and BackFlip policies are deployed on Solo 8. The experiments establish that the complete training recipe can work, but they do not isolate the Wasserstein loss as the sole cause or prove that the discriminator output is a strict Wasserstein distance.",
+        "innovations": [
+          "The discriminator, which normally supplies an auxiliary style reward in AMP/GAIL, is promoted to the primary task-reward source, allowing skills to be learned from partial observation-only demonstrations without explicit stand-up or backflip rewards.",
+          "A Wasserstein-style linear critic objective replaces LSGAN regression to \\(+1/-1\\) and its clipped reward mapping, preserving relative reward information when the policy distribution is initially far from the demonstrations.",
+          "The discriminator receives \\(H\\) consecutive base-observation frames to discourage policies from repeatedly exploiting an easy local segment of the reference motion; the appendix provides only partial evidence and does not directly measure mode collapse.",
+          "The principal contribution is a system-level combination of adversarial imitation, a low-dimensional base representation, PPO, and sim-to-real methods rather than an entirely different framework from AMP; the appendix explicitly describes the LSGAN baseline as an AMP adaptation for task learning."
+        ],
+        "implementation": [
+          "Each hand-held demonstration records only base linear velocity \\(v\\), angular velocity \\(\\omega\\), projected gravity \\(g\\), and base height \\(z\\) in the robot frame, totaling 10 dimensions per frame. Twenty trajectories are collected per skill, without joint states, contact sequences, or expert actions.",
+          "The discriminator consumes \\(H\\) consecutive feature frames with input dimension \\(10H\\) and architecture \\(10H\\rightarrow512\\rightarrow256\\rightarrow1\\). Its objective is \\(\\mathcal L_D=w_D[-\\mathbb E_{d_M}D(o^H)+\\mathbb E_{d_\\pi}D(\\Phi(s^H))]+w_{GP}\\mathbb E_{d_M}\\|\\nabla D(o^H)\\|_2^2\\), with \\(w_D=0.5\\) and \\(w_{GP}=5.0\\). This loss updates only the discriminator and is not differentiated through the simulator into the actor.",
+          "The discriminator score is normalized as \\(r_t^I=(D(\\Phi(s_t^H))-\\hat\\mu)/\\hat\\sigma\\). The total reward is \\(r_t=w_I(r_t^I+r_t^T)+r_t^R\\), where \\(r_t^T\\) prevents the policy from terminating negative-reward episodes by deliberately falling and \\(r_t^R\\) penalizes action rate, joint acceleration, torque, base roll/yaw rates, and lateral velocity.",
+          "The simulated actor and critic receive two policy-observation frames. Each frame contains \\(v,\\omega,g,z,q,\\dot q,a_{t-1}\\), giving 68 dimensions. The ELU actor has architecture \\(68\\rightarrow128\\rightarrow128\\rightarrow128\\rightarrow8\\) and outputs eight target joint positions; the critic outputs a scalar value and is used only during PPO training.",
+          "The policy runs at 50 Hz and its joint targets are executed by a PD controller with \\(K_p=5.0\\) and \\(K_d=0.1\\). Training uses 4096 parallel Isaac Gym environments, 24 steps per iteration, up to 5000 iterations, and five random seeds; PPO uses a clip range of 0.2, discount factor of 0.99, and entropy coefficient of 0.01.",
+          "Training alternates between collecting policy rollouts and using PPO to update the actor and value function from imitation, termination, and regularization rewards, followed by discriminator updates using demonstration and policy segments while the policy is fixed. The actor receives a scalar reward rather than demonstrated action labels.",
+          "Sim-to-real training includes base-mass randomization and periodic random pushes. The real-robot policy uses only the current 34-dimensional observation, with root-state estimates supplied by a 100 Hz Vicon system. Deployment retains only the actor and PD controller; demonstrations, discriminator, and critic are removed.",
+          "WASABI is not a strict superset of full-body mimic. With complete and feasible retargeted references, a phase- or reference-conditioned mimic policy receives much stronger whole-body tracking supervision. WASABI avoids requiring joint references but constrains only low-dimensional base motion, leaving joint and contact behaviors underdetermined.",
+          "The main evidence limitation is that optimizer choice, learning rates, discriminator horizon \\(H\\), and imitation-reward weight \\(w_I\\) differ between WASABI and LSGAN. The results therefore support the complete WASABI recipe rather than isolating the Wasserstein loss as the sole causal factor."
+        ]
+      }
     }
   ]
 }
