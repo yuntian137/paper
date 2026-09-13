@@ -4180,6 +4180,89 @@
           "The main evidence limitation is that optimizer choice, learning rates, discriminator horizon \\(H\\), and imitation-reward weight \\(w_I\\) differ between WASABI and LSGAN. The results therefore support the complete WASABI recipe rather than isolating the Wasserstein loss as the sole causal factor."
         ]
       }
+    },
+    {
+      "id": "fb-learning-one-representation-to-optimize-all-rewards",
+      "categories": [],
+      "pdf": "https://arxiv.org/pdf/2103.07945",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2103.07945",
+      "year": "2021",
+      "venue": "NeurIPS 2021",
+      "zh": {
+        "title": "Learning One Representation to Optimize All Rewards",
+        "authors": "Ahmed Touati, Yann Ollivier",
+        "institutions": "Mila, University of Montreal；Facebook Artificial Intelligence Research, Paris",
+        "status": "全文已精读",
+        "takeaway": "先用无奖励转移和 TD 自举学习不同策略下的长期访问关系，再把新奖励编码成任务向量，直接读出动作；任意奖励最优的保证依赖精确 FB 表示，不是实际网络训练的收敛保证。",
+        "tags": [
+          "Unsupervised RL",
+          "Zero-Shot RL",
+          "Forward-Backward Representation",
+          "Successor Measure",
+          "TD Learning",
+          "Reward-Conditioned Control"
+        ],
+        "mainContent": "论文研究能否在奖励尚未给定时，学习一套表示，使新奖励到来后无需重新训练或在线规划即可构造策略。方法联合学习前向网络 F 与后向网络 B，使两者的内积近似给定起点、动作和后续策略条件下的折扣访问测度相对于训练参考分布的密度，再通过奖励加权的 B 特征计算任务向量。实验覆盖离散迷宫、连续迷宫、FetchReach 仿真机械臂和像素输入的 Ms. Pacman：较高维表示在部分单目标任务上接近 goal-conditioned DQN，但连续迷宫仍落后，复杂奖励主要提供定性轨迹。理论最优性依赖表示精度和数据覆盖，不能推出有限维网络一定收敛、任意新奖励都能准确处理或能够直接迁移到新机器人。",
+        "innovations": [
+          "核心表示：用策略条件化的前向特征与跨条件共享的后向特征分解 successor measure 的密度，同时令策略由前向特征和条件向量的内积贪心选动作；访问预测和策略定义构成自洽关系。（§3，Definition 1，Eq. 2）",
+          "奖励到策略的显式接口：训练结束后计算 \\(z_R=\\mathbb E_{g\\sim\\rho}[B_\\omega(g)r(g)]\\)，再用 \\(\\pi_{z_R}(s)=\\arg\\max_{a\\in\\mathcal A}F_\\theta(s,a,z_R)^\\top z_R\\) 选动作。在精确表示条件下，论文证明该策略对相应奖励最优；存在表示误差时给出性能误差界。（Theorem 2；目标特征推广见 Theorem 4）",
+          "继承与改造：successor representation、Bellman/TD 自举、目标网络和 Polyak averaging 都不是本文新提出的。本文将已有 successor-measure 学习更新用于 F、B 的联合表示学习，并配合条件化策略，使无奖励预训练结果可供不同奖励任务使用。（§2–4，Algorithm 1）",
+          "关键辅助设计：对 B 加入正交化正则，以控制表示的尺度与相关性；它约束训练分布下的未中心化二阶矩接近单位阵，而不是证明每个目标都拥有独立维度，也不是最优控制中的协态约束。（Appendix D.3，Eq. 165–166）"
+        ],
+        "implementation": [
+          "表示对象：一般定义中，\\(F_\\theta(s,a,z)^\\top B_\\omega(s',a')\\) 预测从 \\((s,a)\\) 出发、随后执行条件策略时，对状态—动作对 \\((s',a')\\) 的折扣访问密度；若 B 输入目标特征 \\(g'=\\phi(s',a')\\)，则统计该特征的访问。实验中迷宫使用状态，FetchReach 使用夹爪位置，Ms. Pacman 使用角色二维位置。访问累计包含第零步、允许重复访问，未归一化为总和为 1 的概率分布；B 不是协态。（Eq. 1–2；Appendix D.3）",
+          "参考分布与采样：离散目标且参考概率非零时，网络内积近似折扣访问量除以 \\(\\rho(g')\\)。算法直接学习这个密度，并非先算真实访问量再除法；损失中的期望通过按参考分布抽取查询目标、计算批次平均来估计。样本平均是期望的估计，不是每一批都精确等于期望；按分布采样不要求显式知道每个目标的概率数值。（§4，Eq. 5；Appendix D.3）",
+          "无奖励数据与条件：探索策略产生真实转移 \\((s_i,a_i,s_i^+)\\)，存入回放池；更新时抽取转移批次、独立查询目标批次 \\(g'_j\\) 和条件批次 \\(z_i\\)。条件用于指定后续策略，不是要通过当前损失优化的网络参数；不同于测试时根据奖励计算的任务向量。论文采用高斯方向与 Cauchy 径向缩放采样条件，并在输入 F 前进行有界化预处理。（Algorithm 1；Appendix D.3）",
+          "自举目标：\\(y_{ij}=\\gamma\\sum_{a'\\in\\mathcal A}\\bar\\pi_{z_i}(a'\\mid s_i^+)F_{\\theta^-}(s_i^+,a',z_i)^\\top B_{\\omega^-}(g'_j)\\)。下一状态来自真实转移，后续动作按目标策略加权，目标 FB 提供后续访问密度预测；外部的折扣因子把下一起点的时间基准换算到当前。目标不是 rollout 直接给出的真实长期访问标签，整个目标分支停止梯度。（Algorithm 1，Eq. 164）",
+          "实际批次损失：\\(\\mathcal L_{\\mathrm{FB}}=\\frac{1}{2b^2}\\sum_{i=1}^{b}\\sum_{j=1}^{b}[F_\\theta(s_i,a_i,z_i)^\\top B_\\omega(g'_j)-\\operatorname{sg}(y_{ij})]^2-\\frac1b\\sum_{i=1}^{b}F_\\theta(s_i,a_i,z_i)^\\top B_\\omega(\\phi(s_i,a_i))\\)。平方项比较当前总访问预测与折扣未来预测；负线性项注入当前访问贡献。两项都直接更新在线 F、B，线性项不是预先给定的固定标签。（Algorithm 1，第 19–22 行；Eq. 164）",
+          "损失理解修正：[推导] 在离散目标、参考概率非零且目标分支冻结时，上述形式可由拟合“当前访问密度贡献＋折扣未来预测”的完整 MSE 展开得到。对查询目标解析取期望后，当前贡献的交叉项变成负的当前内积；当前贡献的平方及其与冻结未来预测的乘积对本轮在线参数无梯度，可以删除。它改变的是梯度估计的实现方式，不是新增监督信息；连续空间的当前点质量需要测度处理，不能直接把 Dirac 密度当普通数值放入平方。",
+          "在线与目标网络：Adam 更新在线参数，目标 F、B 只用于构造自举目标；每个 cycle 完成 40 次梯度更新后，以 \\(\\theta^-\\leftarrow0.95\\theta^-+0.05\\theta\\)、\\(\\omega^-\\leftarrow0.95\\omega^-+0.05\\omega\\) 同步。冻结指不接受本轮反传，不是永久不变；F 与 B 是一次访问预测的两个因子，不是 SAC/TD3 的双 Q 估计器。（Algorithm 1；Appendix D.3）",
+          "关键参数：批次大小为 128；目标动作分布为 \\(\\bar\\pi_z(a'\\mid s^+)=\\operatorname{softmax}_{a'}(F_{\\theta^-}(s^+,a',z)^\\top z/\\tau)\\)，训练温度为 200，用于缓和 argmax 的不连续性。迷宫折扣因子为 0.99，FetchReach 与 Ms. Pacman 为 0.9；B 正则系数为 1，直接更新 B。理论采用贪心策略，而训练使用 softmax，这一差异不能省略。（Appendix D.3，Table 1）",
+          "维度含义：FB-200 表示 F、B 的输出及策略条件均为 200 维，内积仍为一个标量；不是 200 个目标或 200 个策略。增大维度提高访问关系表示的容量，但不保证优化一定成功，也不赋予每个维度预定义物理含义。（§3、§5.2）",
+          "新奖励与部署：冻结训练后的网络，用奖励样本或显式奖励函数估计任务向量，再逐状态比较候选动作的前向内积分数。一般新奖励需要重新计算任务向量，但不要求重新训练 F、B 或执行逐轨迹数值优化；在线选动作需要 F 与任务向量，B 用于构造任务向量，训练目标网络与训练损失不参与动作执行。若奖励样本分布与训练参考分布不同，不能直接混用，论文另给分布变化处理方法。（§4，Eq. 6–8；Appendix B.5）",
+          "实验与报告修正：以下为曲线近似读数。FetchReach 中 FB-50 与 goal-conditioned DQN 均约 100% 成功率；Continuous Maze 中 FB-200 约 90%，DQN 约 99%，差约 9 个百分点。Discrete Maze 的 FB-25 归一化策略质量约 0.38，但 FB-75/100 约 0.97，DQN 约 0.96；FB-25 是低维失败案例，不能当作最佳 FB 结果，该指标也不是成功率。（Figure 8–10，第 38 页）",
+          "证据边界：单目标基线已经是 goal-conditioned DQN，能够处理不同目标，不是每个目标重新训练一个模型。FB 的更广主张是训练后适配新的奖励组合，但避障区域、双目标与奖励权衡实验主要是定性轨迹；没有充分定量证据证明其在广泛新奖励上稳定优于基线。论文不解决探索，也没有真机部署实验。（§5.2–5.3；Limitations，第 6 页）",
+          "发表信息核查：[外部官方资料] 正式发表于 NeurIPS 2021；所读附件为包含附录的 arXiv:2103.07945v3。NeurIPS 官方论文：https://proceedings.neurips.cc/paper/2021/file/003dd617c12d444ff9c80f717c3fa982-Paper.pdf"
+        ]
+      },
+      "en": {
+        "title": "Learning One Representation to Optimize All Rewards",
+        "authors": "Ahmed Touati, Yann Ollivier",
+        "institutions": "Mila, University of Montreal; Facebook Artificial Intelligence Research, Paris",
+        "status": "Full paper reviewed",
+        "takeaway": "Learn long-term visitation relationships across policies from reward-free transitions using TD bootstrapping, then encode a new reward into a task vector for direct action selection; optimality for all rewards requires an exact FB representation and is not a convergence guarantee for practical neural training.",
+        "tags": [
+          "Unsupervised RL",
+          "Zero-Shot RL",
+          "Forward-Backward Representation",
+          "Successor Measure",
+          "TD Learning",
+          "Reward-Conditioned Control"
+        ],
+        "mainContent": "The paper asks whether representations learned before rewards are specified can produce policies for subsequent rewards without retraining or online planning. It jointly learns forward and backward networks whose inner product approximates the discounted successor-measure density relative to the training reference distribution, conditioned on the starting state, initial action, and subsequent policy, and computes a task vector by reward-weighting backward features. Experiments cover discrete and continuous mazes, simulated FetchReach, and pixel-based Ms. Pacman: higher-dimensional representations approach goal-conditioned DQN on some goal-reaching tasks, remain worse on the continuous maze, and demonstrate complex rewards mainly through qualitative trajectories. The theoretical guarantee depends on representation accuracy and data coverage and does not establish convergence of finite-dimensional networks, accurate handling of every new reward, or direct transfer to new robots.",
+        "innovations": [
+          "Core representation: factorize the successor-measure density using policy-conditioned forward features and backward features shared across conditions, while defining the policy through greedy action selection from the forward-feature/task-vector inner product; visitation prediction and policy definition form a self-consistency relation. (§3, Definition 1, Eq. 2)",
+          "Explicit reward-to-policy interface: after training, compute \\(z_R=\\mathbb E_{g\\sim\\rho}[B_\\omega(g)r(g)]\\) and select actions with \\(\\pi_{z_R}(s)=\\arg\\max_{a\\in\\mathcal A}F_\\theta(s,a,z_R)^\\top z_R\\). The policy is optimal under exact representation assumptions, with performance bounds for representation errors. (Theorem 2; goal-feature extension in Theorem 4)",
+          "Inherited components and adaptation: successor representations, Bellman/TD bootstrapping, target networks, and Polyak averaging are not introduced by this paper. Existing successor-measure learning updates are adapted to jointly learn F and B with a conditioned policy, enabling reward-free pretraining to support subsequent reward tasks. (§2–4, Algorithm 1)",
+          "Supporting design: an orthonormalization regularizer controls the scale and correlations of B by encouraging its uncentered second moment under the training distribution to approach the identity. It neither assigns an independent coordinate to every goal nor imposes an optimal-control costate constraint. (Appendix D.3, Eq. 165–166)"
+        ],
+        "implementation": [
+          "Prediction object: in the general definition, \\(F_\\theta(s,a,z)^\\top B_\\omega(s',a')\\) predicts discounted visitation density for the state-action pair \\((s',a')\\), starting from \\((s,a)\\) and subsequently following the conditioned policy. If B receives a goal feature \\(g'=\\phi(s',a')\\), visitation is measured in that feature space. Experiments use maze states, FetchReach gripper positions, and the two-dimensional Ms. Pacman position. Visitation includes time zero and repeated visits and is not normalized to a probability distribution; B is not a costate. (Eq. 1–2; Appendix D.3)",
+          "Reference distribution and sampling: for discrete goals with positive reference probability, the inner product approximates discounted visitation divided by \\(\\rho(g')\\). The algorithm learns this density directly rather than calculating true visitation and then dividing. Expectations in the loss are estimated by sampling query goals from the reference distribution and averaging batch losses; a sample average need not equal the expectation for an individual batch, and sampling does not require explicit probability values for every goal. (§4, Eq. 5; Appendix D.3)",
+          "Reward-free data and conditions: exploration generates real transitions \\((s_i,a_i,s_i^+)\\) stored in replay; updates sample a transition batch, an independent query-goal batch \\(g'_j\\), and conditions \\(z_i\\). A condition specifies the subsequent policy and is not a network parameter optimized by the current loss; it differs from the reward-derived task vector used at test time. Conditions use Gaussian directions with Cauchy radial scaling and are bounded by preprocessing before entering F. (Algorithm 1; Appendix D.3)",
+          "Bootstrap target: \\(y_{ij}=\\gamma\\sum_{a'\\in\\mathcal A}\\bar\\pi_{z_i}(a'\\mid s_i^+)F_{\\theta^-}(s_i^+,a',z_i)^\\top B_{\\omega^-}(g'_j)\\). The next state comes from a real transition, next actions are weighted by the target policy, and target FB networks predict subsequent visitation density; the outer discount shifts the next-state time origin back to the current step. This is not a true long-horizon visitation label supplied directly by a rollout, and gradients stop through the entire target branch. (Algorithm 1, Eq. 164)",
+          "Empirical loss: \\(\\mathcal L_{\\mathrm{FB}}=\\frac{1}{2b^2}\\sum_{i=1}^{b}\\sum_{j=1}^{b}[F_\\theta(s_i,a_i,z_i)^\\top B_\\omega(g'_j)-\\operatorname{sg}(y_{ij})]^2-\\frac1b\\sum_{i=1}^{b}F_\\theta(s_i,a_i,z_i)^\\top B_\\omega(\\phi(s_i,a_i))\\). The square compares the current total-visitation prediction with the discounted future prediction; the negative linear term supplies current visitation. Both terms directly update online F and B, and the linear term is not a fixed precomputed label. (Algorithm 1, lines 19–22; Eq. 164)",
+          "Loss clarification: [Derivation] For discrete goals with positive reference probabilities and frozen targets, this loss follows by expanding the complete MSE for current visitation density plus discounted future prediction. Analytically taking the query expectation converts the current-visitation cross term into the negative current inner product; the squared current contribution and its product with the frozen future prediction have no gradient with respect to online parameters and can be removed. This changes gradient estimation rather than adding supervision; continuous-space point masses require measure-based treatment, and a Dirac density cannot simply be squared as an ordinary numerical label.",
+          "Online and target networks: Adam updates online parameters; target F and B only construct bootstrap targets. After 40 gradient updates per cycle, synchronize with \\(\\theta^-\\leftarrow0.95\\theta^-+0.05\\theta\\) and \\(\\omega^-\\leftarrow0.95\\omega^-+0.05\\omega\\). Frozen means excluded from current backpropagation, not permanently unchanged. F and B are two factors of one visitation prediction, not the twin Q estimators used in SAC/TD3. (Algorithm 1; Appendix D.3)",
+          "Key settings: batch size is 128; the target action distribution is \\(\\bar\\pi_z(a'\\mid s^+)=\\operatorname{softmax}_{a'}(F_{\\theta^-}(s^+,a',z)^\\top z/\\tau)\\), with training temperature 200 to soften argmax discontinuities. Discount factors are 0.99 for mazes and 0.9 for FetchReach and Ms. Pacman. The B regularization coefficient is 1 and directly updates B. Theory uses a greedy policy whereas training uses softmax; this distinction matters. (Appendix D.3, Table 1)",
+          "Representation dimension: FB-200 means 200-dimensional F outputs, B outputs, and policy conditions, while their inner product remains a scalar; it does not mean 200 goals or policies. Larger dimensions increase visitation-representation capacity but guarantee neither optimization success nor predefined physical meanings for individual coordinates. (§3, §5.2)",
+          "New rewards and deployment: freeze the trained networks, estimate the task vector from reward samples or an explicit reward function, and compare forward inner-product scores over candidate actions at each state. A general new reward requires recomputing the task vector but not retraining F/B or solving a trajectory optimization problem. Online action selection uses F and the task vector; B constructs that vector, while training targets and losses are absent from action execution. Reward samples from a different distribution require correction rather than direct substitution. (§4, Eq. 6–8; Appendix B.5)",
+          "Experiments and report correction: approximate readings from the plots give about 100% success for both FB-50 and goal-conditioned DQN on FetchReach. On Continuous Maze, FB-200 achieves about 90% versus about 99% for DQN, a gap of approximately 9 percentage points. On Discrete Maze, FB-25 has normalized policy quality around 0.38, whereas FB-75/100 reach about 0.97 versus about 0.96 for DQN; FB-25 is a low-dimensional failure case rather than the best FB result, and policy quality is not success rate. (Figures 8–10, p. 38)",
+          "Evidence boundaries: the single-goal baseline is already goal-conditioned DQN and handles different goals without a separate model for each. FB aims to support new reward combinations after training, but forbidden-region, two-goal, and reward-tradeoff results mainly show qualitative trajectories; broad quantitative superiority across new rewards is not established. The method does not solve exploration, and the paper reports no real-robot deployment. (§5.2–5.3; Limitations, p. 6)",
+          "Publication verification: [External official source] Published at NeurIPS 2021; the reviewed attachment is arXiv:2103.07945v3 with appendices. Official NeurIPS paper: https://proceedings.neurips.cc/paper/2021/file/003dd617c12d444ff9c80f717c3fa982-Paper.pdf"
+        ]
+      }
     }
   ]
 }
