@@ -31,7 +31,7 @@ const uiText = {
     arxiv: "arXiv",
     promptButton: "精读 Prompt v4",
     promptModalTitle: "论文精读 Prompt v4",
-    promptModalDescription: "先复制完整报告 Prompt 建立阅读地图，再复制导师式 Prompt 逐点追问。论文处理均在外部模型会话中进行。",
+    promptModalDescription: "可先生成精读报告，再用导师式 Prompt 深入讨论；也可直接用随读答疑 Prompt 配合 PDF 阅读。论文处理均在外部模型会话中进行。",
     promptPreview: "预览全文",
     copyFullPrompt: "复制全文",
     promptCopied: "已复制全文",
@@ -76,7 +76,7 @@ const uiText = {
     arxiv: "arXiv",
     promptButton: "Reading Prompts v4",
     promptModalTitle: "Paper Reading Prompts v4",
-    promptModalDescription: "First copy the full-report prompt to build a reading map, then use the tutor prompt for focused follow-up. All paper processing happens in an external model conversation.",
+    promptModalDescription: "Generate a report and follow up with the tutor prompt, or use the PDF reading Q&A prompt as you read. All paper processing happens in an external model conversation.",
     promptPreview: "Preview full prompt",
     copyFullPrompt: "Copy full prompt",
     promptCopied: "Full prompt copied",
@@ -100,19 +100,10 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20260812-closed-loop-report";
+const readingPromptsPath = "reading_prompts_v4.json?v=20260930-readable-report";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
-const tutorFormulaRuleOld =
-  "3. 聊天中的行内公式使用 \\(...\\)，独立公式使用 \\[...\\]，禁止使用单美元符号或双美元符号作为定界符。";
-const tutorFormulaRuleNew =
-  "3. 聊天中的行内公式必须使用带反斜杠的标准定界符 \\(...\\)，独立公式必须使用 \\[...\\]。反斜杠不可省略；不得用普通的 (...) 或 [...] 充当公式定界符，也不得使用单美元符号或双美元符号作为聊天公式定界符。正确源码示例：行内公式写作 `\\(a_t=\\pi(o_t)\\)`；独立公式以 `\\[` 开始、以 `\\]` 结束，两个定界符分别独占一行。示例中的反引号只用于展示源码；实际回答不得把公式放入代码块或行内代码。";
-
-function correctedPromptBody(key, body) {
-  if (key !== "paper-reading-tutor-v4") return body;
-  return body.replace(tutorFormulaRuleOld, tutorFormulaRuleNew);
-}
 const categories = [
   { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
   { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
@@ -4528,10 +4519,7 @@ async function loadPromptData() {
         title: item && typeof item.title === "object" ? item.title : {},
         description: item && typeof item.description === "object" ? item.description : {},
         usage: item && typeof item.usage === "object" ? item.usage : {},
-        body: correctedPromptBody(
-          stringField(item && item.key),
-          stringField(item && item.body),
-        ),
+        body: stringField(item && item.body),
       }))
       .filter((item) => item.key && item.body);
     promptLoadFailed = readingPrompts.length === 0;
