@@ -100,7 +100,7 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20260930-readable-report";
+const readingPromptsPath = "reading_prompts_v4.json?v=20261009-rongrong-qa";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
