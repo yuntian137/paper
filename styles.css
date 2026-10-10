@@ -318,10 +318,79 @@ body.is-sidebar-collapsed .sidebar-restore {
 }
 
 .category-button:hover,
+.category-button:focus-visible,
 .category-button.is-active {
   border-color: rgba(36, 124, 117, 0.2);
   background: rgba(36, 124, 117, 0.1);
   color: var(--teal-dark);
+}
+
+.category-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-group-header .category-button {
+  flex: 1;
+  padding-right: 4px;
+  font-weight: 700;
+}
+
+.category-group-toggle {
+  flex: 0 0 28px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--teal-dark);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.category-group-toggle:hover,
+.category-group-toggle:focus-visible {
+  background: rgba(36, 124, 117, 0.1);
+}
+
+.category-children {
+  display: grid;
+  gap: 3px;
+  margin: 6px 0 4px 10px;
+  padding-left: 6px;
+  border-left: 2px solid rgba(36, 124, 117, 0.2);
+}
+
+.category-children[hidden] {
+  display: none;
+}
+
+.category-children .category-button {
+  min-height: 38px;
+  padding: 7px 6px;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.category-children .category-button span:first-child,
+.category-group-header .category-button span:first-child {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.category-section-label {
+  margin: 8px 12px 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.view-description {
+  max-width: 660px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
 }
 
 .quick-stats {
@@ -953,6 +1022,15 @@ body.is-detail-collapsed .paper-detail {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .category-group,
+  .category-section-label {
+    grid-column: 1 / -1;
+  }
+
+  .category-children {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .workspace {
     grid-template-columns: 1fr;
     align-items: start;
@@ -989,6 +1067,7 @@ body.is-detail-collapsed .paper-detail {
   }
 
   .category-nav,
+  .category-children,
   .quick-stats,
   .detail-grid {
     grid-template-columns: 1fr;

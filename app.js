@@ -17,6 +17,9 @@ const uiText = {
     of: "共",
     items: "篇",
     noResults: "没有找到匹配的论文。",
+    taskCategories: "任务与应用",
+    expandBfm: "展开 BFM 子分类",
+    collapseBfm: "收起 BFM 子分类",
     venue: "来源",
     year: "年份",
     status: "状态",
@@ -62,6 +65,9 @@ const uiText = {
     of: "of",
     items: "items",
     noResults: "No matching papers found.",
+    taskCategories: "Tasks & applications",
+    expandBfm: "Expand BFM categories",
+    collapseBfm: "Collapse BFM categories",
     venue: "Venue",
     year: "Year",
     status: "Status",
@@ -94,9 +100,9 @@ const uiText = {
 const siteMetaPath = "site_meta.json";
 const siteMeta = {
   lastUpdated: {
-    iso: "2026-08-01",
-    zh: "2026-08-01",
-    en: "Aug 1, 2026",
+    iso: "2026-10-10",
+    zh: "2026-10-10",
+    en: "Oct 10, 2026",
   },
 };
 
@@ -105,6 +111,16 @@ let readingPrompts = [];
 let promptLoadFailed = false;
 
 const categories = [
+  { id: "bfm", label: { zh: "BFM / 通用运动控制", en: "BFM / General Motor Control" }, description: { zh: "围绕通用运动控制整理基座、训练方法，以及动力学、数据与迁移工作。按机制细分，同一篇论文可以出现在多个方向。", en: "Control foundations, training methods, dynamics, data, and transfer, grouped by mechanism. Papers can belong to several directions." } },
+  { id: "bfm-fb", parent: "bfm", label: { zh: "FB / 奖励可编程", en: "FB / Reward Conditioning" }, description: { zh: "从长期访问关系学习共享表示，再把奖励、目标或参考动作编码为任务向量：FB → Meta Motivo / FB-CPR → BFM-Zero。", en: "Learn long-term occupancy representations and encode rewards, goals, or motion into task vectors: FB → Meta Motivo / FB-CPR → BFM-Zero." } },
+  { id: "bfm-tracking", parent: "bfm", label: { zh: "运动跟踪 / 技能蒸馏", en: "Tracking / Distillation" }, description: { zh: "通过物理运动跟踪、单动作专家与技能蒸馏训练可复用控制器，关注动作覆盖、反馈执行和多技能整合。", en: "Reusable controllers trained through physical motion tracking, specialist policies, and skill distillation." } },
+  { id: "bfm-goal", parent: "bfm", label: { zh: "掩码目标 / 多模态接口", en: "Masked Goals / Interfaces" }, description: { zh: "把全身、稀疏关节、头手、文本或任务空间命令接入同一个控制器，关注目标补全和不同输入模式。", en: "One controller accepts full-body, sparse-joint, head-and-hand, text, or task-space commands through goal completion and shared interfaces." } },
+  { id: "bfm-latent", parent: "bfm", label: { zh: "连续潜空间 / 运动先验", en: "Continuous Latents / Priors" }, description: { zh: "把动作库压缩为可调用的连续技能空间或运动先验，供高层策略和新任务复用。", en: "Motion libraries become reusable continuous skill spaces or motion priors for higher-level policies and new tasks." } },
+  { id: "bfm-token", parent: "bfm", label: { zh: "离散 Token / 技能序列", en: "Discrete Tokens / Skills" }, description: { zh: "用 FSQ 等量化方法构建离散技能接口，再进行序列建模、跨模态对齐或高层控制。", en: "Quantized skill interfaces, including FSQ, support sequence modeling, cross-modal alignment, and higher-level control." } },
+  { id: "bfm-generative", parent: "bfm", label: { zh: "生成式控制 / 动作过渡", en: "Generative Control / Transitions" }, description: { zh: "用 Diffusion、Flow Matching 或生成式中间件产生动作、短期参考与恢复轨迹，关注在线参考调整和行为切换。", en: "Diffusion, flow matching, and generative middleware produce actions, short-term references, and recovery motions." } },
+  { id: "bfm-dynamics", parent: "bfm", label: { zh: "动力学 / 模型与优化", en: "Dynamics / Models & Optimization" }, description: { zh: "简化动力学、轨迹优化、模型控制与状态估计，为参考生成、执行和过渡提供物理结构。", en: "Reduced dynamics, trajectory optimization, model-based control, and state estimation provide physical structure for references, execution, and transitions." } },
+  { id: "bfm-data", parent: "bfm", label: { zh: "数据 / 运动重定向", en: "Data / Motion Retargeting" }, description: { zh: "人体动作重建、数据集、运动学与动力学重定向，连接人体行为数据和机器人参考轨迹。", en: "Human motion reconstruction, datasets, and kinematic or dynamic retargeting connect behavior data to robot references." } },
+  { id: "bfm-adaptation", parent: "bfm", label: { zh: "适应 / 迁移与鲁棒性", en: "Adaptation / Transfer & Robustness" }, description: { zh: "动力学适应、特权信息、教师—学生学习和 Sim2Real，为通用控制器的部署与鲁棒性提供方法基础。", en: "Dynamics adaptation, privileged information, teacher–student learning, and sim-to-real methods support deployment and robustness." } },
   { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
   { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
   { id: "loco-manipulation", label: { zh: "Loco-Manipulation", en: "Loco-Manipulation" } },
@@ -528,6 +544,7 @@ const papers = [
   {
     "id": "xhugwbc",
     "categories": [
+      "bfm-adaptation",
       "locomotion"
     ],
     "pdf": "https://arxiv.org/pdf/2602.05791",
@@ -1291,6 +1308,7 @@ const papers = [
   {
     "id": "spi-active",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real"
     ],
@@ -1411,6 +1429,7 @@ const papers = [
   {
     "id": "pace-legged-sim2real",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real"
     ],
@@ -1531,6 +1550,7 @@ const papers = [
   {
     "id": "rma-rapid-motor-adaptation-for-legged-robots",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real"
     ],
@@ -1544,7 +1564,7 @@ const papers = [
       "authors": "Ashish Kumar, Zipeng Fu, Deepak Pathak, Jitendra Malik",
       "institutions": "University of California, Berkeley; Carnegie Mellon University; Facebook AI Research",
       "status": "全文已精读（含补充材料）",
-      "takeaway": "最该记住的是：RMA 先用 PPO 联合训练读取仿真特权参数的环境编码器 \\(\\mu\\) 与直接输出关节目标的 base policy \\(\\pi\\)，再冻结两者，用机器人最近 0.5 s 的状态—动作历史训练 \\(\\phi\\) 回归同一个 8 维 extrinsics；部署时只在线重估 latent，不更新任何网络权重。",
+      "takeaway": "先用特权动力学训练 base policy，再用半秒状态—动作历史估计同一个 8 维环境 latent，在线适应未知动力学。",
       "tags": [
         "Quadruped Locomotion",
         "Rapid Adaptation",
@@ -1555,7 +1575,7 @@ const papers = [
         "Domain Randomization",
         "Sim-to-Real"
       ],
-      "mainContent": "RMA 研究纯本体感知的 Unitree A1 如何在未知且会变化的载荷、电机强度、摩擦和地形条件下快速调整运动，而不依赖真机微调、参考动作或预定义足端轨迹。第一阶段用 PPO 联合训练特权环境编码器 \\(\\mu:e_t\\mapsto z_t\\) 与 base policy \\(\\pi(x_t,a_{t-1},z_t)\\)；第二阶段冻结二者，让 adaptation module \\(\\phi\\) 在自己预测的 latent 所诱导的状态分布上，仅用最近 0.5 s 状态—动作历史回归 \\(z_t\\)。部署时 \\(\\phi\\) 以 10 Hz 更新 8 维 latent，\\(\\pi\\) 以 100 Hz 直接输出 12 维关节位置目标，再由固定 PD 转为力矩，全程没有在线梯度更新。论文的仿真多随机种子实验及小样本真机试验支持适应模块优于普通 domain randomization、显式 SysID、AWR 和无适应版本，但系统只会无视觉地向前行走、只能在扰动发生后反应，且自然地形试验规模和对比基线有限。",
+      "mainContent": "RMA 先以 PPO 联合训练特权环境编码器和 Unitree A1 base policy，再冻结二者，用最近 0.5 秒的状态—动作历史训练 adaptation module 回归环境 latent。部署时适应模块以 10 Hz 更新 8 维 latent，策略以 100 Hz 输出 12 维关节位置目标，由 PD 执行。仿真和真机实验评估载荷、电机强度、摩擦与地形变化下的反馈适应。",
       "innovations": [
         "核心方法：把控制拆成固定的快速 base policy 与较慢的 adaptation module。特权环境参数先被压缩成只需服务于控制回报的低维 extrinsics，部署时再由历史模块估计该表征；所谓 rapid online adaptation 是在线 latent inference，而不是真机在线 RL、参数优化或网络微调。",
         "关键训练设计：第二阶段不使用由真实 \\(z_t\\) 产生的完美专家轨迹，而让随机初始化或尚不准确的 \\(\\phi\\) 实际驱动冻结的 \\(\\pi\\) rollout，再用仿真中的 \\(\\mu(e_t)\\) 标注这些访问状态。这是 DAgger-style 的 on-policy 监督，专门缓解部署时 latent 误差造成的分布偏移；补充算法每轮清空 \\(D_2\\)，没有证明使用了经典 DAgger 的永久数据聚合。",
@@ -1585,7 +1605,7 @@ const papers = [
       "authors": "Ashish Kumar, Zipeng Fu, Deepak Pathak, Jitendra Malik",
       "institutions": "University of California, Berkeley; Carnegie Mellon University; Facebook AI Research",
       "status": "Full paper and supplementary reviewed",
-      "takeaway": "The key point is that RMA first jointly trains a privileged environment encoder \\(\\mu\\) and a direct-joint base policy \\(\\pi\\) with PPO, then freezes both and trains \\(\\phi\\) to regress the same 8-dimensional extrinsics from the latest 0.5 s of state-action history; deployment updates only the latent online, never the network weights.",
+      "takeaway": "Trains a base policy with privileged dynamics, then estimates its eight-dimensional environment latent from half a second of state–action history for online adaptation.",
       "tags": [
         "Quadruped Locomotion",
         "Rapid Adaptation",
@@ -1596,7 +1616,7 @@ const papers = [
         "Domain Randomization",
         "Sim-to-Real"
       ],
-      "mainContent": "RMA studies how a proprioceptive Unitree A1 can rapidly adjust to unknown and changing payload, motor strength, friction, and terrain without hardware fine-tuning, reference motions, or predefined foot trajectories. Phase 1 jointly trains a privileged environment encoder \\(\\mu:e_t\\mapsto z_t\\) and base policy \\(\\pi(x_t,a_{t-1},z_t)\\) with PPO; Phase 2 freezes both and trains an adaptation module \\(\\phi\\), on the state distribution induced by its own predicted latent, to recover \\(z_t\\) from the latest 0.5 s of state-action history. At deployment, \\(\\phi\\) updates the 8-dimensional latent at 10 Hz, while \\(\\pi\\) directly predicts 12 joint-position targets at 100 Hz for a fixed PD controller, with no online gradient update. Multi-seed simulation experiments and small real-robot trials support improvements over ordinary domain randomization, explicit SysID, AWR, and a no-adaptation ablation, but the system only walks forward blindly, reacts after disturbances occur, and has limited real-world sample sizes and baseline coverage.",
+      "mainContent": "RMA jointly trains a privileged environment encoder and Unitree A1 base policy with PPO, then freezes both and trains an adaptation module to infer the environment latent from 0.5 seconds of state–action history. At deployment, adaptation updates the eight-dimensional latent at 10 Hz, while the policy produces twelve joint-position targets at 100 Hz for PD execution. Simulation and hardware tests evaluate adaptation to payloads, motor strength, friction, and terrain.",
       "innovations": [
         "Core method: control is decomposed into a fixed fast base policy and a slower adaptation module. Privileged environment parameters are compressed into low-dimensional extrinsics optimized only for control return, and deployment estimates that representation from history; rapid online adaptation means online latent inference, not hardware-side RL, parameter optimization, or weight fine-tuning.",
         "Key training design: Phase 2 does not rely on perfect expert trajectories generated with the true \\(z_t\\). Instead, the randomly initialized or still-imperfect \\(\\phi\\) actually drives the frozen \\(\\pi\\), and simulation labels the visited states with \\(\\mu(e_t)\\). This is DAgger-style on-policy supervision aimed at covariate shift from latent error; the supplementary algorithm clears \\(D_2\\) each iteration and does not establish permanent dataset aggregation as in classical DAgger.",
@@ -2766,6 +2786,7 @@ const papers = [
   {
     "id": "amp-adversarial-motion-priors",
     "categories": [
+      "bfm-latent",
       "locomotion",
       "imitation-teleop",
       "benchmark-dataset"
@@ -2829,6 +2850,7 @@ const papers = [
   {
     "id": "humanmimic",
     "categories": [
+      "bfm-tracking",
       "locomotion",
       "imitation-teleop"
     ],
@@ -2889,6 +2911,7 @@ const papers = [
   {
     "id": "phc-perpetual-humanoid-control",
     "categories": [
+      "bfm-tracking",
       "locomotion",
       "imitation-teleop"
     ],
@@ -2902,7 +2925,7 @@ const papers = [
       "authors": "Zhengyi Luo, Jinkun Cao, Alexander Winkler, Kris Kitani, Weipeng Xu",
       "institutions": "Reality Labs Research, Meta; Carnegie Mellon University",
       "status": "全文已精读",
-      "takeaway": "PHC 最值得记住的是：它不靠 RFC 外力或反复 reset，而是用“冻结旧 primitive、复制权重训练更难动作、单独学习恢复技能、最后由 composer 乘性组合”的 PMCP 流程，把大规模 motion imitation、抗遗忘和 fail-state recovery 统一成一个实时物理控制器。",
+      "takeaway": "逐步训练更难动作和恢复 primitive，再用乘性 composer 组合，统一大规模跟踪、抗遗忘与摔倒恢复。",
       "tags": [
         "PHC",
         "PMCP",
@@ -2913,7 +2936,7 @@ const papers = [
         "Fail-state Recovery",
         "Multiplicative Control"
       ],
-      "mainContent": "论文研究如何让物理仿真人形体在噪声参考动作和意外摔倒下持续运行，同时在不使用 Residual Force Control（RFC）等外部稳定力的条件下覆盖大规模人体动作库。核心方法 PMCP 先用 PPO、AMP 和 motion tracking reward 训练多个逐步扩容的 primitive：第一个 primitive 学全数据集，后续 primitive 专门学习上一阶段自动筛出的失败序列，并冻结旧网络以避免灾难性遗忘；随后另训恢复 primitive，再用 multiplicative composer 统一组合。主实验总计使用 4 个 primitive，其中 3 个用于 motion imitation、1 个用于 fail-state recovery，在 AMASS-Train* 上达到 98.9% 成功率，并能直接接收关节旋转或仅 3D keypoints。局限是仍难覆盖后空翻、高跳、侧手翻等需要未来意图和长时规划的高动态动作，且训练成本约为单张 A100 一周、约 100 亿样本。",
+      "mainContent": "PHC 用 PMCP 逐步扩展物理运动跟踪能力：第一个 primitive 学全动作库，后续网络专门学习前一阶段的失败序列，并冻结已有 primitive。另训恢复技能后，multiplicative composer 组合跟踪与恢复控制。主实验用三个模仿 primitive 和一个恢复 primitive，在 AMASS-Train* 上达到 98.9% 成功率，可读取关节旋转或 3D keypoints。",
       "innovations": [
         "核心新方法是 Progressive Multiplicative Control Policy（PMCP）：把上一 primitive 无法完成的 motion clips 视为更难的新任务，冻结旧 primitive 并增加新网络容量，从结构上减少继续训练同一 actor 时的灾难性遗忘。",
         "将 progressive primitives 与 Multiplicative Control Policy 结合：所有 primitive 训练完成并冻结后，composer 根据同一状态输入输出各 primitive 的激活权重，以 product-of-Gaussians 形式生成最终动作分布，而不是人工指定某个动作类别或只选择一个 expert。",
@@ -2942,7 +2965,7 @@ const papers = [
       "authors": "Zhengyi Luo, Jinkun Cao, Alexander Winkler, Kris Kitani, Weipeng Xu",
       "institutions": "Reality Labs Research, Meta; Carnegie Mellon University",
       "status": "Full paper reviewed",
-      "takeaway": "The key idea of PHC is to replace RFC-based stabilization and repeated resets with a PMCP pipeline that freezes old primitives, warm-starts new primitives on harder clips, learns recovery as a separate primitive, and finally combines all skills with a multiplicative composer.",
+      "takeaway": "Progressively trains difficult-motion and recovery primitives and combines them with a multiplicative composer for tracking, retention, and recovery.",
       "tags": [
         "PHC",
         "PMCP",
@@ -2953,7 +2976,7 @@ const papers = [
         "Fail-state Recovery",
         "Multiplicative Control"
       ],
-      "mainContent": "The paper studies perpetual control of physically simulated humanoids under noisy reference motion and unexpected falls, without Residual Force Control (RFC) or other external stabilizing forces. PMCP trains a progressive stack of PPO/AMP motion primitives: the first primitive learns the full dataset, later primitives learn automatically mined failure sequences while previous networks are frozen, a separate recovery primitive is then added, and a multiplicative composer combines them. The main model uses four primitives in total—three for motion imitation and one for fail-state recovery—reaching 98.9% success on AMASS-Train* and supporting either joint rotations or 3D keypoints as reference input. Remaining limitations include highly dynamic clips that require future intent and long-horizon planning, as well as a training cost of roughly one week and ten billion samples on a single A100.",
+      "mainContent": "PHC expands physical tracking with PMCP: an initial primitive learns the motion library, later primitives focus on earlier failures, and existing primitives remain frozen. A multiplicative composer combines these with a separately trained recovery skill. Three imitation primitives and one recovery primitive reach 98.9% success on AMASS-Train*, accepting joint rotations or 3D keypoints.",
       "innovations": [
         "The main new method is the Progressive Multiplicative Control Policy (PMCP): motion clips failed by the current primitive are treated as a harder task, the old primitive is frozen, and new network capacity is allocated to reduce catastrophic forgetting.",
         "Progressive primitives are combined with a Multiplicative Control Policy. After all primitives are pretrained and frozen, a composer receives the same state input and outputs activation weights, producing the final action distribution through a product of Gaussian experts instead of manual task selection or top-1 routing.",
@@ -2981,6 +3004,8 @@ const papers = [
   {
     "id": "beyondmimic",
     "categories": [
+      "bfm-tracking",
+      "bfm-generative",
       "locomotion",
       "imitation-teleop"
     ],
@@ -3045,6 +3070,8 @@ const papers = [
   {
     "id": "learning-whole-body-humanoid-locomotion-via-motion-gener",
     "categories": [
+      "bfm-tracking",
+      "bfm-generative",
       "locomotion",
       "loco-manipulation",
       "imitation-teleop"
@@ -3106,6 +3133,7 @@ const papers = [
   {
     "id": "srbtrack-terrain-adaptive-tracking-of-a-single-rigid-bod",
     "categories": [
+      "bfm-dynamics",
       "locomotion",
       "imitation-teleop"
     ],
@@ -3172,6 +3200,7 @@ const papers = [
   {
     "id": "run-residual-policy-for-natural-humanoid-locomotion",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3233,6 +3262,7 @@ const papers = [
   {
     "id": "pmtg-policies-modulating-trajectory-generators",
     "categories": [
+      "bfm-dynamics",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3294,6 +3324,7 @@ const papers = [
   {
     "id": "navigait",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3355,6 +3386,7 @@ const papers = [
   {
     "id": "residual-mpc",
     "categories": [
+      "bfm-dynamics",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3418,6 +3450,7 @@ const papers = [
   {
     "id": "skillblender-towards-versatile-humanoid-whole-body-loco-",
     "categories": [
+      "bfm-latent",
       "locomotion",
       "loco-manipulation",
       "imitation-teleop"
@@ -3481,6 +3514,7 @@ const papers = [
   {
     "id": "hugwbc",
     "categories": [
+      "bfm-goal",
       "locomotion",
       "loco-manipulation",
       "imitation-teleop"
@@ -3542,6 +3576,7 @@ const papers = [
   {
     "id": "homie",
     "categories": [
+      "bfm-goal",
       "locomotion",
       "loco-manipulation",
       "imitation-teleop"
@@ -3605,6 +3640,7 @@ const papers = [
   {
     "id": "langwbc",
     "categories": [
+      "bfm-goal",
       "locomotion",
       "loco-manipulation",
       "sim2real",
@@ -3670,6 +3706,7 @@ const papers = [
   {
     "id": "host-learning-humanoid-standing-up-control-across-divers",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3733,6 +3770,7 @@ const papers = [
   {
     "id": "learning-h-infinity-locomotion-control",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "imitation-teleop"
     ],
@@ -3793,6 +3831,7 @@ const papers = [
   {
     "id": "lcp-lipschitz-constrained-policies",
     "categories": [
+      "bfm-adaptation",
       "locomotion",
       "sim2real",
       "imitation-teleop"
@@ -3854,6 +3893,7 @@ const papers = [
   {
     "id": "unsupervised-actuator-net-uan",
     "categories": [
+      "bfm-adaptation",
       "sim2real",
       "loco-manipulation"
     ],
@@ -3914,6 +3954,7 @@ const papers = [
   {
     "id": "learning-torque-control-for-quadrupedal-locomotion",
     "categories": [
+      "bfm-dynamics",
       "sim2real"
     ],
     "pdf": "https://arxiv.org/pdf/2203.05194",
@@ -3973,6 +4014,7 @@ const papers = [
   {
     "id": "dynamics-randomization-revisited-a-case-study-for-quadru",
     "categories": [
+      "bfm-adaptation",
       "sim2real"
     ],
     "pdf": "https://arxiv.org/pdf/2011.02404",
@@ -4034,6 +4076,7 @@ const papers = [
   {
     "id": "high-performance-reinforcement-learning-on-spot-optimizi",
     "categories": [
+      "bfm-adaptation",
       "sim2real"
     ],
     "pdf": "https://arxiv.org/pdf/2504.17857",
@@ -4095,6 +4138,7 @@ const papers = [
   {
     "id": "neuralsim-augmenting-differentiable-simulators-with-neur",
     "categories": [
+      "bfm-dynamics",
       "sim2real",
       "loco-manipulation",
       "imitation-teleop",
@@ -4205,9 +4249,10 @@ const paperNotes = new Map();
 
 const state = {
   lang: localStorage.getItem("paper-notes-lang") || "zh",
-  category: "all",
+  category: "bfm",
+  bfmExpanded: localStorage.getItem("paper-bfm-expanded") !== "0",
   query: "",
-  selectedId: "dextrah-rgb",
+  selectedId: "scaling-bfm-humanoid-transformer",
   layout: {
     sidebarCollapsed: localStorage.getItem("paper-layout-sidebar-collapsed") === "1",
     detailCollapsed: localStorage.getItem("paper-layout-detail-collapsed") === "1",
@@ -4235,6 +4280,7 @@ const nodes = {
   paperList: document.querySelector("#paper-list"),
   paperDetail: document.querySelector("#paper-detail"),
   viewTitle: document.querySelector("#view-title"),
+  viewDescription: document.querySelector("#view-description"),
   resultCount: document.querySelector("#result-count"),
   paperCount: document.querySelector("#paper-count"),
   categoryCount: document.querySelector("#category-count"),
@@ -4327,6 +4373,7 @@ function normalizePaperRecord(rawPaper) {
 
   return {
     id,
+    aliases: stringArray(rawPaper.aliases),
     categories: stringArray(rawPaper.categories),
     pdf: stringField(rawPaper.pdf),
     project: stringField(rawPaper.project),
@@ -4552,7 +4599,18 @@ function categoryLabel(categoryId) {
 }
 
 function categoryCount(categoryId) {
-  return papers.filter((paper) => paper.categories.includes(categoryId)).length;
+  return papers.filter((paper) => matchesCategory(paper, categoryId)).length;
+}
+
+function matchesCategory(paper, categoryId) {
+  return categoryId === "all" || paper.categories.some((id) =>
+    id === categoryId || categories.find((category) => category.id === id)?.parent === categoryId
+  );
+}
+
+function categorySearchLabels(categoryId) {
+  const category = categories.find((item) => item.id === categoryId);
+  return [categoryLabel(categoryId), category?.parent && categoryLabel(category.parent)].filter(Boolean);
 }
 
 function isLocalReadLink(link) {
@@ -4646,6 +4704,8 @@ function searchableText(paper) {
   const localized = localPaper(paper);
   const institutions = localInstitutions(paper);
   return [
+    paper.id,
+    ...(paper.aliases || []),
     localized.title,
     localized.authors,
     institutions,
@@ -4653,7 +4713,7 @@ function searchableText(paper) {
     localized.mainContent,
     localized.innovations.join(" "),
     localized.implementation.join(" "),
-    paper.categories.map(categoryLabel).join(" "),
+    paper.categories.flatMap(categorySearchLabels).join(" "),
     localized.tags.join(" "),
     paper.year,
     paper.venue,
@@ -4666,9 +4726,9 @@ function filteredPapers() {
   const query = state.query.trim().toLowerCase();
 
   return papers.filter((paper) => {
-    const matchesCategory = state.category === "all" || paper.categories.includes(state.category);
+    const inCategory = matchesCategory(paper, state.category);
     const matchesQuery = !query || searchableText(paper).includes(query);
-    return matchesCategory && matchesQuery;
+    return inCategory && matchesQuery;
   }).reverse();
 }
 
@@ -4697,39 +4757,43 @@ function syncLanguage() {
 }
 
 function renderCategories() {
-  nodes.categoryCount.textContent = categories.length;
+  nodes.categoryCount.textContent = categories.filter((category) => !category.parent).length;
 
-  const buttons = [
-    {
-      label: text("allPapers"),
-      value: "all",
-      count: papers.length,
-    },
-    ...categories.map((category) => ({
-      label: category.label[state.lang],
-      value: category.id,
-      count: categoryCount(category.id),
-    })),
-  ];
+  const button = (id, label, count) => `
+    <button class="category-button ${state.category === id ? "is-active" : ""}"
+      type="button" data-category="${id}" aria-pressed="${state.category === id}"
+      title="${escapeHtml(label)}">
+      <span>${escapeHtml(label)}</span><small>${count}</small>
+    </button>`;
 
-  nodes.categoryNav.innerHTML = buttons
-    .map(
-      (category) => `
-        <button class="category-button ${state.category === category.value ? "is-active" : ""}"
-          type="button"
-          data-category="${category.value}">
-          <span>${category.label}</span>
-          <small>${category.count}</small>
+  nodes.categoryNav.innerHTML = `
+    ${button("all", text("allPapers"), papers.length)}
+    <div class="category-group">
+      <div class="category-group-header">
+        ${button("bfm", state.lang === "zh" ? "BFM / 通用控制" : "BFM / Motor Control", categoryCount("bfm"))}
+        <button class="category-group-toggle" type="button" data-category-toggle="bfm"
+          aria-expanded="${state.bfmExpanded}" aria-controls="bfm-subcategories"
+          aria-label="${text(state.bfmExpanded ? "collapseBfm" : "expandBfm")}">
+          ${state.bfmExpanded ? "−" : "+"}
         </button>
-      `,
-    )
-    .join("");
+      </div>
+      <div class="category-children" id="bfm-subcategories" ${state.bfmExpanded ? "" : "hidden"}>
+        ${categories.filter((category) => category.parent === "bfm")
+          .map((category) => button(category.id, category.label[state.lang], categoryCount(category.id))).join("")}
+      </div>
+    </div>
+    <p class="category-section-label">${text("taskCategories")}</p>
+    ${categories.filter((category) => !category.parent && category.id !== "bfm")
+      .map((category) => button(category.id, category.label[state.lang], categoryCount(category.id))).join("")}`;
 }
 
 function renderList() {
   const list = filteredPapers();
   nodes.paperCount.textContent = papers.length;
   nodes.viewTitle.textContent = state.category === "all" ? text("allPapers") : categoryLabel(state.category);
+  const description = categories.find((category) => category.id === state.category)?.description?.[state.lang] || "";
+  nodes.viewDescription.textContent = description;
+  nodes.viewDescription.hidden = !description;
   nodes.resultCount.textContent = `${text("showing")} ${list.length} ${text("of")} ${papers.length} ${text("items")}`;
 
   if (!list.length) {
@@ -4881,7 +4945,6 @@ function render() {
 nodes.langButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.lang = button.dataset.lang;
-    state.category = "all";
     localStorage.setItem("paper-notes-lang", state.lang);
     render();
   });
@@ -4967,6 +5030,13 @@ nodes.search.addEventListener("input", (event) => {
 });
 
 nodes.categoryNav.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-category-toggle]");
+  if (toggle) {
+    state.bfmExpanded = !state.bfmExpanded;
+    localStorage.setItem("paper-bfm-expanded", state.bfmExpanded ? "1" : "0");
+    renderCategories();
+    return;
+  }
   const button = event.target.closest("[data-category]");
   if (!button) return;
   state.category = button.dataset.category;
@@ -5076,21 +5146,14 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-function initialize() {
-  render();
-  loadExternalData();
-}
-
-async function loadExternalData() {
-  const [metaLoaded, importedCount, promptsLoaded] = await Promise.all([
+async function initialize() {
+  await Promise.all([
     loadSiteMeta(),
     loadExternalPapers(),
     loadPromptData(),
   ]);
-  const noteCount = await loadPaperNotes();
-  if (metaLoaded || importedCount || promptsLoaded || noteCount) {
-    render();
-  }
+  await loadPaperNotes();
+  render();
 }
 
 initialize();

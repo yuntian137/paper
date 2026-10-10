@@ -17,16 +17,77 @@
     "id 使用稳定的小写英文 slug，优先采用论文官方简称加标题关键词，不使用空格；同 id 会覆盖已有卡片。",
     "title 必须使用论文官方英文标题；zh.title 与 en.title 必须是完全相同的字符串，不自行翻译标题。",
     "中文正文以中文为主，但保留 PPO、RL、VLA、Sim-to-Real、模型名和数据集名等必要英文缩写与术语。",
-    "mainContent 根据实际阅读范围概括研究问题、核心方法、主要结果和关键限制；不要把作者未证明的主张写成事实。",
-    "innovations 要区分真正的新方法与对已有组件的系统整合；implementation 中的数字、网络结构、训练资源和评测结果必须能在论文中核实。",
+    "mainContent 用 2–4 句直接说明问题、方法流程和主要结果。一句话理解优先讲核心机制；适用条件只在影响理解时简短说明一次，避免在多个字段重复免责声明。",
+    "innovations 写清本文新增的机制或系统设计；implementation 写数据、输入输出、训练和部署流程。保留能核实的关键数字，省略逐项未报告清单和反复的新颖性否定。",
     "正文中的行内公式必须显式使用 \\( ... \\) 定界，独立公式使用 \\[ ... \\]；不要依赖变量下划线或上标触发自动识别，也不要把包含普通文字的整段内容放进数学模式。",
     "institutions 填论文首页或官方页面明确列出的作者机构；查不到或不确定时留空字符串，不要猜测。",
     "year 和 venue 优先使用已确认的正式发表信息；尚未正式发表时再使用 arXiv 首次公开年份和 arXiv 编号，不把最近修订年份当作发表年份。",
     "categories 只能使用 available_categories 中的 id，并按论文的主要研究贡献选择；不要仅因正文顺带提到某主题就增加分类。",
     "zh 和 en 必须事实一致；允许自然翻译，但不得增删实验数字、结论或限制。",
-    "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。"
+    "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。",
+    "aliases 可填写 UMR、ScaleBFM、Humanoid Transformer 等常用简称，用于搜索；同一论文保留一个正式标题条目。",
+    "BFM 相关论文选择一个或多个 bfm-* 子分类，网站自动汇总到 bfm 父分类；同时保留任务、应用与迁移分类。"
   ],
   "available_categories": [
+    {
+      "id": "bfm",
+      "zh": "BFM / 通用运动控制",
+      "en": "BFM / General Motor Control"
+    },
+    {
+      "id": "bfm-fb",
+      "zh": "FB / 奖励可编程",
+      "en": "FB / Reward Conditioning",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-tracking",
+      "zh": "运动跟踪 / 技能蒸馏",
+      "en": "Tracking / Distillation",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-goal",
+      "zh": "掩码目标 / 多模态接口",
+      "en": "Masked Goals / Interfaces",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-latent",
+      "zh": "连续潜空间 / 运动先验",
+      "en": "Continuous Latents / Priors",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-token",
+      "zh": "离散 Token / 技能序列",
+      "en": "Discrete Tokens / Skills",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-generative",
+      "zh": "生成式控制 / 动作过渡",
+      "en": "Generative Control / Transitions",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-dynamics",
+      "zh": "动力学 / 模型与优化",
+      "en": "Dynamics / Models & Optimization",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-data",
+      "zh": "数据 / 运动重定向",
+      "en": "Data / Motion Retargeting",
+      "parent": "bfm"
+    },
+    {
+      "id": "bfm-adaptation",
+      "zh": "适应 / 迁移与鲁棒性",
+      "en": "Adaptation / Transfer & Robustness",
+      "parent": "bfm"
+    },
     {
       "id": "locomotion",
       "zh": "运动控制 / Locomotion",

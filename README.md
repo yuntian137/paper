@@ -30,14 +30,30 @@ site_meta.json            站点元信息，例如最近更新时间
 
 ## 分类方式
 
-仓库按两层分类维护：
+网站默认打开最近主要阅读的 **BFM / 通用运动控制**。分类同时保留研究机制和任务应用两个维度：
 
 ```txt
-页面分类：用于网页左侧筛选和论文标签
+BFM 父分类与子分类：按控制机制组织基座、训练方法和前置工作
+任务与应用分类：保留原有运动控制、操作、迁移等入口
 关键词：用于描述方法、硬件、任务和迁移方式，并参与搜索
 ```
 
-页面内的主分类由 `app.js` 的 `categories` 数组维护，适合保持少量、稳定。当前固定分类 id 为：
+分类由 `app.js` 的 `categories` 数组维护。BFM 子分类通过 `parent: "bfm"` 建立层级，父分类自动汇总并按论文 id 去重计数。当前 BFM 分类为：
+
+```txt
+bfm                 -> BFM / 通用运动控制（父分类）
+  bfm-fb            -> FB / 奖励可编程
+  bfm-tracking      -> 运动跟踪 / 技能蒸馏
+  bfm-goal          -> 掩码目标 / 多模态接口
+  bfm-latent        -> 连续潜空间 / 运动先验
+  bfm-token         -> 离散 Token / 技能序列
+  bfm-generative    -> 生成式控制 / 动作过渡
+  bfm-dynamics      -> 动力学 / 模型与优化
+  bfm-data          -> 数据 / 运动重定向
+  bfm-adaptation    -> 适应 / 迁移与鲁棒性
+```
+
+例如，FB、Meta Motivo / FB-CPR、BFM-Zero 放入 `bfm-fb`；ScaleBFM 放入 `bfm-tracking` 和 `bfm-goal`；UMR、GMR、OmniRetarget 放入 `bfm-data`。支持工作的分类说明会解释它与通用控制的连接。任务与应用分类 id 为：
 
 ```txt
 locomotion          -> 运动控制 / Locomotion
@@ -53,7 +69,7 @@ benchmark-dataset   -> Benchmark / Dataset
 一篇论文可以属于多个页面分类，例如：
 
 ```js
-categories: ["locomotion", "sim2real"]
+categories: ["bfm-goal", "bfm-latent", "locomotion", "sim2real"]
 ```
 
 关键词由每篇论文的 `tags` 字段维护，适合放方法、硬件、任务和细粒度主题，例如：
@@ -65,7 +81,9 @@ in-hand manipulation, grasping, tool use, velocity tracking
 system identification, domain randomization, real-world finetuning
 ```
 
-如果新增页面主分类，需要同时更新 `categories` 数组和论文对象里的 `categories` 字段。一般情况下优先新增关键词，不要轻易新增左侧主分类。
+论文选一个或多个 BFM 子分类即可出现在父分类，子类间允许交叉。任务分类继续按实际贡献选择。新增分类时同步更新 `categories`、论文记录和 `example.json` 的 `available_categories`。
+
+论文可增加 `aliases` 数组保存常用简称。搜索 UMR、ScaleBFM、Humanoid Transformer 或 Meta Motivo 都能定位对应的正式标题；同一论文只保留一个条目。
 
 ## 使用精读 Prompt
 
@@ -103,10 +121,10 @@ system identification, domain randomization, real-world finetuning
 2. JSON 对象字段和 `app.js` 里的 `papers` 对象保持一致。
 3. `arxiv`、`project` 和 `pdf` 可以留空；非空时只能填写以 `https://` 开头的纯 URL，禁止使用 `[文字](URL)` 形式的 Markdown 链接。
 4. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
-5. `categories` 使用上面的固定分类 id。
+5. `categories` 使用上面的分类 id；BFM 相关论文优先选择 `bfm-*` 子分类，并保留任务与应用分类。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
 7. `zh.title` 和 `en.title` 必须完全一致，均使用论文官方英文标题；中文正文可以保留 PPO、RL、VLA、Sim-to-Real 等必要英文缩写和专业术语。
-8. `takeaway` 是给自己复习用的一句话定性理解，不需要像摘要一样客观完整。
+8. `takeaway` 用一句话直接解释核心机制，方便复习。`mainContent` 按“问题 → 方法 → 结果”写 2–4 句；只保留影响理解的必要条件，避免反复写“论文没有证明”“不能保证”等保护措辞。
 9. `institutions` 填论文首页、PDF 首页或官方页面明确列出的作者机构；查不到或不确定时留空，不要猜测。
 10. `example.json` 里所有以下划线开头的字段都只是给 agent 的说明，最终生成的论文对象不得包含这些字段。
 11. LaTeX 必须按使用场景显式定界：论文卡片 JSON 字符串使用 `\\(...\\)` 表示行内公式、`\\[...\\]` 表示独立公式；“精读 Prompt”实际写入 Markdown 报告文件的公式使用 `$...$` 和 `$$...$$`；所有聊天回复中的公式统一使用 `\(...\)` 和 `\[...\]`，反斜杠不可省略，禁止用普通 `(...)`、`[...]` 或美元符号充当聊天公式定界符，也不要把公式放入代码块。普通文字不要放进数学模式。
@@ -149,7 +167,11 @@ system identification, domain randomization, real-world finetuning
 }
 ```
 
-## 摘要级整理规范
+## 网站笔记的写法
+
+一句话理解说明方法怎样工作，简介建立流程，创新点说明新增机制，实现方法保留数据、网络、训练与部署中的关键信息。直接陈述已核实的内容；明确区分参考轨迹、任务向量和控制动作。必要时用一句话说明实验环境、定理前提或具体的论文—代码分歧，避免堆叠未报告清单。
+
+BFM 等已精读论文可以依据正文与附录整理。只读摘要的条目继续标明阅读范围。
 
 `mainContent` 默认只需要基于论文摘要整理，避免为了补页面内容而完整通读全文。推荐写 2-4 句，覆盖：
 
@@ -159,7 +181,7 @@ system identification, domain randomization, real-world finetuning
 实验或结果声称解决了什么
 ```
 
-`innovations` 和 `implementation` 只记录摘要里能确认的信息。摘要没有说明的内容可以保留为“待阅读全文补充”，不要写成已经确认的细节。
+摘要级条目的 `innovations` 和 `implementation` 只记录摘要里能确认的信息。资料缺失时留空相应字段，后续精读再补充。
 
 ## 个人复习笔记
 
