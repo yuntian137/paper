@@ -4520,6 +4520,89 @@
           "Architecture experiments scale actor and critic together. The roughly 3M Transformer outperforms the similarly sized MLP; Ours whole-body success reaches 98.85% at 4.44M and 98.36% at 9.91M, illustrating saturation. (Figure 9; B.6)"
         ]
       }
+    },
+    {
+      "id": "belief-fb-zero-shot-unseen-dynamics",
+      "aliases": [
+        "BFB",
+        "RFB",
+        "Belief-FB",
+        "Rotation-FB",
+        "BeliefConditionedFB",
+        "2505.13150"
+      ],
+      "categories": [
+        "bfm-fb",
+        "bfm-adaptation",
+        "bfm-dynamics"
+      ],
+      "pdf": "https://arxiv.org/pdf/2505.13150v2",
+      "project": "https://belief-fb.dunnolab.ai/",
+      "arxiv": "https://arxiv.org/abs/2505.13150",
+      "year": "2026",
+      "venue": "ICLR 2026",
+      "zh": {
+        "title": "Zero-Shot Adaptation of Behavioral Foundation Models to Unseen Dynamics",
+        "authors": "Maksim Bobrin, Ilya Zisman, Alexander Nikulin, Vladislav Kurenkov, Dmitry Dylov",
+        "institutions": "AXXX; Applied AI Institute, Computational Imaging Lab; MSU; Innopolis University; Humanoid",
+        "status": "正文与方法附录已精读",
+        "tags": [
+          "Belief-FB",
+          "Rotation-FB",
+          "Successor Measure",
+          "Dynamics Context",
+          "von Mises-Fisher",
+          "Offline RL"
+        ],
+        "takeaway": "先用下一状态预测学环境上下文并条件化 Forward，再围绕上下文方向采样任务向量，缓解混合动力学下的表示干扰。",
+        "mainContent": "本文研究隐藏环境配置导致的动力学变化：相同可见状态在不同门洞布局、风向或摩擦下需要不同策略，原始 FB 的共享输入会混合这些未来占据分布。BFB 从无奖励历史推断上下文 h 并条件化 Forward；RFB 进一步将训练任务向量的先验改为围绕 h 方向的 vMF 分布。模型用多个环境的离线轨迹训练，测试时根据短历史和指定奖励提取策略，无需梯度更新；在 Four-Rooms、Pointmass、AntWind 与 OGBench Scene 的未见配置上改善表现。",
+        "innovations": [
+          "把动力学适应接入 FB 的 successor measure 表示：用历史推断环境上下文，保留共享 Backward 与任意奖励的任务编码接口。",
+          "用轨迹共享的潜变量辅助预测下一状态，先预训练上下文估计器，再训练条件化的 FB 表示。",
+          "RFB 用上下文方向引导任务向量采样，使不同动力学在任务空间形成偏好的区域，进一步缓解策略表示干扰。"
+        ],
+        "implementation": [
+          "问题表述为 Contextual MDP：隐藏配置 c 决定转移函数，每个 episode 内保持不变，跨 episode 改变；训练不使用配置标签。FB 本身通过 successor measure 隐式表示长期动力学，本文补充区分隐藏配置的条件信息。（A.1，第 15 页；§3.1）",
+          "上下文 Transformer 读取轨迹转移，输出高斯均值与 log 标准差，通过重参数化得到 h；一个轨迹窗口共享同一个 h。预测头结合当前状态、动作和 h，以下一状态的均方误差预训练编码器。（§3.2；Algorithm 1，第 24 页）",
+          "将 h 与任务向量拼接后输入 Forward，Backward 跨上下文共享并继续训练；沿用 FB 的 TD 目标。作者发现分阶段训练比端到端训练效果更好。（公式 6，第 6 页；Algorithm 1）",
+          "原始 FB 在均匀球面采样和 z=B(s) 之间按 50:50 混合。RFB 改用归一化 h 为中心的 vMF 采样：先围绕北极采样，再经 Householder 变换对齐到 h，最后投影到半径 sqrt(d) 的球面；默认 κ=50，Pointmass 为 100。（E.3；Algorithm 2，第 23–24 页）",
+          "测试时先用短的无奖励随机探索轨迹推断 h，再由奖励加权的 Backward 表示得到任务向量，条件化策略执行；零样本指无需测试时梯度更新，仍需要环境历史。（§3.2–4，第 6–7 页）",
+          "主实验比较 FB、HILP、LAP 和随机策略；Table 1 还包含 Contextual-FB、Oracle-ID 与 OGBench Scene 摩擦变化。Four-Rooms 未见布局成功率 BFB 为 0.40、RFB 为 0.61，FB 为 0.15。（Table 1，第 10 页；Table 2，第 20 页）",
+          "Figure 4 展示上下文与任务向量的几何结构，Figure 7 展示学到的上下文随布局、风向区分。有限 κ 的 vMF 是软采样偏置；理论的误差解耦依赖不重叠区域与参数块可分假设，不能直接当作共享神经网络完全消除干扰的保证。（第 6、9 页；Appendix B）",
+          "附录将本文与 Contextual FB 的域分类器及奖励修正、PEARL/VariBAD 的历史信念推断、Transformer 的 in-context RL 联系起来。本文的组合重点是无奖励动力学上下文、FB 奖励提示接口和上下文条件化的任务先验。（A.2，第 15–16 页）"
+        ]
+      },
+      "en": {
+        "title": "Zero-Shot Adaptation of Behavioral Foundation Models to Unseen Dynamics",
+        "authors": "Maksim Bobrin, Ilya Zisman, Alexander Nikulin, Vladislav Kurenkov, Dmitry Dylov",
+        "institutions": "AXXX; Applied AI Institute, Computational Imaging Lab; MSU; Innopolis University; Humanoid",
+        "status": "Main text and method appendices reviewed",
+        "tags": [
+          "Belief-FB",
+          "Rotation-FB",
+          "Successor Measure",
+          "Dynamics Context",
+          "von Mises-Fisher",
+          "Offline RL"
+        ],
+        "takeaway": "Learns dynamics context through next-state prediction, conditions Forward on that context, and samples task vectors around its direction to reduce interference across dynamics.",
+        "mainContent": "Hidden environment configurations make identical visible states require different policies under changing doorway layouts, wind, or friction; vanilla FB inputs conflate their future occupancy distributions. BFB infers context h from reward-free history and conditions Forward on it, while RFB additionally replaces the training task prior with a vMF distribution around the context direction. Trained on offline trajectories from multiple environments, the models extract reward-prompted policies from short test histories without gradient updates and improve generalization on Four-Rooms, Pointmass, AntWind, and OGBench Scene.",
+        "innovations": [
+          "Adds hidden-dynamics context inference to FB successor measures while retaining a shared Backward representation and arbitrary-reward task encoding.",
+          "Pretrains a trajectory-shared context latent through auxiliary next-state prediction before learning the conditioned FB representation.",
+          "RFB biases task-vector sampling toward context directions, encouraging dynamics-specific preferred regions and reducing policy-representation interference."
+        ],
+        "implementation": [
+          "The Contextual MDP has a hidden configuration c that determines transitions and stays fixed within each episode. Training uses no configuration labels. FB already represents long-term dynamics implicitly through successor measures; the added context distinguishes hidden configurations. (A.1, p.15; §3.1)",
+          "A context Transformer encodes trajectory transitions into Gaussian means and log standard deviations; reparameterization produces h, shared across a trajectory window. A prediction head takes state, action, and h, and next-state mean squared error pretrains the encoder. (§3.2; Algorithm 1, p.24)",
+          "Concatenate h with the task vector for Forward while keeping Backward shared and trainable. Use the FB TD objective; the authors report better results with separate encoder pretraining than end-to-end training. (Eq.6, p.6; Algorithm 1)",
+          "Vanilla FB mixes uniform sphere sampling and z=B(s) at 50:50. RFB samples vMF vectors around normalized h via north-pole sampling and a Householder transform, then projects them onto the sphere of radius sqrt(d). Default κ is 50 and Pointmass uses 100. (E.3; Algorithm 2, pp.23–24)",
+          "At test time, a short reward-free random-exploration history yields h; reward-weighted Backward features yield the task vector for the conditioned policy. Zero-shot adaptation requires no test-time gradient updates but does require environment history. (§3.2–4, pp.6–7)",
+          "Main baselines include FB, HILP, LAP, and random policies. Table 1 also includes Contextual-FB, Oracle-ID, and OGBench Scene friction shifts. Unseen Four-Rooms success is 0.40 for BFB, 0.61 for RFB, and 0.15 for FB. (Table 1, p.10; Table 2, p.20)",
+          "Figure 4 illustrates context/task geometry; Figure 7 distinguishes contexts by layouts and wind. Finite-κ vMF sampling is a soft bias. The theoretical error decoupling assumes disjoint regions and block-separable parameters, rather than guaranteeing zero interference in the shared neural network. (pp.6, 9; Appendix B)",
+          "Related work connects domain-classifier reward correction in Contextual FB, history-based belief inference in PEARL/VariBAD, and Transformer in-context RL. The contribution combines reward-free dynamics context, the FB reward-prompt interface, and a context-conditioned task prior. (A.2, pp.15–16)"
+        ]
+      }
     }
   ]
 }
