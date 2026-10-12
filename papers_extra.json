@@ -4603,6 +4603,90 @@
           "Related work connects domain-classifier reward correction in Contextual FB, history-based belief inference in PEARL/VariBAD, and Transformer in-context RL. The contribution combines reward-free dynamics context, the FB reward-prompt interface, and a context-conditioned task prior. (A.2, pp.15–16)"
         ]
       }
+    },
+    {
+      "id": "uniphys-unified-planner-controller",
+      "aliases": [
+        "UniPhys",
+        "2504.12540"
+      ],
+      "categories": [
+        "bfm-generative",
+        "bfm-latent",
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2504.12540v1",
+      "project": "https://wuyan01.github.io/uniphys-project/",
+      "arxiv": "https://arxiv.org/abs/2504.12540",
+      "year": "2025",
+      "venue": "ICCV 2025 (Highlight)",
+      "zh": {
+        "title": "UniPhys: Unified Planner and Controller with Diffusion for Flexible Physics-Based Character Control",
+        "authors": "Yan Wu, Korrawe Karunratanakul, Zhengyi Luo, Siyu Tang",
+        "institutions": "ETH Zurich; Carnegie Mellon University",
+        "status": "方法与关键实验已阅读",
+        "takeaway": "用扩散模型联合生成未来身体状态与 PULSE 动作 latent，解码执行一小段后更新历史，再生成下一段。",
+        "tags": [
+          "UniPhys",
+          "Diffusion Forcing",
+          "PULSE",
+          "Behavior Cloning",
+          "Causal Transformer",
+          "Receding Horizon",
+          "Humanoid"
+        ],
+        "mainContent": "UniPhys 针对运动学规划器与物理控制器分离造成的跟踪偏差，用 PULSE 跟踪 AMASS 运动并配上 BABEL 文字，构建物理状态—动作示范。因果 Transformer 按 Diffusion Forcing 方式训练，联合生成未来状态和 32 维动作 latent，再经 PULSE 解码器与 PD 控制在 Isaac Gym 中执行。推理通过文字或任务损失引导去噪，同一模型完成文字控制、目标到达、速度控制与动态避障；实验展示较自然、平滑的运动，推理效率仍是主要限制。",
+        "innovations": [
+          "联合建模状态和动作 latent：未来状态支持规划与任务损失引导，latent 经现有 PULSE 解码器转成控制动作；“统一”指共享行为生成模型。（§4.2–4.3，图 3）",
+          "将逐帧独立噪声的 Diffusion Forcing 用于物理行为克隆，并配合历史稳定化和不同去噪日程，缓解长期执行中的误差积累。（§4.2–4.3）",
+          "在推理阶段使用 CFG 与任务损失梯度引导同一模型，实现多种控制要求，无需逐任务微调；同时构建带文字的物理状态—动作数据集。（§4.1、§4.3–4.4）"
+        ],
+        "implementation": [
+          "数据：BABEL 提供与 AMASS 运动对应的人工文字及时间段标注，不提供物理控制动作。PULSE 在仿真中跟踪运动，记录状态、控制动作和 latent，保留成功跟踪的序列；最终 4,875 段、15.7 小时。（§4.1，第 4 页）",
+          "表示与网络：每个实际训练 token 为 \\(x_t=[z_t,s_{t+1}]\\)，拼接 32 维动作 latent 与 366 维状态，共 398 维；文字经 CLIP 编码，单独作为条件。token 与噪声等级嵌入经 MLP、加时间位置编码，进入 12 层、隐藏维度 768 的因果 Transformer；因果注意力不读取后续行为 token。（图 3(a)、§4.2；附录 A）",
+          "训练：以步长 8 将运动切成 32 帧片段，多条文字标注时随机选一条；各帧独立采样噪声等级并直接加高斯噪声。网络预测干净序列，损失为 \\(\\mathcal L=\\mathbb E\\|X^0-M_\\theta(X^k,k,c)\\|^2\\)。一次更新是加噪、一次前向预测、误差反传，再重新采样；不在每次训练更新中完整运行多轮反向去噪。（式 1；附录 A）",
+          "推理：历史行为作为上下文，未知未来 token 从高斯随机噪声初始化。网络每轮输出干净序列的估计，DDIM 采样器据此更新到更低噪声等级，再输入同一网络；附录采用 5 步 DDIM。干净估计不是最终正确轨迹，采样过程不更新网络权重。（算法 1；附录 A）",
+          "帧数务必分开：训练窗口长度 32、历史长度 \\(h\\)、未来预测长度 \\(H\\)、实际执行长度 \\(T_a\\) 是不同量。文字控制为 \\(h=4,H=8,T_a=8\\)；目标到达、速度控制、避障为 \\(h=4,H=28,T_a=8\\)。目标任务的 32 帧窗口是 4 帧历史＋28 帧未来，不能把执行 8 帧误记成“8 帧历史＋24 帧噪声”。（表 1，第 6 页）",
+          "执行闭环：对要执行的前 \\(T_a\\) 帧，将对应预测状态和 latent 交给 PULSE 解码器得到动作 \\(a_i=D(\\hat s_i,\\hat z_i)\\)。动作指定关节 PD 目标，再由物理仿真产生实际状态；预测状态不会直接赋给身体。默认执行 8 帧后更新历史，取最近 4 帧继续生成未来；每次生成包含多步去噪，并非只调用 Transformer 一次。（§3、§4.3–4.4，算法 1）",
+          "稳定化：把已去噪帧的噪声标记从 0 改为小的非零值，提示模型历史可能含误差；只修改噪声标记，不实际给这些状态—动作预测再加噪声。文字控制采用自回归去噪，目标等任务采用优先处理近期帧的渐进去噪。（§4.3，表 1）",
+          "任务引导：文字用 CFG；目标位置、速度和动态障碍物分别定义任务损失，用经网络预测结果反传得到的样本梯度调整生成序列，MCG 对多个样本的梯度取平均。这里的梯度用于生成过程，不是测试时训练网络。（式 2–4；附录 B）",
+          "时效性：默认每执行 8 个运动帧重新生成，不等于每 8 帧一定能及时算完。A100、5 步 DDIM 下，表 4 的自回归、渐进、全序列去噪分别为 9.5、18、23 FPS；全序列配置稳定性较差。附录 D 承认推理效率低于 RL 策略，实时控制需要优化；文中没有说明异步生成与执行重叠的调度，也未给出第 9 帧衔接的延迟保证。（§5.5、表 4；附录 D）"
+        ]
+      },
+      "en": {
+        "title": "UniPhys: Unified Planner and Controller with Diffusion for Flexible Physics-Based Character Control",
+        "authors": "Yan Wu, Korrawe Karunratanakul, Zhengyi Luo, Siyu Tang",
+        "institutions": "ETH Zurich; Carnegie Mellon University",
+        "status": "Method and key experiments reviewed",
+        "takeaway": "Jointly generates future body states and PULSE action latents with diffusion, decodes and executes a short segment, then updates history and generates again.",
+        "tags": [
+          "UniPhys",
+          "Diffusion Forcing",
+          "PULSE",
+          "Behavior Cloning",
+          "Causal Transformer",
+          "Receding Horizon",
+          "Humanoid"
+        ],
+        "mainContent": "UniPhys addresses tracking discrepancies between separate kinematic planners and physics controllers by tracking AMASS motion with PULSE and pairing the resulting physical demonstrations with BABEL text. A causal Transformer trained with Diffusion Forcing jointly generates future states and 32-dimensional action latents, which a PULSE decoder and PD controllers execute in Isaac Gym. Text or task-loss guidance enables text control, goal reaching, velocity control, and dynamic obstacle avoidance with one model; experiments show natural, smooth motion, while inference efficiency remains a major limitation.",
+        "innovations": [
+          "Jointly models states and action latents: predicted states enable planning and task-loss guidance, while latents are decoded into control actions by the existing PULSE decoder. Unification refers to the shared behavior generator. (§4.2–4.3, Figure 3)",
+          "Applies per-frame independent-noise Diffusion Forcing to physics-based behavior cloning, combining history stabilization and flexible denoising schedules to mitigate accumulated rollout errors. (§4.2–4.3)",
+          "Uses CFG and task-loss gradient guidance at inference to support multiple control objectives without per-task finetuning, and constructs a text-paired physical state–action dataset. (§4.1, §4.3–4.4)"
+        ],
+        "implementation": [
+          "Data: BABEL provides human-written text and temporal annotations aligned with AMASS motion, rather than physical control actions. PULSE tracks motion in simulation, logging states, actions, and latents and retaining successfully tracked sequences: 4,875 sequences and 15.7 hours. (§4.1, p.4)",
+          "Representation and network: each actual training token is \\(x_t=[z_t,s_{t+1}]\\), combining a 32-dimensional action latent and 366-dimensional state into 398 features. CLIP text is supplied separately as conditioning. Tokens and noise-level embeddings pass through an MLP, receive temporal positional encoding, and enter a 12-layer causal Transformer with hidden size 768; causal attention cannot read later behavior tokens. (Figure 3(a), §4.2; Appendix A)",
+          "Training: cut motion into 32-frame clips with stride 8, randomly selecting one text annotation when several apply. Independently sample each frame's noise level and directly corrupt it with Gaussian noise. Predict the clean sequence with \\(\\mathcal L=\\mathbb E\\|X^0-M_\\theta(X^k,k,c)\\|^2\\). Each update consists of corruption, one forward prediction, error backpropagation, and resampling; it does not run the full iterative reverse sampling process. (Eq.1; Appendix A)",
+          "Inference: use past behavior as context and initialize unknown future tokens with Gaussian noise. Each network call estimates the clean sequence; the DDIM sampler constructs lower-noise inputs for subsequent calls to the same network. Appendix A uses 5 DDIM steps. A clean estimate is not a guaranteed correct trajectory, and sampling does not update network weights. (Algorithm 1; Appendix A)",
+          "Keep frame counts distinct: the 32-frame training window, history \\(h\\), prediction horizon \\(H\\), and execution interval \\(T_a\\) are separate quantities. Text control uses \\(h=4,H=8,T_a=8\\); goal reaching, velocity control, and avoidance use \\(h=4,H=28,T_a=8\\). The goal-task window is 4 history frames plus 28 future frames, not 8 history frames plus 24 noise frames. (Table 1, p.6)",
+          "Execution loop: for the first \\(T_a\\) frames, decode corresponding predicted states and latents into actions \\(a_i=D(\\hat s_i,\\hat z_i)\\). Actions specify joint PD targets; simulation produces actual states rather than assigning predicted states directly to the body. By default execute 8 frames, update history, and use the latest 4 frames to generate again. Each generation involves multiple denoising steps, rather than a single Transformer call. (§3, §4.3–4.4, Algorithm 1)",
+          "Stabilization: replace zero noise indicators on denoised frames with small nonzero values to signal possible history errors, without actually adding noise to those state–action predictions. Text control uses autoregressive denoising; goal-related tasks use gradual denoising that prioritizes near-future frames. (§4.3, Table 1)",
+          "Guidance: text uses CFG. Position, velocity, and dynamic-obstacle tasks define losses whose sample gradients propagate through predicted outputs to guide generation; MCG averages gradients from multiple samples. These gradients modify sampling, rather than training the network at test time. (Eqs.2–4; Appendix B)",
+          "Timing: generating again after every 8 executed motion frames does not guarantee that computation meets that deadline. Table 4 reports 9.5, 18, and 23 FPS for autoregressive, gradual, and full-sequence denoising on A100 with 5 DDIM steps; full-sequence denoising is less stable. Appendix D identifies inference inefficiency relative to RL policies. The paper does not describe overlapping asynchronous generation/execution or guarantee latency at the ninth-frame boundary. (§5.5, Table 4; Appendix D)"
+        ]
+      }
     }
   ]
 }
