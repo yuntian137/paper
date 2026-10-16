@@ -27,5 +27,13 @@
     "en": {
       "note": "Engineering takeaway: when switching from distillation to RL, check whether value estimates fit the current student before updating the actor. HuMBLE loads the teacher critic, freezes the student for 5000 critic-only iterations, conditions the critic on task identity, and normalizes advantages by group. Short imitation episodes preserve local style; long command episodes expand coverage and transitions; GC-RSI starts near command-relevant references. The transferable idea is to address value mismatch and task scales before actor updates, rather than treating 5000 iterations or a 50:50 split as universal settings; these details are not individually ablated."
     }
+  },
+  "constrainedmimic": {
+    "zh": {
+      "note": "阅读思考（针对 v1 §2）：任务优先结构不等于安全约束之间的优先级。安全约束通常并列施加，冲突时通过松弛与惩罚处理，并不意味着数值上平均分配；本文已读方法未明确建立随场景变化的严格安全优先级。可以研究按场景排序、逐级最小化约束违反量的分层优化，这是我们的扩展思路，不是作者已实现的贡献。CBF 松弛、离散执行与模型误差会影响严格保证；质心投影约束也不等于完整动态稳定性。版本说明：本卡片依据本地 v1；官方 v2（2026-10-14）已加入硬件实验并报告超过 1 kHz，尚未精读，不与 v1 结果混用。"
+    },
+    "en": {
+      "note": "Reading reflection on v1 §2: task priorities differ from priorities among safety constraints. Safety inequalities are generally enforced together and relaxed with penalized slack when conflicting; this does not imply equal numerical allocation. The reviewed method does not explicitly establish context-dependent strict safety priorities. Context-based ordering and lexicographic minimization of constraint violation are possible extensions discussed here, not contributions implemented by the authors. Slack, discrete execution, and model mismatch affect formal guarantees; CoM projection containment is not full dynamic stability. Version scope: this card uses the local v1. Official v2 (2026-10-14) adds hardware experiments and reports over 1 kHz; it has not been reviewed in depth and its results are not mixed with v1."
+    }
   }
 }

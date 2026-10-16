@@ -4878,6 +4878,86 @@
           "Evidence scope: fidelity uses DTW-aligned reference errors; final G1 joint MAE is 0.055 rad versus 0.033 rad for the teacher. High-speed response is typically slower than Tabula Rasa RL. Main ablations support staged and grouped training without isolating every detail such as critic warm-start or GC-RSI; separate sub-policies handle box climbing. (pp. 7–11)"
         ]
       }
+    },
+    {
+      "id": "constrainedmimic",
+      "aliases": [
+        "ConstrainedMimic",
+        "Constrained Whole-Body Tracking"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "bfm-data",
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.00374v1",
+      "project": "https://stanfordasl.github.io/constrainedmimic/",
+      "arxiv": "https://arxiv.org/abs/2606.00374v1",
+      "year": "2026",
+      "venue": "CoRL 2026 / arXiv:2606.00374",
+      "zh": {
+        "title": "Constrained Whole-Body Tracking for Humanoid Robots",
+        "authors": "Daniel Morton, Pranit Mohnot, Marco Pavone",
+        "institutions": "Stanford University; NVIDIA Research",
+        "status": "v1 引言与方法已阅读（§1–2；附录 B、C.3）",
+        "takeaway": "在不修改预训练 RL 跟踪策略的前提下，用接触一致的 CBF-QP 修正输入参考或输出力矩，并尽量保留原运动任务。",
+        "tags": [
+          "ConstrainedMimic",
+          "Control Barrier Functions",
+          "Quadratic Programming",
+          "Motion Retargeting",
+          "Whole-Body Control",
+          "Runtime Safety",
+          "Unitree G1"
+        ],
+        "mainContent": "ConstrainedMimic 面向人形机器人部署时新增的安全约束，以及安全参考动作仍可能因跟踪误差产生不安全执行的问题。方法在重定向、已有参考动作过滤和策略输出力矩过滤三个位置引入 CBF-QP，结合接触约束模型与任务一致的修正目标。当前卡片依据所读 v1：作者在仿真 Unitree G1 上展示自碰撞与外部避障、关节限位和质心投影约束，摘要报告部署频率可达 300–500 Hz。",
+        "innovations": [
+          "双端安全接口：输入端修正运动学参考，输出端修正策略控制指令，可叠加到未修改的预训练跟踪策略上。（图 1；§1.2、§2）",
+          "接触一致的约束构造：在完整的接触约束运动学或动力学上建立 CBF，使安全修正符合当前支撑模式。（式 5、9）",
+          "任务一致的修正目标：运动学层保留主要任务及其零空间姿态；动力学层进一步优先考虑支撑接触力，减少过滤对原控制行为的干扰。（式 7–11）"
+        ],
+        "implementation": [
+          "安全定义：安全集合为 \\(\\mathcal C=\\{z:h(z)\\geq0\\}\\)。对 \\(\\dot z=f(z)+g(z)u\\)，施加 \\(L_fh+L_gh\\,u\\geq-\\alpha(h)\\)，限制安全余量下降速度。（式 1；附录 B）",
+          "约束实例：关节限位 \\(h=[q-q_{\\min};q_{\\max}-q]\\)；球体间避碰 \\(h_{ij}=\\|x_i(q)-x_j(q)\\|_2-r_i-r_j\\)；质心水平投影约束 \\(h=b-Ax_{\\mathrm{CoM}}(q)\\)。最后一项约束支撑多边形内的位置。（式 2–4）",
+          "受约束重定向：使用 \\(\\dot q=N_cu\\)，最小化 \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\)，同时施加 CBF、速度限制与松弛变量。人体到 G1 使用 14 个配对任务，求出速度后按受约束运动学积分。（式 5–6；附录 C.3）",
+          "已有参考动作过滤：最小化 \\(\\left\\|\\begin{bmatrix}W_tJ_{t|c}\\\\W_nN_{t|c}\\end{bmatrix}(\\dot q-\\dot q_{\\mathrm{nom}})\\right\\|_2^2\\)，其中两项分别衡量任务运动和零空间姿态的变化；过滤修改参考运动，不删除不安全帧。（式 7–8；最后一句为流程解释）",
+          "动力学过滤：状态为 \\(z=[q,\\dot q]\\)，优化驱动关节力矩 \\(\\Gamma_{\\mathrm{body}}\\)；目标保留接触力、任务加速度与零空间姿态加速度，并限制力矩。位置屏障在力矩控制下通常为相对阶二，采用 \\(h_2=\\dot h+\\alpha_1(h)\\)、\\(\\dot h_2+\\alpha_2(h_2)\\geq0\\)。（式 9–11；附录 B，式 42–43）",
+          "控制接口：先由 PD 目标计算并裁剪名义力矩，过滤后反算新位置目标。省略 body 下标时，\\(q_{\\mathrm{des}}^*=q+K_p^{-1}[\\Gamma^*-K_d(\\dot q_{\\mathrm{des}}-\\dot q)]\\)；原 RL 策略权重不更新。（式 12–13；§1.2）",
+          "实现采用 JAX：frax 计算运动学与动力学，cbfpy 构造可微 CBF 项，qpax 求解 QP。v1 实验使用预训练 TWIST2 与 SONIC；这里记录实现流程，实验尚未逐项精读。（§2.1；§3 开头；附录 C.1、C.3）"
+        ]
+      },
+      "en": {
+        "title": "Constrained Whole-Body Tracking for Humanoid Robots",
+        "authors": "Daniel Morton, Pranit Mohnot, Marco Pavone",
+        "institutions": "Stanford University; NVIDIA Research",
+        "status": "v1 introduction and method reviewed (§§1–2; Appendices B, C.3)",
+        "takeaway": "Uses contact-consistent CBF-QPs to modify reference inputs or output torques around an unchanged pretrained RL tracker while preserving its motion tasks.",
+        "tags": [
+          "ConstrainedMimic",
+          "Control Barrier Functions",
+          "Quadratic Programming",
+          "Motion Retargeting",
+          "Whole-Body Control",
+          "Runtime Safety",
+          "Unitree G1"
+        ],
+        "mainContent": "ConstrainedMimic addresses deployment-time safety constraints and unsafe execution caused by tracking errors even when references are safe. It introduces CBF-QPs inside retargeting, on existing motion references, and on policy-output torques, using contact-constrained models and task-consistent modification objectives. This card covers the reviewed v1: simulated Unitree G1 demonstrations include self- and external-collision avoidance, joint limits, and CoM projection constraints, with deployment frequencies of 300–500 Hz reported in the abstract.",
+        "innovations": [
+          "Two-sided safety interfaces: modify kinematic references before the policy and control commands after it, retaining unchanged pretrained tracking policies. (Fig. 1; §§1.2, 2)",
+          "Contact-consistent constraint construction: build CBFs on full contact-constrained kinematics or dynamics so modifications respect the current support mode. (Eqs. 5, 9)",
+          "Task-consistent objectives: preserve motion tasks and nullspace posture at the kinematic level, and additionally prioritize support contact forces at the dynamic level. (Eqs. 7–11)"
+        ],
+        "implementation": [
+          "Safety definition: \\(\\mathcal C=\\{z:h(z)\\geq0\\}\\). For \\(\\dot z=f(z)+g(z)u\\), impose \\(L_fh+L_gh\\,u\\geq-\\alpha(h)\\) to bound the decrease in safety margin. (Eq. 1; Appendix B)",
+          "Constraint examples: joint limits \\(h=[q-q_{\\min};q_{\\max}-q]\\), sphere separation \\(h_{ij}=\\|x_i(q)-x_j(q)\\|_2-r_i-r_j\\), and CoM horizontal projection \\(h=b-Ax_{\\mathrm{CoM}}(q)\\). The last constraint keeps the projection inside the support polygon. (Eqs. 2–4)",
+          "Constrained retargeting: use \\(\\dot q=N_cu\\), minimize \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\), and enforce CBFs, velocity bounds, and slack variables. Human-to-G1 mapping uses 14 paired tasks; integrate the optimized velocity through constrained kinematics. (Eqs. 5–6; Appendix C.3)",
+          "Existing-reference filtering: minimize \\(\\left\\|\\begin{bmatrix}W_tJ_{t|c}\\\\W_nN_{t|c}\\end{bmatrix}(\\dot q-\\dot q_{\\mathrm{nom}})\\right\\|_2^2\\), measuring changes to task motion and nullspace posture. Filtering modifies reference motion rather than deleting unsafe frames. (Eqs. 7–8; final sentence interprets the workflow)",
+          "Dynamic filtering: state \\(z=[q,\\dot q]\\), input actuated torque \\(\\Gamma_{\\mathrm{body}}\\). Preserve contact forces, task accelerations, and nullspace posture accelerations subject to safety and torque bounds. Position barriers typically have relative degree two under torque control, using \\(h_2=\\dot h+\\alpha_1(h)\\) and \\(\\dot h_2+\\alpha_2(h_2)\\geq0\\). (Eqs. 9–11; Appendix B, Eqs. 42–43)",
+          "Control interface: convert PD targets to clipped nominal torque, filter it, and recover a position target. Omitting body subscripts, \\(q_{\\mathrm{des}}^*=q+K_p^{-1}[\\Gamma^*-K_d(\\dot q_{\\mathrm{des}}-\\dot q)]\\). The RL policy weights remain unchanged. (Eqs. 12–13; §1.2)",
+          "Implementation uses JAX, frax for kinematics/dynamics, cbfpy for differentiable CBF terms, and qpax for QPs. v1 experiments use pretrained TWIST2 and SONIC; this card records the implementation workflow, while experiments have not been reviewed individually. (§2.1; opening of §3; Appendices C.1, C.3)"
+        ]
+      }
     }
   ]
 }
