@@ -19,5 +19,13 @@
     "en": {
       "note": "Separate the explicit geometric retargeting map from the RL tracking network. Nominal transforms are computed from reference poses, whereas extra offsets are learned by gradient optimization. Upper-level differentiation treats sampled simulated states as fixed and follows error → reference → geometric parameters; the retargeted data comes from actual simulated execution. Changing the robot generally requires retraining the policy and parameters; one policy covering many motions refers to motion generalization on the same robot."
     }
+  },
+  "humble-human-motion-driven-locomotion": {
+    "zh": {
+      "note": "工程启发：蒸馏接 RL 时，先检查价值函数是否适配当前学生，不急着更新 actor。本文加载教师 critic，冻结学生并预热 5000 次迭代；多任务奖励下，critic 看任务指示量，优势按组归一化。短时模仿保局部风格，长时指令训练覆盖与切换；GC-RSI 从与指令相近的参考状态起步。可迁移的思路是先处理估值失配与任务尺度，再放开策略更新，而不是把 5000 次迭代或 50:50 比例当成通用配方；文中未逐项消融这些细节。"
+    },
+    "en": {
+      "note": "Engineering takeaway: when switching from distillation to RL, check whether value estimates fit the current student before updating the actor. HuMBLE loads the teacher critic, freezes the student for 5000 critic-only iterations, conditions the critic on task identity, and normalizes advantages by group. Short imitation episodes preserve local style; long command episodes expand coverage and transitions; GC-RSI starts near command-relevant references. The transferable idea is to address value mismatch and task scales before actor updates, rather than treating 5000 iterations or a 50:50 split as universal settings; these details are not individually ablated."
+    }
   }
 }

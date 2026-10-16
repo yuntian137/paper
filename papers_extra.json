@@ -4780,6 +4780,104 @@
           "Downstream use and transfer scope: the retargeting policy permits penalized auxiliary root wrenches; separate downstream tracking policies are trained on its output. One target-specific policy handles many motions and is tested on unseen motions; shared control across robots is not demonstrated, and changing the embodiment generally requires new pairing, calibration, and joint training. (pp. 2, 7–8; the final statement is an interpretation based on control interfaces and dynamics)"
         ]
       }
+    },
+    {
+      "id": "humble-human-motion-driven-locomotion",
+      "aliases": [
+        "HuMBLE",
+        "2610.10489",
+        "critic warm-start",
+        "多任务微调",
+        "critic 预热"
+      ],
+      "categories": [
+        "bfm-tracking",
+        "bfm-adaptation",
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.10489v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2610.10489",
+      "year": "2026",
+      "venue": "arXiv:2610.10489",
+      "zh": {
+        "title": "HuMBLE: Human Motion-Driven Behavior Learning for Embodied Locomotion",
+        "authors": "Mike Zhang, Dongho Kang, Kevin Bergamin, Nicola Burger, Robin Deits, Jonathan Foster, Bilal Hammoud, Katie Hughes, Francesco Iacobelli, Twan Koolen, M. Eva Mungai, Zach Nobles, Shane Rozen-Levy, Jean Pierre Sleiman, Fangzhou Yu, Yunbo Zhang, Alfred Rizzi, Jessica Hodgins, Scott Kuindersma, Yeuhi Abe, Sylvain Bertrand, Farbod Farshidian",
+        "institutions": "RAI Institute; Boston Dynamics; Carnegie Mellon University",
+        "status": "方法与关键实验已阅读",
+        "takeaway": "先把完整参考动作教师蒸馏成速度指令学生，再用短时模仿与长时指令任务共同微调；先适配 critic，再放开 actor 更新。",
+        "tags": [
+          "HuMBLE",
+          "PPO",
+          "Teacher–Student Distillation",
+          "DAgger",
+          "Multi-Task RL",
+          "Critic Warm-Start",
+          "GC-RSI",
+          "Humanoid Locomotion"
+        ],
+        "mainContent": "HuMBLE 面向人形机器人自然步态与灵活指令控制之间的矛盾，使用约 3 小时人类运动数据学习可部署的运动策略。先用 PPO 训练完整参考条件教师，再通过 DAgger 变体蒸馏出仅接收本体感知与平面速度指令的 prior；随后以参考模仿和任意指令跟踪两组环境共同微调，兼顾风格与指令覆盖。方法分别在 Atlas R1、Atlas D1 和 Unitree G1 上部署，展示协调摆臂、脚跟到脚尖的接触过渡以及走跑切换，控制表现总体接近从零 RL 基线。",
+        "innovations": [
+          "将风格获取与指令空间扩展拆成两阶段：教师先实现物理可行的全身参考跟踪，学生再移除参考输入，最后通过多任务 RL 扩展数据稀疏区域的操控能力。（图 6，第 12–16 页）",
+          "用并行环境分组显式保持动作风格：参考引导组提供全身模仿奖励，目标条件组提供速度跟踪奖励；共享同一个 actor，默认 50:50 分配，比例可调节动作保真度与指令性能的折中。（式 7–8、图 5B，第 11、16 页）",
+          "面向蒸馏后 RL 微调设计价值函数适配与任务条件估值：先冻结 actor 预热 critic，再以仅 critic 可见的任务指示量和分组优势归一化处理两类回报。（第 16–17 页）",
+          "整理覆盖多速度、多方向及启停切换的动捕数据，并结合三种机器人上的部署、指令扫描和消融验证整套训练方案。（图 1–5，第 3–11、21 页）"
+        ],
+        "implementation": [
+          "教师训练：输入本体感知、SE(2) 速度指令与完整参考状态；PPO 奖励由参考跟踪、正则和生存项组成。RSI 从参考状态采样并扰动初始化；非对称 critic 额外接收仿真特权信息。（式 3–5，第 15 页）",
+          "学生蒸馏：由学生 rollout，在学生实际到达的相同状态上查询教师动作，以动作差异做监督更新。学生只接收本体感知与速度指令；教师在此阶段提供动作标签，得到 prior。（式 6，第 15 页）",
+          "Critic 预热：微调加载 prior actor 和教师 critic，先在参考引导任务上冻结 actor、仅更新 critic 5000 次迭代，使教师价值函数适配学生行为，再联合更新 actor 与 critic。（第 16 页）",
+          "任务条件 critic：参考环境的支持指示量为 0，目标环境为 1，仅 critic 接收该指示量；两组分别归一化优势，减少任务间奖励尺度差异对 PPO 更新的影响。（式 5，第 16–17 页）",
+          "短模仿与长指令：参考组最长 3 s，用参考状态计算奖励但不给 actor 看参考，减轻不可观测参考造成的长期误差累积；目标组最长 8 s，episode 内重采样速度指令，训练持续运动与指令切换。默认各占 2048/4096 个环境。（第 16 页、表 S9）",
+          "GC-RSI：按速度指令对参考状态分桶，目标任务根据采样指令检索相近参考帧，再从其时间邻域采样并扰动作为初始状态。参考数据用于初始化，目标任务奖励不跟踪参考动作。（第 16 页）",
+          "保守微调：prior 为三层、每层 1024 单元的 ELU MLP；微调学习率为 1e-6，熵系数由教师阶段的 0.0015 降为 0.001，减少大幅更新对已有风格的破坏。（第 17 页、表 S9）",
+          "数据处理：重定向到机器人形态，估计并平滑躯干速度后作时间调整，生成速度指令标签，再镜像扩充。缩小本体时同步缩放动作时长以保持重力下的动态一致性；能力缺口可反馈到补采数据。（第 13–14、21 页）",
+          "真机适配：G1 初次部署出现踝关节过硬、落脚易绊的问题，通过训练地形粗糙度随机化增加落脚角度和接触条件变化；对户外线速度估计漂移另训去除线速度观测的策略版本。（第 17、24 页）",
+          "部署：单一 MLP 以 50 Hz 输出动作，经缩放和偏置变成关节位置目标，由 PD 跟踪。G1 上使用 ONNX Runtime，在 Jetson AGX Orin CPU 平均推理 1.1 ms；教师、参考动作与 critic 均不参与部署。（第 14、17、9 页）",
+          "关键验证：图 5 比较直接部分观测模仿与教师蒸馏、扫描五种参考/目标环境比例，并比较微调前后的指令覆盖。纯目标微调丢失风格，纯参考微调在测试侧移指令时失败；最终策略在该组指令扫描测试中没有摔倒。（第 10–11 页）",
+          "证据边界：自然度量化采用 DTW 对齐后的参考误差，G1 最终策略关节 MAE 为 0.055 rad，教师为 0.033 rad；高速响应通常慢于从零 RL。主要消融支持两阶段与分组训练，未单独隔离 critic 预热、GC-RSI 等每个细节的收益；上下箱由独立子策略完成。（第 7–11 页）"
+        ]
+      },
+      "en": {
+        "title": "HuMBLE: Human Motion-Driven Behavior Learning for Embodied Locomotion",
+        "authors": "Mike Zhang, Dongho Kang, Kevin Bergamin, Nicola Burger, Robin Deits, Jonathan Foster, Bilal Hammoud, Katie Hughes, Francesco Iacobelli, Twan Koolen, M. Eva Mungai, Zach Nobles, Shane Rozen-Levy, Jean Pierre Sleiman, Fangzhou Yu, Yunbo Zhang, Alfred Rizzi, Jessica Hodgins, Scott Kuindersma, Yeuhi Abe, Sylvain Bertrand, Farbod Farshidian",
+        "institutions": "RAI Institute; Boston Dynamics; Carnegie Mellon University",
+        "status": "Method and key experiments reviewed",
+        "takeaway": "Distill a full-reference teacher into a velocity-commanded student, then fine-tune with short imitation and long command-tracking tasks; adapt the critic before unfreezing actor updates.",
+        "tags": [
+          "HuMBLE",
+          "PPO",
+          "Teacher–Student Distillation",
+          "DAgger",
+          "Multi-Task RL",
+          "Critic Warm-Start",
+          "GC-RSI",
+          "Humanoid Locomotion"
+        ],
+        "mainContent": "HuMBLE addresses the trade-off between natural humanoid gait and flexible command following using approximately three hours of human locomotion data. PPO first trains a full-reference-conditioned teacher, a DAgger variant distills it into a proprioception-and-planar-velocity-conditioned prior, and reference-imitation and arbitrary-command environments jointly fine-tune the prior for style retention and command coverage. Target-specific policies are deployed on Atlas R1, Atlas D1, and Unitree G1, exhibiting coordinated arm swing, heel-to-toe contact transitions, and walking-to-running transitions while achieving control performance broadly comparable to a Tabula Rasa RL baseline.",
+        "innovations": [
+          "Separates style acquisition from command-space expansion: the teacher learns dynamically feasible full-body tracking, the student removes reference inputs, and multi-task RL expands controllability in sparsely represented command regions. (Fig. 6, pp. 12–16)",
+          "Explicitly preserves style through parallel environment groups: reference environments supply full-body imitation rewards and goal environments supply velocity-tracking rewards to one shared actor. The default 50:50 allocation offers an adjustable fidelity–tracking trade-off. (Eqs. 7–8, Fig. 5B, pp. 11, 16)",
+          "Adapts value estimation for post-distillation RL: warm-start the critic with a frozen actor, then distinguish task returns using a critic-only task indicator and normalize advantages separately by group. (pp. 16–17)",
+          "Curates motion capture spanning speeds, directions, and start/stop transitions, and validates the complete recipe through three robot deployments, command sweeps, and ablations. (Figs. 1–5, pp. 3–11, 21)"
+        ],
+        "implementation": [
+          "Teacher training: proprioception, SE(2) velocity commands, and full reference states feed a PPO actor with tracking, regularization, and survival rewards. RSI samples and perturbs reference states; an asymmetric critic additionally observes privileged simulation information. (Eqs. 3–5, p. 15)",
+          "Student distillation: the student generates rollouts; the teacher is queried at the same student-visited states to label expert actions, and supervised action matching trains the prior. Only proprioception and velocity commands enter the student; the teacher supplies action labels in this stage. (Eq. 6, p. 15)",
+          "Critic warm-start: load the prior actor and teacher critic, freeze the actor, and train only the critic for 5000 iterations on the reference-guided task to adapt value estimates to student behavior before joint actor–critic optimization. (p. 16)",
+          "Task-conditioned critic: the support indicator is 0 for reference environments and 1 for goal environments and is visible only to the critic. Normalize advantages separately for both groups to mitigate reward-scale differences in PPO updates. (Eq. 5, pp. 16–17)",
+          "Short imitation and long command tasks: reference episodes last up to 3 s and compute imitation rewards without exposing references to the actor, limiting accumulated drift from hidden references. Goal episodes last up to 8 s and resample commands within episodes for sustained locomotion and transitions. The default split is 2048/4096 environments per task. (p. 16, Table S9)",
+          "GC-RSI: bin reference states by annotated velocity commands, retrieve a similar-command frame, sample in its temporal neighborhood, and perturb the initial state. References initialize goal rollouts but do not define their tracking reward. (p. 16)",
+          "Conservative fine-tuning: the prior is a three-layer ELU MLP with 1024 units per layer. Fine-tuning uses a 1e-6 learning rate and reduces entropy regularization from 0.0015 in teacher training to 0.001 to limit disruption of learned style. (p. 17, Table S9)",
+          "Data processing: retarget human motion, estimate and smooth torso velocities, temporally adjust command labels, and mirror trajectories. Scale motion duration with body size to preserve gravitational dynamic consistency; observed capability gaps can guide additional data collection. (pp. 13–14, 21)",
+          "Hardware adaptation: initial G1 deployment exposed stiff ankles and stumbling, addressed by terrain-roughness randomization that diversifies landing angles and contact conditions. A separate policy variant omits linear-velocity observations for outdoor estimation drift. (pp. 17, 24)",
+          "Deployment: one MLP outputs actions at 50 Hz, scaled and offset into joint position targets tracked by PD controllers. ONNX Runtime inference averages 1.1 ms on the G1 Jetson AGX Orin CPU; teachers, reference motions, and critics are absent at deployment. (pp. 14, 17, 9)",
+          "Key validation: Fig. 5 compares direct partial-observation imitation with teacher distillation, sweeps five reference/goal allocation ratios, and compares command coverage before and after fine-tuning. Goal-only fine-tuning loses style, reference-only fine-tuning fails the tested sidestep command, and the final policy does not fall in the reported command sweep. (pp. 10–11)",
+          "Evidence scope: fidelity uses DTW-aligned reference errors; final G1 joint MAE is 0.055 rad versus 0.033 rad for the teacher. High-speed response is typically slower than Tabula Rasa RL. Main ablations support staged and grouped training without isolating every detail such as critic warm-start or GC-RSI; separate sub-policies handle box climbing. (pp. 7–11)"
+        ]
+      }
     }
   ]
 }
