@@ -1,5 +1,27 @@
 const uiText = {
   zh: {
+    myLibrary: "我的论文库",
+    researchDirections: "研究方向",
+    personalCollection: "个人笔记",
+    readingStatus: "阅读状态",
+    allYears: "全部年份",
+    clearFilters: "清除筛选",
+    sortLabel: "排序",
+    sortRecent: "最近收录",
+    sortYear: "论文年份",
+    sortTitle: "标题 A–Z",
+    stageReviewed: "已精读",
+    stagePartial: "部分已读",
+    stageSummarized: "已整理",
+    paperCollection: "论文集",
+    readingNotes: "阅读笔记",
+    viewNotes: "查看笔记",
+    hasPersonalNote: "含个人复习笔记",
+    bilingualNotes: "双语阅读笔记",
+    closeReader: "关闭阅读详情",
+    authorsInstitutions: "作者与机构",
+    pdf: "阅读 PDF",
+    noResultsHint: "试试其他关键词，或清除筛选条件。",
     siteLabel: "Paper Reading Notes",
     siteTitle: "论文阅读笔记",
     lastUpdated: "最近更新",
@@ -8,10 +30,10 @@ const uiText = {
     detailNavImplementation: "实现方法",
     detailNavLinks: "链接",
     searchLabel: "搜索论文",
-    searchPlaceholder: "标题、作者、关键词",
+    searchPlaceholder: "搜索标题、方法、关键词…",
     papers: "篇论文",
     topics: "个方向",
-    libraryLabel: "Library",
+    libraryLabel: "论文库 / 研究方向",
     allPapers: "全部论文",
     showing: "显示",
     of: "共",
@@ -42,12 +64,31 @@ const uiText = {
     promptLoadFailed: "Prompt 载入失败，请刷新页面后重试。",
     hideSidebar: "隐藏分类栏",
     showSidebar: "显示分类栏",
-    hideDetail: "隐藏概览",
-    showDetail: "显示概览",
     resizeSidebar: "调整分类栏宽度",
-    resizeDetail: "调整概览宽度",
   },
   en: {
+    myLibrary: "My library",
+    researchDirections: "Research directions",
+    personalCollection: "Personal notes",
+    readingStatus: "Reading status",
+    allYears: "All years",
+    clearFilters: "Clear filters",
+    sortLabel: "Sort",
+    sortRecent: "Recently added",
+    sortYear: "Publication year",
+    sortTitle: "Title A–Z",
+    stageReviewed: "Reviewed",
+    stagePartial: "Partly reviewed",
+    stageSummarized: "Summarized",
+    paperCollection: "Paper collection",
+    readingNotes: "Reading notes",
+    viewNotes: "Read notes",
+    hasPersonalNote: "Includes personal notes",
+    bilingualNotes: "Bilingual reading notes",
+    closeReader: "Close reading details",
+    authorsInstitutions: "Authors & institutions",
+    pdf: "Read PDF",
+    noResultsHint: "Try another keyword or clear the active filters.",
     siteLabel: "Paper Reading Notes",
     siteTitle: "Paper Reading Notes",
     lastUpdated: "Updated",
@@ -59,7 +100,7 @@ const uiText = {
     searchPlaceholder: "Title, author, keyword",
     papers: "papers",
     topics: "topics",
-    libraryLabel: "Library",
+    libraryLabel: "Library / Research directions",
     allPapers: "All Papers",
     showing: "Showing",
     of: "of",
@@ -90,10 +131,7 @@ const uiText = {
     promptLoadFailed: "Unable to load prompts. Refresh the page and try again.",
     hideSidebar: "Hide categories",
     showSidebar: "Show categories",
-    hideDetail: "Hide overview",
-    showDetail: "Show overview",
     resizeSidebar: "Resize categories",
-    resizeDetail: "Resize overview",
   },
 };
 
@@ -4252,12 +4290,14 @@ const state = {
   category: "bfm",
   bfmExpanded: localStorage.getItem("paper-bfm-expanded") !== "0",
   query: "",
-  selectedId: "scaling-bfm-humanoid-transformer",
+  selectedId: null,
+  notesOnly: false,
+  status: "all",
+  year: "all",
+  sort: "recent",
   layout: {
     sidebarCollapsed: localStorage.getItem("paper-layout-sidebar-collapsed") === "1",
-    detailCollapsed: localStorage.getItem("paper-layout-detail-collapsed") === "1",
     sidebarWidth: Number(localStorage.getItem("paper-layout-sidebar-width")) || 220,
-    detailWidth: Number(localStorage.getItem("paper-layout-detail-width")) || 620,
   },
 };
 
@@ -4272,8 +4312,12 @@ const nodes = {
   sidebarToggle: document.querySelector("#sidebar-toggle"),
   sidebarRestore: document.querySelector("#sidebar-restore"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
-  detailToggle: document.querySelector("#detail-toggle"),
-  detailResizer: document.querySelector("#detail-resizer"),
+  paperDialog: document.querySelector("#paper-dialog"),
+  detailClose: document.querySelector("#detail-close"),
+  statusFilter: document.querySelector("#status-filter"),
+  yearFilter: document.querySelector("#year-filter"),
+  sortOrder: document.querySelector("#sort-order"),
+  resetFilters: document.querySelector("#reset-filters"),
   updateBadge: document.querySelector("#update-badge"),
   search: document.querySelector("#paper-search"),
   categoryNav: document.querySelector("#category-nav"),
@@ -4301,32 +4345,18 @@ function setButtonLabel(button, label) {
 }
 
 function applyLayout() {
-  const sidebarWidth = clamp(state.layout.sidebarWidth, 180, 320);
-  const detailWidth = clamp(state.layout.detailWidth, 480, 820);
-  state.layout.sidebarWidth = sidebarWidth;
-  state.layout.detailWidth = detailWidth;
-
-  nodes.html.style.setProperty("--sidebar-width", `${sidebarWidth}px`);
-  nodes.html.style.setProperty("--detail-width", `${detailWidth}px`);
+  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth, 200, 300);
+  nodes.html.style.setProperty("--sidebar-width", `${state.layout.sidebarWidth}px`);
   nodes.body.classList.toggle("is-sidebar-collapsed", state.layout.sidebarCollapsed);
-  nodes.body.classList.toggle("is-detail-collapsed", state.layout.detailCollapsed);
-
-  nodes.sidebarToggle.textContent = "‹";
-  nodes.sidebarRestore.textContent = "›";
-  nodes.detailToggle.textContent = state.layout.detailCollapsed ? "‹" : "›";
-
   setButtonLabel(nodes.sidebarToggle, text("hideSidebar"));
   setButtonLabel(nodes.sidebarRestore, text("showSidebar"));
-  setButtonLabel(nodes.detailToggle, state.layout.detailCollapsed ? text("showDetail") : text("hideDetail"));
   setButtonLabel(nodes.sidebarResizer, text("resizeSidebar"));
-  setButtonLabel(nodes.detailResizer, text("resizeDetail"));
+  setButtonLabel(nodes.detailClose, text("closeReader"));
 }
 
 function saveLayout() {
   localStorage.setItem("paper-layout-sidebar-collapsed", state.layout.sidebarCollapsed ? "1" : "0");
-  localStorage.setItem("paper-layout-detail-collapsed", state.layout.detailCollapsed ? "1" : "0");
   localStorage.setItem("paper-layout-sidebar-width", String(state.layout.sidebarWidth));
-  localStorage.setItem("paper-layout-detail-width", String(state.layout.detailWidth));
 }
 
 function stringField(value) {
@@ -4644,22 +4674,6 @@ function isProjectPage(link) {
   }
 }
 
-function primaryLink(paper) {
-  if (isProjectPage(paper.project)) {
-    return {
-      label: text("project"),
-      url: paper.project,
-    };
-  }
-
-  const url = [paper.arxiv, paper.pdf, paper.project].find(validExternalLink);
-  return url
-    ? {
-        label: text("paperLink"),
-        url,
-      }
-    : null;
-}
 
 function escapeHtml(value) {
   return String(value)
@@ -4722,14 +4736,65 @@ function searchableText(paper) {
     .toLowerCase();
 }
 
+function readingStage(paper) {
+  const status = paper.zh.status;
+  if (/精读/.test(status)) return "reviewed";
+  if (/阅读|已读/.test(status)) return "partial";
+  return "summarized";
+}
+
+function stageLabel(stage) {
+  return text({ reviewed: "stageReviewed", partial: "stagePartial", summarized: "stageSummarized" }[stage]);
+}
+
+function paperDisplayName(paper) {
+  const alias = (paper.aliases || []).find((value) => value.length <= 32 && /[a-z]/i.test(value) && !/^\d/.test(value));
+  if (alias) return alias;
+  const title = localPaper(paper).title;
+  const prefix = title.split(":")[0];
+  return prefix.length <= 32 ? prefix : title;
+}
+
+function publicationYear(paper) {
+  return stringField(paper.year).match(/\b(?:19|20)\d{2}\b/)?.[0] || "";
+}
+
 function filteredPapers() {
   const query = state.query.trim().toLowerCase();
+  const list = papers.filter((paper) =>
+    matchesCategory(paper, state.category) &&
+    (!state.notesOnly || paperNotes.has(paper.id)) &&
+    (state.status === "all" || readingStage(paper) === state.status) &&
+    (state.year === "all" || publicationYear(paper) === state.year) &&
+    (!query || searchableText(paper).includes(query))
+  ).reverse();
+  if (state.sort === "year") list.sort((a, b) => (Number(publicationYear(b)) || 0) - (Number(publicationYear(a)) || 0));
+  if (state.sort === "title") list.sort((a, b) => localPaper(a).title.localeCompare(localPaper(b).title, "en"));
+  return list;
+}
 
-  return papers.filter((paper) => {
-    const inCategory = matchesCategory(paper, state.category);
-    const matchesQuery = !query || searchableText(paper).includes(query);
-    return inCategory && matchesQuery;
-  }).reverse();
+function renderFilters() {
+  const options = (items, selected) => items.map(([value, label]) =>
+    `<option value="${escapeHtml(value)}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+  ).join("");
+  nodes.statusFilter.innerHTML = options([
+    ["all", text("readingStatus")],
+    ...["reviewed", "partial", "summarized"].map((stage) => [stage, stageLabel(stage)]),
+  ], state.status);
+  const years = [...new Set(papers.map(publicationYear).filter(Boolean))].sort((a, b) => (Number(b) || 0) - (Number(a) || 0));
+  nodes.yearFilter.innerHTML = options([["all", text("allYears")], ...years.map((year) => [year, year])], state.year);
+  nodes.sortOrder.innerHTML = options([["recent", text("sortRecent")], ["year", text("sortYear")], ["title", text("sortTitle")]], state.sort);
+  nodes.statusFilter.parentElement.classList.toggle("is-active", state.status !== "all");
+  nodes.yearFilter.parentElement.classList.toggle("is-active", state.year !== "all");
+}
+
+function clearFilters() {
+  state.query = "";
+  state.status = "all";
+  state.year = "all";
+  state.notesOnly = false;
+  nodes.search.value = "";
+  render();
 }
 
 function syncLanguage() {
@@ -4746,6 +4811,7 @@ function syncLanguage() {
     `;
   }
   nodes.search.placeholder = text("searchPlaceholder");
+  document.querySelector(".search-box kbd").textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
   nodes.langButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.lang === state.lang);
   });
@@ -4754,20 +4820,23 @@ function syncLanguage() {
     renderPromptCards();
   }
   applyLayout();
+  renderFilters();
 }
 
 function renderCategories() {
   nodes.categoryCount.textContent = categories.filter((category) => !category.parent).length;
 
   const button = (id, label, count) => `
-    <button class="category-button ${state.category === id ? "is-active" : ""}"
-      type="button" data-category="${id}" aria-pressed="${state.category === id}"
+    <button class="category-button ${!state.notesOnly && state.category === id ? "is-active" : ""}"
+      type="button" data-category="${id}" aria-pressed="${!state.notesOnly && state.category === id}"
       title="${escapeHtml(label)}">
       <span>${escapeHtml(label)}</span><small>${count}</small>
     </button>`;
 
   nodes.categoryNav.innerHTML = `
     ${button("all", text("allPapers"), papers.length)}
+    <button class="category-button ${state.notesOnly ? "is-active" : ""}" type="button" data-notes-only aria-pressed="${state.notesOnly}"><span>${text("personalCollection")}</span><small>${paperNotes.size}</small></button>
+    <p class="category-section-label">${text("researchDirections")}</p>
     <div class="category-group">
       <div class="category-group-header">
         ${button("bfm", state.lang === "zh" ? "BFM / 通用控制" : "BFM / Motor Control", categoryCount("bfm"))}
@@ -4790,58 +4859,46 @@ function renderCategories() {
 function renderList() {
   const list = filteredPapers();
   nodes.paperCount.textContent = papers.length;
-  nodes.viewTitle.textContent = state.category === "all" ? text("allPapers") : categoryLabel(state.category);
-  const description = categories.find((category) => category.id === state.category)?.description?.[state.lang] || "";
+  nodes.viewTitle.textContent = state.notesOnly ? text("personalCollection") : state.category === "all" ? text("allPapers") : categoryLabel(state.category);
+  const description = state.notesOnly ? "" : categories.find((category) => category.id === state.category)?.description?.[state.lang] || "";
   nodes.viewDescription.textContent = description;
   nodes.viewDescription.hidden = !description;
   nodes.resultCount.textContent = `${text("showing")} ${list.length} ${text("of")} ${papers.length} ${text("items")}`;
-
+  nodes.resetFilters.hidden = !state.query && state.status === "all" && state.year === "all" && !state.notesOnly;
   if (!list.length) {
-    nodes.paperList.innerHTML = `<div class="empty-state">${text("noResults")}</div>`;
-    nodes.paperDetail.innerHTML = "";
+    nodes.paperList.innerHTML = `<div class="empty-state"><strong>${text("noResults")}</strong><p>${text("noResultsHint")}</p><button class="action-link" type="button" data-reset-filters>${text("clearFilters")}</button></div>`;
     return;
   }
-
-  const selectedStillVisible = list.some((paper) => paper.id === state.selectedId);
-  if (!state.selectedId || !selectedStillVisible) {
-    state.selectedId = list[0].id;
-  }
-
   nodes.paperList.innerHTML = list.map(renderPaperCard).join("");
-  renderDetail(papers.find((paper) => paper.id === state.selectedId));
+  if (nodes.paperDialog.open) renderDetail(papers.find((paper) => paper.id === state.selectedId));
+  typesetMath();
 }
 
-function renderPaperCard(paper) {
+function renderPaperCard(paper, index) {
   const localized = localPaper(paper);
   const note = localPaperNote(paper);
-  const institutions = localInstitutions(paper);
-  const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
-  const keywordTags = tagItems(localized.tags, "keyword-tag");
-  const selectedClass = paper.id === state.selectedId ? "is-selected" : "";
-  const takeaway = note.takeaway
-    ? `<p class="paper-card-takeaway">${renderText(note.takeaway)}</p>`
-    : "";
-  const institutionLine = institutions
-    ? `<p class="paper-card-institutions">${escapeHtml(institutions)}</p>`
-    : "";
-
+  const name = paperDisplayName(paper);
+  const hasShortName = name !== localized.title;
+  const stage = readingStage(paper);
+  const visibleTags = localized.tags.filter((tag) => normalizeMatchKey(tag) !== normalizeMatchKey(name)).slice(0, 3);
   return `
-    <button class="paper-card ${selectedClass}" type="button" data-paper-id="${paper.id}">
-      <div class="meta-row">
-        <span>${paper.year}</span>
-        <span>${paper.venue}</span>
-      </div>
-      <h3>${escapeHtml(localized.title)}</h3>
-      ${institutionLine}
-      ${takeaway}
-      <div class="paper-card-summary">
-        <p>${renderText(localized.mainContent)}</p>
-      </div>
-      <div class="paper-card-tags">
-        <div class="tag-row">${categoryTags}${keywordTags}</div>
-      </div>
-    </button>
-  `;
+    <button class="paper-card ${index === 0 ? "is-featured" : ""}" type="button" data-paper-id="${escapeHtml(paper.id)}" aria-haspopup="dialog" aria-controls="paper-dialog" aria-label="${escapeHtml(localized.title)} · ${text("viewNotes")}">
+      <div class="meta-row"><span class="card-venue" title="${escapeHtml(paper.venue)}">${escapeHtml(paper.year)} · ${escapeHtml(paper.venue)}</span><span class="reading-status" data-stage="${stage}" title="${escapeHtml(localized.status)}">${stageLabel(stage)}</span></div>
+      <div class="paper-card-heading"><h3 class="${hasShortName ? (name.length > 22 ? "is-medium" : "") : "is-long"}">${escapeHtml(name)}</h3>${hasShortName ? `<p class="paper-card-title">${escapeHtml(localized.title)}</p>` : ""}</div>
+      <p class="paper-card-takeaway">${renderText(note.takeaway || localized.mainContent)}</p>
+      <div class="paper-card-tags"><div class="tag-row">${tagItems(visibleTags)}</div></div>
+      <div class="paper-card-footer"><span>${text(paperNotes.has(paper.id) ? "hasPersonalNote" : "bilingualNotes")}</span><span class="card-read">${text("viewNotes")} ↗</span></div>
+    </button>`;
+}
+
+function openPaper(paperId) {
+  const paper = papers.find((item) => item.id === paperId);
+  if (!paper) return;
+  state.selectedId = paperId;
+  renderDetail(paper);
+  nodes.paperDialog.showModal();
+  nodes.paperDetail.scrollTop = 0;
+  typesetMath();
 }
 
 function renderDetail(paper) {
@@ -4852,10 +4909,15 @@ function renderDetail(paper) {
   const institutions = localInstitutions(paper);
   const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
   const keywordTags = tagItems(localized.tags, "keyword-tag");
-  const link = primaryLink(paper);
-  const linkAction = link
-    ? `<a class="action-link primary" href="${link.url}" target="_blank" rel="noreferrer">${link.label}</a>`
-    : "";
+  const links = [
+    [paper.pdf, text("pdf")],
+    [paper.arxiv, text("arxiv")],
+    [paper.project, isProjectPage(paper.project) ? text("project") : text("paperLink")],
+  ].filter(([url]) => validExternalLink(url));
+  const seenLinks = new Set();
+  const linkAction = links.filter(([url]) => !seenLinks.has(url) && seenLinks.add(url)).map(([url, label], index) =>
+    `<a class="action-link ${index === 0 ? "primary" : ""}" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${label} <span aria-hidden="true">↗</span></a>`
+  ).join("");
   const takeaway = note.takeaway
     ? `
       <section class="detail-takeaway">
@@ -4885,55 +4947,19 @@ function renderDetail(paper) {
   `;
 
   nodes.paperDetail.innerHTML = `
-    <div class="tag-row">${categoryTags}</div>
-    <h2 class="detail-title">${escapeHtml(localized.title)}</h2>
-    <p class="detail-subtitle">${escapeHtml(localized.authors)}</p>
-    ${institutionLine}
+    <div class="detail-meta"><span>${escapeHtml(paper.year)}</span><span>${escapeHtml(paper.venue)}</span><span>${escapeHtml(localized.status)}</span></div>
+    <h2 class="detail-title" id="paper-dialog-title">${escapeHtml(localized.title)}</h2>
+    <details class="detail-authors"><summary>${text("authorsInstitutions")}</summary><p>${escapeHtml(localized.authors)}</p>${institutionLine}</details>
+    <div class="link-row" id="detail-links">${linkAction}</div>
     ${takeaway}
-    ${personalNote}
     ${detailNav}
-
-    <div class="detail-grid">
-      <div class="info-tile">
-        <span>${text("venue")}</span>
-        <strong>${escapeHtml(paper.venue)}</strong>
-      </div>
-      <div class="info-tile">
-        <span>${text("year")}</span>
-        <strong>${escapeHtml(paper.year)}</strong>
-      </div>
-      <div class="info-tile">
-        <span>${text("status")}</span>
-        <strong>${escapeHtml(localized.status)}</strong>
-      </div>
-    </div>
-
-    <section class="keyword-section">
-      <h3>${text("keywords")}</h3>
-      <div class="tag-row">${keywordTags}</div>
-    </section>
-
-    <section class="detail-section" id="detail-summary">
-      <h3>${text("mainContent")}</h3>
-      <p>${renderText(localized.mainContent)}</p>
-    </section>
-
-    <section class="detail-section" id="detail-innovations">
-      <h3>${text("innovations")}</h3>
-      <ul>${listItems(localized.innovations)}</ul>
-    </section>
-
-    <section class="detail-section" id="detail-implementation">
-      <h3>${text("implementation")}</h3>
-      <ul>${listItems(localized.implementation)}</ul>
-    </section>
-
-    <div class="link-row" id="detail-links">
-      ${linkAction}
-    </div>
+    ${personalNote}
+    <section class="detail-section" id="detail-summary"><h3>${text("mainContent")}</h3><p>${renderText(localized.mainContent)}</p></section>
+    <section class="detail-section" id="detail-innovations"><h3>${text("innovations")}</h3><ul>${listItems(localized.innovations)}</ul></section>
+    <section class="detail-section" id="detail-implementation"><h3>${text("implementation")}</h3><ul>${listItems(localized.implementation)}</ul></section>
+    <section class="keyword-section"><h3>${text("keywords")}</h3><div class="tag-row">${keywordTags}</div></section>
+    <section class="keyword-section"><h3>${text("researchDirections")}</h3><div class="tag-row">${categoryTags}</div></section>
   `;
-
-  typesetMath();
 }
 
 function render() {
@@ -4966,63 +4992,60 @@ nodes.sidebarRestore.addEventListener("click", () => {
   applyLayout();
 });
 
-nodes.detailToggle.addEventListener("click", () => {
-  state.layout.detailCollapsed = !state.layout.detailCollapsed;
-  saveLayout();
-  applyLayout();
+nodes.detailClose.addEventListener("click", () => nodes.paperDialog.close());
+nodes.paperDialog.addEventListener("click", (event) => {
+  if (event.target !== nodes.paperDialog) return;
+  const rect = nodes.paperDialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) nodes.paperDialog.close();
 });
 
-function startResize(kind, event) {
-  if (event.button !== 0) return;
-  if (kind === "sidebar" && state.layout.sidebarCollapsed) return;
-  if (kind === "detail" && state.layout.detailCollapsed) return;
-
+function startResize(event) {
+  if (event.button !== 0 || state.layout.sidebarCollapsed) return;
   event.preventDefault();
   const startX = event.clientX;
-  const startWidth = kind === "sidebar" ? state.layout.sidebarWidth : state.layout.detailWidth;
+  const startWidth = state.layout.sidebarWidth;
   nodes.body.classList.add("is-resizing");
-
   const handleMove = (moveEvent) => {
-    const deltaX = moveEvent.clientX - startX;
-    if (kind === "sidebar") {
-      state.layout.sidebarWidth = clamp(startWidth + deltaX, 180, 320);
-    } else {
-      state.layout.detailWidth = clamp(startWidth - deltaX, 480, 820);
-    }
+    state.layout.sidebarWidth = clamp(startWidth + moveEvent.clientX - startX, 200, 300);
     applyLayout();
   };
-
   const handleUp = () => {
     nodes.body.classList.remove("is-resizing");
     saveLayout();
     window.removeEventListener("pointermove", handleMove);
     window.removeEventListener("pointerup", handleUp);
+    window.removeEventListener("pointercancel", handleUp);
   };
-
   window.addEventListener("pointermove", handleMove);
   window.addEventListener("pointerup", handleUp);
+  window.addEventListener("pointercancel", handleUp);
 }
 
-function resizeWithKeyboard(kind, event) {
+nodes.sidebarResizer.addEventListener("pointerdown", startResize);
+nodes.sidebarResizer.addEventListener("keydown", (event) => {
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
   event.preventDefault();
   const step = event.shiftKey ? 32 : 16;
-  const direction = event.key === "ArrowRight" ? 1 : -1;
-
-  if (kind === "sidebar") {
-    state.layout.sidebarWidth = clamp(state.layout.sidebarWidth + direction * step, 180, 320);
-  } else {
-    state.layout.detailWidth = clamp(state.layout.detailWidth - direction * step, 480, 820);
-  }
-
+  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth + (event.key === "ArrowRight" ? step : -step), 200, 300);
   saveLayout();
   applyLayout();
-}
+});
 
-nodes.sidebarResizer.addEventListener("pointerdown", (event) => startResize("sidebar", event));
-nodes.detailResizer.addEventListener("pointerdown", (event) => startResize("detail", event));
-nodes.sidebarResizer.addEventListener("keydown", (event) => resizeWithKeyboard("sidebar", event));
-nodes.detailResizer.addEventListener("keydown", (event) => resizeWithKeyboard("detail", event));
+nodes.statusFilter.addEventListener("change", () => {
+  state.status = nodes.statusFilter.value;
+  renderFilters();
+  renderList();
+});
+nodes.yearFilter.addEventListener("change", () => {
+  state.year = nodes.yearFilter.value;
+  renderFilters();
+  renderList();
+});
+nodes.sortOrder.addEventListener("change", () => {
+  state.sort = nodes.sortOrder.value;
+  renderList();
+});
+nodes.resetFilters.addEventListener("click", clearFilters);
 
 nodes.search.addEventListener("input", (event) => {
   state.query = event.target.value;
@@ -5030,6 +5053,13 @@ nodes.search.addEventListener("input", (event) => {
 });
 
 nodes.categoryNav.addEventListener("click", (event) => {
+  if (event.target.closest("[data-notes-only]")) {
+    state.notesOnly = true;
+    state.category = "all";
+    renderCategories();
+    renderList();
+    return;
+  }
   const toggle = event.target.closest("[data-category-toggle]");
   if (toggle) {
     state.bfmExpanded = !state.bfmExpanded;
@@ -5040,15 +5070,18 @@ nodes.categoryNav.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (!button) return;
   state.category = button.dataset.category;
+  state.notesOnly = false;
   renderCategories();
   renderList();
 });
 
 nodes.paperList.addEventListener("click", (event) => {
+  if (event.target.closest("[data-reset-filters]")) {
+    clearFilters();
+    return;
+  }
   const button = event.target.closest("[data-paper-id]");
-  if (!button) return;
-  state.selectedId = button.dataset.paperId;
-  renderList();
+  if (button) openPaper(button.dataset.paperId);
 });
 
 nodes.paperDetail.addEventListener("click", (event) => {
@@ -5060,8 +5093,9 @@ nodes.paperDetail.addEventListener("click", (event) => {
 
   const nav = nodes.paperDetail.querySelector(".detail-nav");
   const offset = nav ? nav.offsetHeight + 14 : 0;
+  nav?.querySelectorAll("button").forEach((item) => item.classList.toggle("is-active", item === button));
   nodes.paperDetail.scrollTo({
-    top: Math.max(0, target.offsetTop - offset),
+    top: Math.max(0, target.getBoundingClientRect().top - nodes.paperDetail.getBoundingClientRect().top + nodes.paperDetail.scrollTop - offset),
     behavior: "smooth",
   });
 });
@@ -5141,6 +5175,10 @@ nodes.promptModal.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k" && !nodes.paperDialog.open && nodes.promptModal.hidden) {
+    event.preventDefault();
+    nodes.search.focus();
+  }
   if (event.key === "Escape" && !nodes.promptModal.hidden) {
     closePromptModal();
   }

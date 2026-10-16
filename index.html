@@ -8,7 +8,7 @@
       name="description"
       content="A bilingual paper reading notebook with main content, innovations, implementation notes, categories, and links."
     />
-    <link rel="stylesheet" href="styles.css?v=20261010-bfm" />
+    <link rel="stylesheet" href="styles.css?v=20261016-catalog" />
     <script>
       window.MathJax = {
         tex: {
@@ -32,8 +32,9 @@
   <body>
     <header class="app-header">
       <div class="brand-block">
-        <p class="eyebrow" data-i18n="siteLabel">Paper Reading Notes</p>
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H3zM21 4h-6a3 3 0 0 0-3 3v14a4 4 0 0 1 4-3h5z"/></svg></span>
         <h1 data-i18n="siteTitle">论文阅读笔记</h1>
+        <p class="brand-caption" data-i18n="siteLabel">Paper Reading Notes</p>
       </div>
 
       <div class="header-actions" aria-label="language switcher">
@@ -43,27 +44,26 @@
       </div>
     </header>
 
-    <div class="update-badge" id="update-badge" aria-label="last updated"></div>
-
     <main class="shell" id="app-shell">
       <button class="edge-toggle sidebar-restore" id="sidebar-restore" type="button">›</button>
       <aside class="sidebar" id="sidebar" aria-label="paper navigation">
         <div class="sidebar-header">
-          <label class="search-label" for="paper-search" data-i18n="searchLabel">搜索论文</label>
+          <p class="sidebar-label" data-i18n="myLibrary">我的论文库</p>
           <button class="panel-toggle" id="sidebar-toggle" type="button">‹</button>
         </div>
-        <input id="paper-search" class="search-input" type="search" autocomplete="off" />
-
         <nav class="category-nav" id="category-nav" aria-label="categories"></nav>
 
-        <section class="quick-stats" aria-label="statistics">
-          <div>
-            <span id="paper-count">0</span>
-            <small data-i18n="papers">篇论文</small>
-          </div>
-          <div>
-            <span id="category-count">0</span>
-            <small data-i18n="topics">个方向</small>
+        <section class="sidebar-footer" aria-label="statistics">
+          <div class="update-badge" id="update-badge" aria-label="last updated"></div>
+          <div class="quick-stats">
+            <div>
+              <span id="paper-count">0</span>
+              <small data-i18n="papers">篇论文</small>
+            </div>
+            <div>
+              <span id="category-count">0</span>
+              <small data-i18n="topics">个方向</small>
+            </div>
           </div>
         </section>
       </aside>
@@ -75,32 +75,37 @@
         tabindex="0"
       ></div>
 
-      <section class="content-area" aria-live="polite">
+      <section class="content-area">
         <div class="toolbar">
           <div>
-            <p class="section-kicker" data-i18n="libraryLabel">Library</p>
+            <p class="section-kicker" data-i18n="libraryLabel">论文库 / 研究方向</p>
             <h2 id="view-title">全部论文</h2>
             <p id="view-description" class="view-description" hidden></p>
           </div>
-          <div class="toolbar-actions">
-            <p id="result-count" class="result-count"></p>
-            <button class="panel-toggle" id="detail-toggle" type="button">›</button>
+          <label class="search-box" for="paper-search">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+            <span class="sr-only" data-i18n="searchLabel">搜索论文</span>
+            <input id="paper-search" class="search-input" type="search" autocomplete="off" />
+            <kbd aria-hidden="true">⌘ K</kbd>
+          </label>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-controls">
+            <label class="filter-control"><span class="sr-only" data-i18n="readingStatus">阅读状态</span><select id="status-filter"></select></label>
+            <label class="filter-control"><span class="sr-only" data-i18n="year">年份</span><select id="year-filter"></select></label>
+            <button class="reset-filters" id="reset-filters" type="button" data-i18n="clearFilters" hidden>清除筛选</button>
           </div>
+          <label class="sort-control"><span data-i18n="sortLabel">排序</span><select id="sort-order"></select></label>
         </div>
-
-        <div class="workspace" id="workspace">
-          <section class="paper-list" id="paper-list" aria-label="papers"></section>
-          <div
-            class="layout-resizer detail-resizer"
-            id="detail-resizer"
-            role="separator"
-            aria-orientation="vertical"
-            tabindex="0"
-          ></div>
-          <article class="paper-detail" id="paper-detail" aria-label="paper detail"></article>
-        </div>
+        <div class="catalog-heading"><h3 data-i18n="paperCollection">论文集</h3><p id="result-count" class="result-count" role="status" aria-live="polite"></p></div>
+        <section class="paper-list" id="paper-list" aria-label="papers"></section>
       </section>
     </main>
+
+    <dialog class="paper-dialog" id="paper-dialog" aria-labelledby="paper-dialog-title">
+      <div class="reader-toolbar"><span data-i18n="readingNotes">阅读笔记</span><button class="icon-close" id="detail-close" type="button" autofocus aria-label="关闭阅读详情">×</button></div>
+      <article class="paper-detail" id="paper-detail" aria-label="paper detail"></article>
+    </dialog>
 
     <div class="prompt-modal" id="prompt-modal" hidden>
       <button class="prompt-backdrop" type="button" data-prompt-close aria-label="close"></button>
@@ -120,6 +125,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=20261010-bfm"></script>
+    <script src="app.js?v=20261016-catalog"></script>
   </body>
 </html>
