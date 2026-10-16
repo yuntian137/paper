@@ -5034,6 +5034,89 @@
           "Motion prior: AMP discriminates reference and policy joint-position sequences to provide a style reward. Walking uses the LAFAN1 Retargeting Dataset; recovery uses motions captured and retargeted by the authors, with separate discriminators for the two tasks. (§III-D, Eqs. 11–12)"
         ]
       }
+    },
+    {
+      "id": "calm-conditional-adversarial-latent-models",
+      "aliases": [
+        "CALM",
+        "2305.02195"
+      ],
+      "categories": [
+        "bfm-latent",
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2305.02195",
+      "project": "https://xbpeng.github.io/projects/CALM/",
+      "arxiv": "https://arxiv.org/abs/2305.02195",
+      "year": "2023",
+      "venue": "ACM SIGGRAPH 2023 Conference Proceedings",
+      "zh": {
+        "title": "CALM: Conditional Adversarial Latent Models for Directable Virtual Characters",
+        "authors": "Chen Tessler, Yoni Kasten, Yunrong Guo, Shie Mannor, Gal Chechik, Xue Bin Peng",
+        "institutions": "NVIDIA; Technion – Israel Institute of Technology; Bar-Ilan University; Simon Fraser University",
+        "status": "方法与关键实验已阅读",
+        "takeaway": "把参考动作编码成可指定的技能，冻结低层后训练高层选择 latent 来控制方向，最后用 FSM 组合移动、攻击等行为。",
+        "tags": [
+          "CALM",
+          "Conditional Adversarial Imitation",
+          "Motion Encoder",
+          "Latent Skill Space",
+          "Hierarchical RL",
+          "Precision Training",
+          "Finite-State Machine",
+          "PPO"
+        ],
+        "mainContent": "CALM 从无标签动作捕捉数据联合学习动作编码器与 latent 条件低层策略，用条件判别器匹配指定参考片段的状态转移分布。随后冻结编码器和低层，训练高层选择 latent，兼顾目标方向与参考风格；推理时由人工设计的 FSM 调用高层方向控制或直接向低层发送动作编码。表 1 的用户评价中，指定动作生成准确率为 78%，ASE 为 35%；训练好的模块还被组合用于无需再训练的 Location 与 Strike 任务。",
+        "innovations": [
+          "建立参考片段与技能的明确对应：\\(z=E(M)\\) 同时作为低层策略和条件判别器的输入，要求生成运动符合该片段的特征分布，同时保留偏离参考轨迹的自由度。（§5，式 2–4）",
+          "与 ASE 的区别：ASE 从先验采样 latent，以整体动作分布匹配和互信息目标发现技能；CALM 从参考片段产生 latent，并以 \\(D(s,s^{\\prime}\\mid z)\\) 学习可由示例直接指定的技能。（§5）",
+          "Precision training：复用固定的编码器和低层控制器，用方向奖励与 latent 相似性奖励训练独立高层，使角色保持指定风格并响应方向命令。（§6.1，式 8）",
+          "Exemplar guidance：将已学技能作为 FSM 的动作指令，通过规则切换移动、攻击和待机等阶段，复用同一组网络完成论文展示的新任务组合。（图 2，§6.2、§8.2.2）"
+        ],
+        "implementation": [
+          "输入与输出：MLP 编码器将 2 秒参考片段映射为 64 维单位球面编码 \\(z\\)；低层读取当前状态和编码，输出 31 维控制动作。（§5.1.1、§7）",
+          "低层训练：条件判别器提供奖励 \\(r_t=-\\log(1-D(s_t,s_{t+1}\\mid z))\\)，策略用 PPO 更新；编码器通过策略目标学习，判别器损失对编码器停止梯度。（式 4、7）",
+          "alignment 拉近有时间重叠的片段编码，uniformity 鼓励编码在球面上分散；rollout 中随机切换参考片段，训练不同技能之间的过渡。（式 5–6，§5.1.2）",
+          "高层训练：参考风格编码为 \\(\\hat z=E(M)\\)，高层根据当前状态、目标方向和参考风格选择 \\(z_t\\)。奖励为方向项加 \\(\\exp(-4\\|z_t-\\hat z\\|_2^2)\\)；此阶段只更新高层参数，不微调编码器或低层。（图 2，式 8）",
+          "FSM 调度：移动阶段向高层提供风格编码与目标方向；进入攻击范围后，绕过高层，直接向低层提供踢击或挥剑编码。FSM 是设计者给定的阶段与切换规则，高层不负责学习整套任务顺序。（§6.2）",
+          "数据与规模：160 段 Reallusion 动作、总时长超过 30 分钟，切成连续重叠的 2 秒片段；单张 A100 上并行 4096 个 Isaac Gym 环境，预训练共 50 亿步。低层与高层分别以 30 Hz 和 6 Hz 决策。（§7）",
+          "实验与边界：表 1 对每个模型选取 40 个参考动作、每个动作生成 3 次，由用户判断生成动作是否相似，得到 CALM 78% 与 ASE 35% 的生成准确率。该指标不是任务成功率；无需再训练指已学模块的新组合，本文验证对象为物理仿真角色。（§8.1–8.2）"
+        ]
+      },
+      "en": {
+        "title": "CALM: Conditional Adversarial Latent Models for Directable Virtual Characters",
+        "authors": "Chen Tessler, Yoni Kasten, Yunrong Guo, Shie Mannor, Gal Chechik, Xue Bin Peng",
+        "institutions": "NVIDIA; Technion – Israel Institute of Technology; Bar-Ilan University; Simon Fraser University",
+        "status": "Method and key experiments reviewed",
+        "takeaway": "Encodes reference motions into directable skills, freezes the low-level controller to train a high-level latent selector for heading control, then composes behaviors with an FSM.",
+        "tags": [
+          "CALM",
+          "Conditional Adversarial Imitation",
+          "Motion Encoder",
+          "Latent Skill Space",
+          "Hierarchical RL",
+          "Precision Training",
+          "Finite-State Machine",
+          "PPO"
+        ],
+        "mainContent": "CALM jointly learns a motion encoder and a latent-conditioned low-level policy from unlabeled motion-capture data, using a conditional discriminator to match the transition distribution of a selected reference clip. It then freezes the encoder and low-level policy and trains a high-level latent selector to balance heading control with reference style; at inference, a hand-designed FSM invokes heading control or sends motion codes directly to the low-level policy. In the Table 1 user study, requested-motion generation accuracy is 78% versus 35% for ASE, and the trained modules are also composed for Location and Strike tasks without further training.",
+        "innovations": [
+          "Connects reference clips to skills: \\(z=E(M)\\) conditions both the low-level policy and discriminator, aligning generated transitions with the selected clip while retaining freedom to depart from its exact trajectory. (§5, Eqs. 2–4)",
+          "Unlike ASE, which samples latents from a prior and discovers skills through dataset-wide distribution matching and mutual information, CALM derives latents from reference clips and uses \\(D(s,s^{\\prime}\\mid z)\\) to learn exemplar-directable skills. (§5)",
+          "Precision training reuses the frozen encoder and low-level controller and trains a separate high-level policy with heading and latent-similarity rewards to preserve a requested style while following direction commands. (§6.1, Eq. 8)",
+          "Exemplar guidance exposes learned skills as FSM commands, using rules to sequence locomotion, attacks, and idle behaviors and reusing the same networks for the demonstrated new task combinations. (Fig. 2, §6.2, §8.2.2)"
+        ],
+        "implementation": [
+          "An MLP encoder maps a 2-second reference clip to a 64-dimensional unit-sphere code \\(z\\); the low-level policy observes the current state and code and outputs 31-dimensional control actions. (§5.1.1, §7)",
+          "Low-level training uses PPO with conditional discriminator rewards \\(r_t=-\\log(1-D(s_t,s_{t+1}\\mid z))\\). The encoder learns through the policy objective; discriminator-loss gradients are stopped at the encoder. (Eqs. 4, 7)",
+          "Alignment brings temporally overlapping clip embeddings together, uniformity spreads embeddings over the sphere, and randomly switching reference clips during rollouts trains transitions between skills. (Eqs. 5–6, §5.1.2)",
+          "The reference style code is \\(\\hat z=E(M)\\); the high-level policy chooses \\(z_t\\) from the current state, target direction, and requested style. Its reward adds a heading term to \\(\\exp(-4\\|z_t-\\hat z\\|_2^2)\\); only high-level parameters are updated. (Fig. 2, Eq. 8)",
+          "FSM scheduling sends style codes and target directions to the high-level policy during locomotion. Once within attack range, it bypasses that policy and sends a kick or sword-swing code directly to the low-level policy. The designer supplies phases and transition rules; the high-level policy does not learn the entire task sequence. (§6.2)",
+          "Uses 160 Reallusion clips totaling over 30 minutes, split into continuously overlapping 2-second clips. Pretraining uses 5 billion steps across 4096 parallel Isaac Gym environments on one A100 GPU; low- and high-level decisions run at 30 Hz and 6 Hz, respectively. (§7)",
+          "Table 1 uses 40 reference motions and 3 generations per reference for each model, with human raters judging similarity: generation accuracy is 78% for CALM and 35% for ASE. This is not task success. No-further-training results concern new compositions of learned modules, evaluated on physically simulated characters. (§8.1–8.2)"
+        ]
+      }
     }
   ]
 }
