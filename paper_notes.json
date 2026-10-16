@@ -11,5 +11,13 @@
   "Student-Informed Teacher Training": {
     "takeaway": "在教师 PPO 目标中嵌入动态更新的学生模型，让教师始终背负“学生能否学会”的约束。",
     "note": "这个设计让教师进化过程直接考虑后续蒸馏难度，最终蒸馏出既强大又鲁棒的感知控制策略。"
+  },
+  "reactor-physics-aware-motion-retargeting": {
+    "zh": {
+      "note": "阅读时要分清：前面的 retarget 是显式几何映射，不是另一个神经网络；神经网络是后面的 RL 跟踪策略。初始坐标变换由标准姿态自动算出，额外偏移由梯度优化学习。上层把当前仿真状态固定，只沿“误差 → 参考目标 → 几何参数”求导；实际重定向数据来自仿真执行轨迹。换机器人通常要重训这套策略与参数，而“一个策略覆盖大量动作”指同一个机器人上的动作泛化。"
+    },
+    "en": {
+      "note": "Separate the explicit geometric retargeting map from the RL tracking network. Nominal transforms are computed from reference poses, whereas extra offsets are learned by gradient optimization. Upper-level differentiation treats sampled simulated states as fixed and follows error → reference → geometric parameters; the retargeted data comes from actual simulated execution. Changing the robot generally requires retraining the policy and parameters; one policy covering many motions refers to motion generalization on the same robot."
+    }
   }
 }

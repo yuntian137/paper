@@ -4687,6 +4687,87 @@
           "Timing: generating again after every 8 executed motion frames does not guarantee that computation meets that deadline. Table 4 reports 9.5, 18, and 23 FPS for autoregressive, gradual, and full-sequence denoising on A100 with 5 DDIM steps; full-sequence denoising is less stable. Appendix D identifies inference inefficiency relative to RL policies. The paper does not describe overlapping asynchronous generation/execution or guarantee latency at the ninth-frame boundary. (§5.5, Table 4; Appendix D)"
         ]
       }
+    },
+    {
+      "id": "reactor-physics-aware-motion-retargeting",
+      "aliases": [
+        "ReActor",
+        "2605.06593"
+      ],
+      "categories": [
+        "bfm-data",
+        "locomotion",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2605.06593v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2605.06593",
+      "year": "2026",
+      "venue": "ACM TOG 45(4), Article 97 (2026)",
+      "zh": {
+        "title": "ReActor: Reinforcement Learning for Physics-Aware Motion Retargeting",
+        "authors": "David Müller, Agon Serifi, Sammy Christen, Ruben Grandia, Espen Knoop, Moritz Bächer",
+        "institutions": "Disney Research, Switzerland",
+        "status": "方法与关键实验已阅读",
+        "takeaway": "用双层优化同时学习参考动作的几何修正与机器人 RL 跟踪策略，再把仿真中实际执行出的轨迹作为重定向数据。",
+        "tags": [
+          "ReActor",
+          "Motion Retargeting",
+          "Bilevel Optimization",
+          "PPO",
+          "Physics Simulation",
+          "Residual Force Control",
+          "Humanoid",
+          "Quadruped"
+        ],
+        "mainContent": "ReActor 解决人体与机器人形态差异导致的脚滑、自穿透和难以跟踪的参考动作问题。方法从稀疏刚体配对生成参数化参考，上层优化位置、朝向和高度偏移，下层用 PPO 在物理仿真中学习跟踪，最终记录实际机器人轨迹。实验覆盖 Unitree G1、Lima 与 ANYmal D，并在 Lima 上展示实机应用；表 4 中，ReActor 数据训练的下游策略在 G1 和 Lima 上的成功率分别为 97.45% 和 95.07%。",
+        "innovations": [
+          "联合优化参考与策略：参考目标随跟踪误差调整，机器人策略同时学习跟踪；借助物理仿真的接触与碰撞处理生成重定向数据，无需预先规定接触时序。（第 2–3 页，图 2，式 1–3）",
+          "简化上层梯度：假设最优轨迹对参考变化的敏感度近似为标量乘单位矩阵，得到只需对几何映射求导的缩放梯度，避免对整个 RL 求解过程求导。（第 3 页，式 4–7）",
+          "稀疏、跨形态的参考参数化：仅需标准姿态下的刚体语义配对，允许源与目标的关节数量不同；固定的局部位置与朝向修正及每段动作的高度修正可联合学习。（第 3–4 页，图 3，式 8–14）"
+        ],
+        "implementation": [
+          "输入与初始校准：提供人体与机器人的标准姿态，人工指定刚体配对及根部配对；按根部高度比缩放源动作，再由标准姿态自动计算固定位置偏移与旋转变换。GMR 是对比基线，不是此流程的前置步骤。（第 3–4、6 页）",
+          "几何修正：每个配对刚体学习三维局部位置偏移与旋转向量，每段动作学习一个世界竖直方向的高度偏移；参数在时间上保持常量。位置偏移随源刚体旋转，朝向修正在初始朝向右侧相乘，参数幅度受约束。（第 4 页，式 10–14；第 9 页）",
+          "参考与输出：几何映射给出配对刚体的位置、朝向和速度目标，不直接给出机器人关节角；策略接收本体观测与参考，输出关节位置目标及根部辅助力/力矩，以 50 Hz 经 PD 控制和仿真生成实际轨迹。（第 4–5 页，式 10–20）",
+          "上层更新：从当前策略 rollout 中采样参考与实际状态，按论文近似对参考映射参数求导，并做投影梯度更新；无需等下层策略完全收敛。默认上层位置/朝向权重为 10/1，线速度与角速度权重为 0。（第 3、6 页，式 3、6、7及表 2）",
+          "下层训练：PPO；策略与价值网络均为三层、每层 512 单元的 ELU MLP。使用筛选后的 AMASS、Isaac Sim 和 4096 个并行环境，20k 次训练迭代约 6 小时，单张 RTX 5090。（第 6 页）",
+          "起始姿态：根部状态对齐源动作，关节位置在机器人标准姿态附近随机采样；暂停参考，通过渐增的跟踪阶段变量让策略先到达起始姿态，该准备阶段的数据不用于上层参数优化。（第 5 页）",
+          "下游与迁移边界：重定向策略允许受惩罚的根部辅助力，生成数据后另训下游跟踪策略。同一目标机器人的策略可处理大量动作并测试未见动作；论文没有展示跨机器人共享控制策略，更换本体通常需要重新配对、校准并联合训练。（第 2、7–8 页；最后一句为基于控制接口与动力学的理解）"
+        ]
+      },
+      "en": {
+        "title": "ReActor: Reinforcement Learning for Physics-Aware Motion Retargeting",
+        "authors": "David Müller, Agon Serifi, Sammy Christen, Ruben Grandia, Espen Knoop, Moritz Bächer",
+        "institutions": "Disney Research, Switzerland",
+        "status": "Method and key experiments reviewed",
+        "takeaway": "Jointly learns geometric reference corrections and a robot RL tracking policy through bilevel optimization, then uses actual simulated robot trajectories as retargeted data.",
+        "tags": [
+          "ReActor",
+          "Motion Retargeting",
+          "Bilevel Optimization",
+          "PPO",
+          "Physics Simulation",
+          "Residual Force Control",
+          "Humanoid",
+          "Quadruped"
+        ],
+        "mainContent": "ReActor addresses foot sliding, self-penetration, and difficult-to-track references caused by morphological differences between humans and robots. Sparse body correspondences define a parameterized reference; the upper level optimizes position, orientation, and height offsets while the lower level learns physics-based tracking with PPO, producing actual robot trajectories. Experiments cover Unitree G1, Lima, and ANYmal D, with hardware applications on Lima; downstream policies trained on ReActor data achieve success rates of 97.45% on G1 and 95.07% on Lima in Table 4.",
+        "innovations": [
+          "Joint reference and policy optimization: references adapt to tracking errors while the policy learns to track, and simulated contacts and collisions shape the retargeted data without prescribed contact schedules. (pp. 2–3, Fig. 2, Eqs. 1–3)",
+          "Simplified upper-level gradient: a scalar-times-identity approximation of optimal trajectory sensitivity yields a scaled gradient through the geometric mapping, avoiding differentiation through the entire RL solution process. (p. 3, Eqs. 4–7)",
+          "Sparse cross-morphology parameterization: semantic body pairs in nominal poses support different joint counts, with learned constant local position/orientation offsets and a per-motion height correction. (pp. 3–4, Fig. 3, Eqs. 8–14)"
+        ],
+        "implementation": [
+          "Inputs and calibration: provide nominal human and robot configurations and manually select body pairs, including the root. Scale source motion by the root-height ratio and automatically compute fixed nominal position and rotation transforms. GMR is a comparison baseline, not a preprocessing stage. (pp. 3–4, 6)",
+          "Geometric corrections: learn a 3D local position offset and rotation vector per body pair and one world-vertical height offset per motion. Parameters remain constant over time; position offsets rotate with the source body, orientation corrections multiply on the right, and parameter magnitudes are constrained. (p. 4, Eqs. 10–14; p. 9)",
+          "References and outputs: the mapping produces paired-body position, orientation, and velocity targets rather than robot joint angles. The policy receives proprioception and references and outputs joint position setpoints plus auxiliary root forces/torques at 50 Hz; PD control and simulation produce the actual trajectory. (pp. 4–5, Eqs. 10–20)",
+          "Upper-level updates: sample reference/state pairs from current-policy rollouts, differentiate reference parameters using the paper’s approximation, and apply projected gradient updates without waiting for full lower-level convergence. Default upper-level position/orientation weights are 10/1; linear/angular velocity weights are zero. (pp. 3, 6, Eqs. 3, 6–7, Table 2)",
+          "Lower-level training: PPO with three-layer, 512-unit-per-layer ELU MLPs for both policy and value function. Filtered AMASS, Isaac Sim, 4096 parallel environments, and 20k training iterations in about 6 hours on one RTX 5090. (p. 6)",
+          "Initialization: align the root with the source and randomly sample joints around the robot nominal pose. Pause the reference and ramp a tracking-phase variable to learn the starting pose; preparation samples are excluded from upper-level updates. (p. 5)",
+          "Downstream use and transfer scope: the retargeting policy permits penalized auxiliary root wrenches; separate downstream tracking policies are trained on its output. One target-specific policy handles many motions and is tested on unseen motions; shared control across robots is not demonstrated, and changing the embodiment generally requires new pairing, calibration, and joint training. (pp. 2, 7–8; the final statement is an interpretation based on control interfaces and dynamics)"
+        ]
+      }
     }
   ]
 }
