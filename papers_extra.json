@@ -1341,7 +1341,7 @@
         "authors": "Xue Bin Peng, Yunrong Guo, Lina Halper, Sergey Levine, Sanja Fidler",
         "institutions": "University of California, Berkeley; NVIDIA; University of Toronto",
         "status": "全文已精读",
-        "takeaway": "用 AMP 分布匹配和互信息目标学出连续技能空间，再让高层策略用 latent 调用这些自然动作。",
+        "takeaway": "先用对抗模仿、技能识别奖励和多样性正则学会可控的连续技能，再冻结低层，让高层根据任务目标选择技能。",
         "tags": [
           "ASE",
           "AMP",
@@ -1361,8 +1361,14 @@
         "implementation": [
           "使用 187 段、约 30 分钟的 Reallusion 动作，包含行走、跑步、转向、蹲伏、挥剑和盾击。",
           "低层策略读取 120 维本体状态和 64 维单位球面技能向量，输出 31 维关节目标，由 PD 控制器执行。",
-          "技能向量从先验采样，每次随机保持 1–150 个策略步；判别器学习动作库与策略状态转移的分布差异，编码器从转移预测 latent。",
-          "冻结低层策略后，为各任务训练高层 PPO；高层以 6 Hz 更新技能，低层以 30 Hz 输出动作，物理仿真以 120 Hz 积分。",
+          "预训练①采样与交互：将标准高斯样本归一化，得到单位球面均匀先验中的技能向量；低层策略 \\(\\pi(a\\mid s,z)\\) 在仿真中执行动作，记录状态转移和所用技能。每个 latent 保持 1–150 个低层步后重新采样，一个 episode 内也切换技能，以学习衔接。（第 6 页式 11；第 7 页算法 1；附录 A）",
+          "预训练②计算奖励：\\(r_t=-\\log(1-D(s_t,s_{t+1}))+\\beta\\log q(z_t\\mid s_t,s_{t+1})\\)。判别器奖励鼓励动作符合数据风格，编码器奖励鼓励行为能辨认出所选技能；预训练不使用下游任务奖励，\\(\\beta=0.5\\)。（第 5 页式 10；表 2）",
+          "预训练③更新编码器与判别器：先用策略生成的转移及技能标签训练 q 反推 latent，再用动作库转移作为正样本、策略转移作为负样本训练 D，并在动作库样本上加入梯度惩罚。q 不负责先把参考动作编码成技能；实现中 q 与 D 共享网络主干、使用不同输出头。（第 6 页式 13–14；第 7 页算法 1；第 8 页图 5、§8.2）",
+          "预训练④更新策略与价值函数：用上述奖励计算 GAE 优势，通过 PPO 更新低层策略，通过 TD(λ) 更新 V(s,z)。额外的 diversity 正则让同一状态下动作分布的 KL 散度与 latent 的余弦距离相匹配；它只用于策略梯度更新，不加进每步奖励。重复采集轨迹、更新 q/D、更新 π/V。（第 6 页式 15；第 7 页算法 1、§6.6）",
+          "跌倒恢复：预训练时每个 episode 有 10% 概率从随机倒地状态开始；倒地状态由随机高度和朝向的空中掉落生成，使恢复能力随低层技能一起迁移。（第 6 页 §6.5）",
+          "任务训练①选择技能：冻结预训练低层策略 π，为每个任务训练独立高层 PPO 及其价值函数。高层读取当前状态 s 和任务目标 g，输出高斯分布中的未归一化向量，再归一化为 z 交给低层；低层继续根据当前状态闭环输出关节动作。（第 7 页 §7.1、图 3；第 9 页 §8.2）",
+          "任务训练②计算奖励：\\(r_t=w_G r_t^G-w_S\\log(1-D(s_t,s_{t+1}))\\)，任务奖励权重为 0.9、风格奖励权重为 0.1。D 保持冻结，仅前向计算风格分数；此阶段不再使用 q 的技能识别奖励，也不需要动作库。（第 8 页式 16；附录 A 表 3）",
+          "控制频率：任务训练高层以 6 Hz 更新技能，低层以 30 Hz 输出动作，每个高层技能保持 5 个低层步；物理仿真以 120 Hz 积分。（第 10 页 §10.1；第 18 页附录 A）",
           "部署使用高层策略和低层策略的反馈闭环。论文观察到部分动作覆盖不足和偶发抽动，体现技能分布学习的实际质量。"
         ]
       },
@@ -1371,7 +1377,7 @@
         "authors": "Xue Bin Peng, Yunrong Guo, Lina Halper, Sergey Levine, Sanja Fidler",
         "institutions": "University of California, Berkeley; NVIDIA; University of Toronto",
         "status": "Full paper reviewed",
-        "takeaway": "Learns continuous skills with AMP-style distribution matching and mutual information, then lets a high-level policy invoke them through latents.",
+        "takeaway": "Pretrains controllable continuous skills with adversarial imitation, skill-identification rewards, and diversity regularization, then freezes the low-level policy and learns task-conditioned skill selection.",
         "tags": [
           "ASE",
           "AMP",
@@ -1391,8 +1397,14 @@
         "implementation": [
           "Uses 187 Reallusion clips totaling about 30 minutes of walking, running, turning, crouching, sword swings, and shield bashes.",
           "The low-level policy observes 120-dimensional proprioception and a 64-dimensional unit-sphere skill vector and outputs 31-dimensional joint targets for PD control.",
-          "Samples skills from a prior and holds each for 1–150 policy steps. A discriminator matches demonstrated and generated transition distributions, and an encoder predicts latents from transitions.",
-          "After freezing the low-level policy, trains task-specific high-level PPO at 6 Hz; low-level control runs at 30 Hz and physics at 120 Hz.",
+          "Pretraining 1 — sampling and interaction: normalizes standard Gaussian samples to draw skills uniformly on the unit sphere. The low-level policy \\(\\pi(a\\mid s,z)\\) acts in simulation and records transitions and their conditioning skills. Each latent lasts 1–150 low-level steps before resampling; skills also change within episodes to teach transitions. (p. 6, Eq. 11; p. 7, Algorithm 1; Appendix A)",
+          "Pretraining 2 — rewards: \\(r_t=-\\log(1-D(s_t,s_{t+1}))+\\beta\\log q(z_t\\mid s_t,s_{t+1})\\). The discriminator rewards dataset-like behavior; the encoder rewards behavior that identifies the chosen skill. Pretraining uses no downstream task reward, and \\(\\beta=0.5\\). (p. 5, Eq. 10; Table 2)",
+          "Pretraining 3 — encoder and discriminator updates: first trains q to recover latents from policy-generated transitions and their skill labels, then trains D with motion-data transitions as positives and policy transitions as negatives, adding a gradient penalty on motion-data samples. q does not first encode reference clips into skills. The implementation shares a backbone between q and D with separate output heads. (p. 6, Eqs. 13–14; p. 7, Algorithm 1; p. 8, Fig. 5 and §8.2)",
+          "Pretraining 4 — policy and value updates: computes GAE advantages from these rewards, updates the low-level policy with PPO, and updates V(s,z) with TD(λ). An additional diversity regularizer matches action-distribution KL divergence at the same state to cosine distance between latents; it applies only during policy gradient updates, not as a per-step reward. Repeats rollout collection, q/D updates, and π/V updates. (p. 6, Eq. 15; p. 7, Algorithm 1 and §6.6)",
+          "Recovery: initializes 10% of pretraining episodes in random fallen states generated by dropping the character from random heights and orientations, so recovery transfers with the low-level skills. (p. 6, §6.5)",
+          "Task training 1 — skill selection: freezes the pretrained low-level policy π and trains a separate high-level PPO policy and value function for each task. The high-level policy observes state s and task goal g, samples an unnormalized Gaussian vector, and normalizes it into z for the low-level policy, which continues closed-loop joint control using the current state. (p. 7, §7.1 and Fig. 3; p. 9, §8.2)",
+          "Task training 2 — rewards: \\(r_t=w_G r_t^G-w_S\\log(1-D(s_t,s_{t+1}))\\), with task and style weights 0.9 and 0.1. D stays frozen and only supplies style scores through forward evaluation; this stage uses neither q-based skill-identification rewards nor the motion dataset. (p. 8, Eq. 16; Appendix A, Table 3)",
+          "Control rates: the high-level policy selects skills at 6 Hz and the low-level policy produces actions at 30 Hz, holding each high-level skill for five low-level steps; physics runs at 120 Hz. (p. 10, §10.1; p. 18, Appendix A)",
           "Deployment uses the high- and low-level policies in a feedback loop. The paper observes incomplete motion coverage and occasional twitching in the learned skill distribution."
         ]
       }
