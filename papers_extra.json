@@ -4958,6 +4958,82 @@
           "Implementation uses JAX, frax for kinematics/dynamics, cbfpy for differentiable CBF terms, and qpax for QPs. v1 experiments use pretrained TWIST2 and SONIC; this card records the implementation workflow, while experiments have not been reviewed individually. (§2.1; opening of §3; Appendices C.1, C.3)"
         ]
       }
+    },
+    {
+      "id": "pchc-preference-conditioned-humanoid-control",
+      "aliases": [
+        "PCHC",
+        "2603.24047"
+      ],
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.24047v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2603.24047",
+      "year": "2026",
+      "venue": "arXiv:2603.24047",
+      "zh": {
+        "title": "PCHC: Enabling Preference Conditioned Humanoid Control via Multi-Objective Reinforcement Learning",
+        "authors": "Huanyu Li, Dewei Wang, Xinmiao Wang, Xinzhe Liu, Peng Liu, Chenjia Bai, Xuelong Li",
+        "institutions": "哈尔滨工业大学；中国科学技术大学；哈尔滨工程大学；上海科技大学；中国电信人工智能研究院（TeleAI）",
+        "status": "引言、相关工作与方法已阅读",
+        "takeaway": "偏好一边给多路 critic 的优势加权，一边通过 Beta 分布调节多专家融合，让同一任务的策略实时改变目标取舍。",
+        "tags": [
+          "PCHC",
+          "Multi-Objective RL",
+          "Preference Conditioning",
+          "Mixture of Experts",
+          "Beta Distribution",
+          "PPO",
+          "AMP",
+          "Humanoid"
+        ],
+        "mainContent": "PCHC 针对固定奖励权重使人形控制策略难以在部署时改变目标取舍的问题，将偏好向量同时接入训练评价与动作生成。方法分别估计基本任务和各目标的优势，仅对目标优势进行偏好加权，并用偏好参数化的 Beta 分布融合多个专家。作者在行走的抗扰能力—步幅、跌倒恢复的能量效率—抗扰能力两组目标上开展仿真与实机实验，报告根据输入偏好实时调整行为优先级；两个任务分别训练策略。",
+        "innovations": [
+          "将 MORL 接入复杂人形控制：每个任务学习一个以偏好为条件的策略，近似覆盖多种帕累托折中解，避免为每种偏好单独训练和切换策略。（§I、§III-B）",
+          "区分基本任务奖励与目标专属奖励：多 critic 分别估计回报，归一化各路 GAE 优势后，仅对目标优势按偏好加权，让基本任务奖励持续参与优化。（§III-B，式 6–7）",
+          "设计 Beta 分布驱动的多专家偏好注入模块：偏好决定分布形状，在固定专家位置计算密度并归一化为融合权重，替代学习式门控网络。（§III-C，式 8）"
+        ],
+        "implementation": [
+          "训练偏好与优化：偏好非负且分量和为 1，从 Dirichlet 分布采样并与观测拼接。一个基本任务 critic 加每个目标各自的 critic，组合优势为 \\(\\hat A^\\lambda=\\hat A^{\\mathrm{task}}+\\sum_i\\lambda_i\\hat A_i^{\\mathrm{obj}}\\)，用于 PPO 更新。（§III-B，式 6–7）",
+          "专家融合：两个目标下设 \\(\\alpha=\\alpha_0+s\\lambda_1\\)、\\(\\beta=\\beta_0+s\\lambda_2\\)。5 个专家的位置为 0、0.25、0.5、0.75、1；计算对应 Beta 密度并归一化，对专家输出加权融合后，经后续 MLP 生成动作。Dirichlet 用于采样训练偏好，Beta 用于给定偏好下的专家路由。（图 2、§III-C，式 8）",
+          "观测与控制：利用当前状态及五个历史状态，包含机身角速度、机身坐标系重力向量、关节位置与速度、上一动作和动作缩放因子；行走额外接收三维速度命令。动作映射为 \\(q_t^{\\mathrm{target}}=q^{\\mathrm{default}}+\\eta a_t\\)，再由关节 PD 控制器计算力矩。（§III-D，式 9–10）",
+          "任务奖励：行走控制 20 个关节，奖励步幅，并在受扰后一段时间内惩罚机身水平位移及沿扰动方向的速度。跌倒恢复控制 23 个关节，从俯卧姿态起身，节能奖励惩罚关节力矩平方和绝对机械功率，抗扰奖励与行走相同，覆盖起身及随后站立阶段。（§III-D.1–2，式 13–15）",
+          "动作先验：AMP 用关节位置序列区分参考动作与策略轨迹，提供风格奖励。行走参考来自 LAFAN1 Retargeting Dataset；跌倒恢复参考由作者自行采集并重定向，两任务使用各自的判别器。（§III-D，式 11–12）"
+        ]
+      },
+      "en": {
+        "title": "PCHC: Enabling Preference Conditioned Humanoid Control via Multi-Objective Reinforcement Learning",
+        "authors": "Huanyu Li, Dewei Wang, Xinmiao Wang, Xinzhe Liu, Peng Liu, Chenjia Bai, Xuelong Li",
+        "institutions": "Harbin Institute of Technology; University of Science and Technology of China; Harbin Engineering University; ShanghaiTech University; Institute of Artificial Intelligence (TeleAI), China Telecom",
+        "status": "Introduction, related work, and method reviewed",
+        "takeaway": "Uses preferences both to weight advantages from multiple critics and to modulate expert fusion through a Beta distribution, letting one task policy change objective trade-offs in real time.",
+        "tags": [
+          "PCHC",
+          "Multi-Objective RL",
+          "Preference Conditioning",
+          "Mixture of Experts",
+          "Beta Distribution",
+          "PPO",
+          "AMP",
+          "Humanoid"
+        ],
+        "mainContent": "PCHC addresses fixed reward weights that prevent humanoid controllers from changing objective trade-offs at deployment by using preferences in both training evaluation and action generation. Separate critics estimate task and objective advantages; only objective advantages receive preference weights, while a preference-parameterized Beta distribution combines multiple experts. The authors report simulation and hardware experiments demonstrating real-time preference adaptation for disturbance resistance versus stride length in walking and energy efficiency versus disturbance resistance in fall recovery; policies are trained separately for the two tasks.",
+        "innovations": [
+          "Brings MORL to complex humanoid control: each task uses one preference-conditioned policy to approximate multiple Pareto trade-offs, avoiding separately training and switching policies for every preference. (§I, §III-B)",
+          "Separates basic task rewards from objective-specific rewards: multiple critics estimate returns, and preference weights apply only to normalized objective GAE advantages while the task advantage remains in the optimization. (§III-B, Eqs. 6–7)",
+          "Introduces Beta-distribution expert fusion for preference injection: preferences determine the density, evaluated at fixed expert positions and normalized into routing weights, replacing a learned gating network. (§III-C, Eq. 8)"
+        ],
+        "implementation": [
+          "Preferences and optimization: sample nonnegative, unit-sum preferences from a Dirichlet distribution and concatenate them with observations. Use one task critic plus one critic per objective, combining advantages as \\(\\hat A^\\lambda=\\hat A^{\\mathrm{task}}+\\sum_i\\lambda_i\\hat A_i^{\\mathrm{obj}}\\) for PPO updates. (§III-B, Eqs. 6–7)",
+          "Expert fusion: for two objectives, set \\(\\alpha=\\alpha_0+s\\lambda_1\\) and \\(\\beta=\\beta_0+s\\lambda_2\\). Evaluate the Beta density at five expert positions, 0, 0.25, 0.5, 0.75, and 1, normalize the weights, and fuse expert outputs before the downstream action MLP. Dirichlet samples training preferences; Beta routes experts for a given preference. (Fig. 2, §III-C, Eq. 8)",
+          "Observations and control: use the current state and five historical states, including base angular velocity, body-frame gravity, joint positions and velocities, previous action, and action scale; walking additionally receives a three-dimensional velocity command. Map actions to \\(q_t^{\\mathrm{target}}=q^{\\mathrm{default}}+\\eta a_t\\), then compute torques with joint PD control. (§III-D, Eqs. 9–10)",
+          "Task rewards: walking controls 20 joints, rewards stride length, and penalizes horizontal base displacement and velocity along the disturbance direction during a post-disturbance interval. Fall recovery controls 23 joints to stand from a prone posture, penalizes squared torques and absolute mechanical power for energy efficiency, and uses the same disturbance reward during recovery and subsequent standing. (§III-D.1–2, Eqs. 13–15)",
+          "Motion prior: AMP discriminates reference and policy joint-position sequences to provide a style reward. Walking uses the LAFAN1 Retargeting Dataset; recovery uses motions captured and retargeted by the authors, with separate discriminators for the two tasks. (§III-D, Eqs. 11–12)"
+        ]
+      }
     }
   ]
 }
