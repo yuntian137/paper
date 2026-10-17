@@ -35,5 +35,13 @@
     "en": {
       "note": "Reading reflection on v1 §2: task priorities differ from priorities among safety constraints. Safety inequalities are generally enforced together and relaxed with penalized slack when conflicting; this does not imply equal numerical allocation. The reviewed method does not explicitly establish context-dependent strict safety priorities. Context-based ordering and lexicographic minimization of constraint violation are possible extensions discussed here, not contributions implemented by the authors. Slack, discrete execution, and model mismatch affect formal guarantees; CoM projection containment is not full dynamic stability. Version scope: this card uses the local v1. Official v2 (2026-10-14) adds hardware experiments and reports over 1 kHz; it has not been reviewed in depth and its results are not mixed with v1."
     }
+  },
+  "amor-adaptive-character-control": {
+    "zh": {
+      "note": "个人读后评价：“占坑感强”，低优先级保留思路。训练后调偏好确实形成可用接口，但 HLP 的主要对照只是固定等权，MAE 仅下降 0.47°（约 4.7%），表 2 未报告跨训练 seed 的波动或置信区间。缺少充分调优的固定权重、逐动作固定权重等对照，无法隔离动态调权本身的贡献；采样策略互不支配也不代表接近真实最优前沿。真机结果以人工调权案例为主，应与仿真 HLP 定量实验分开解读。本次没有系统核查新颖性，也未复现代码。"
+    },
+    "en": {
+      "note": "Personal assessment: feels like staking out a research niche; retain the idea at low priority. Post-training preference tuning provides a usable interface, but HLP is mainly compared with equal fixed weights and reduces MAE by only 0.47° (about 4.7%); Table 2 reports no across-training-seed uncertainty or confidence intervals. Without well-tuned global or per-motion fixed-weight baselines, the contribution of dynamic adaptation is not isolated. Mutual non-dominance among sampled policies does not establish proximity to the true optimal front. Hardware results mainly use manual tuning and should be distinguished from simulated HLP evaluations. Novelty has not been systematically audited and code has not been reproduced."
+    }
   }
 }

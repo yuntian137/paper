@@ -5117,6 +5117,85 @@
           "Table 1 uses 40 reference motions and 3 generations per reference for each model, with human raters judging similarity: generation accuracy is 78% for CALM and 35% for ASE. This is not task success. No-further-training results concern new compositions of learned modules, evaluated on physically simulated characters. (§8.1–8.2)"
         ]
       }
+    },
+    {
+      "id": "amor-adaptive-character-control",
+      "aliases": [
+        "AMOR",
+        "2505.23708"
+      ],
+      "categories": [
+        "bfm-tracking",
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2505.23708v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2505.23708",
+      "year": "2025",
+      "venue": "SIGGRAPH Conference Papers 2025",
+      "zh": {
+        "title": "AMOR: Adaptive Character Control through Multi-Objective Reinforcement Learning",
+        "authors": "Lucas N. Alegre, Agon Serifi, Ruben Grandia, David Müller, Espen Knoop, Moritz Bächer",
+        "institutions": "巴西南里奥格兰德联邦大学；Disney Research（瑞士）",
+        "status": "方法与实验已阅读（代码与补充视频未核验）",
+        "takeaway": "把奖励偏好作为动作跟踪策略的输入，训练后可直接调权重，再用冻结底层上的高层 PPO 自动选择取舍。",
+        "tags": [
+          "AMOR",
+          "Multi-Objective RL",
+          "Preference Conditioning",
+          "MOPPO",
+          "Hierarchical RL",
+          "Motion Tracking",
+          "Sim-to-Real"
+        ],
+        "mainContent": "AMOR 针对固定奖励权重使动作跟踪需要反复重训的问题，将身体状态、参考动作上下文和奖励权重共同输入一个策略，用多目标 PPO 学习不同目标取舍。训练后可人工调权，也可冻结底层，训练高层根据状态与参考上下文动态输出权重，并用条件判别器奖励评价实际运动。实验展示平滑性与跟踪精度的取舍及真机调权案例；高层相对固定等权配置的关节角 MAE 从 10.02° 降至 9.55°，约改善 4.7%。",
+        "innovations": [
+          "将动作上下文纳入偏好条件 MORL：同一个控制器表示不同参考动作与奖励偏好下的行为取舍，训练后改变输入权重即可调整行为。（§4.2–5，第 4–5 页）",
+          "MOPPO 学习按权重条件化的向量价值函数，保留各目标的优势，再按当前偏好合成为标量，沿用 PPO 裁剪更新。（式 4–5，第 4 页）",
+          "把奖励权重作为高层的动作空间：冻结 AMOR 后，用新定义的高层奖励训练状态相关的权重选择器；本文用参考动作 latent 条件化的判别器奖励进行展示。（§6、图 3，第 5–6 页）"
+        ],
+        "implementation": [
+          "训练偏好：每个环境的每个回合从 Dirichlet(1,…,1) 均匀采样单纯形上的权重，回合内保持固定；多维 GAE 优势加权为 \\(A_t^{\\mathbf w}=\\mathbf w^\\top\\mathbf A_t\\)，再在 mini-batch 内归一化并用于 PPO 更新。（§4.2–5，第 4–5 页）",
+          "动作上下文：\\(c_t=(m_t,z_t)\\)，当前参考帧与 VAE 编码的前后动作窗口共同描述跟踪目标。\\(z_t\\) 来自参考动作编码；高层输出的是奖励权重 \\(\\mathbf w_t\\)。（§5–6，第 4–5 页）",
+          "七项目标包括上肢、下肢、脚部关节、末端位姿、根部朝向、速度跟踪和平滑性。平滑性惩罚力矩、动作一阶差分、动作二阶差分及关节加速度；各项仍使用预设缩放，并包含存活奖励。（表 1，第 5 页）",
+          "高层训练：使用普通 PPO，actor 末层 softmax 约束权重非负且和为 1；判别器根据实际观测窗口与参考 latent 提供 \\(r_t^D=-\\log(1-D(O_t\\mid z_t))\\)。高层根据轨迹奖励更新，AMOR 参数冻结；第 6 节没有单独列出高层 GAE 的具体公式。（§6、式 7，第 5 页）",
+          "规模：36 自由度仿真人形与 20 自由度机器人分别训练；CMU 1870 段/8.5 小时、Reallusion 214 段/0.5 小时。8192 个 Isaac Gym 环境，仿真 250 Hz、策略 50 Hz；每种角色训练约 30 万次迭代，在 RTX 4090 上约 5 天。（§7.1，第 6 页）",
+          "底层评估：对站立、行走、舞蹈采样 8192 组权重，每组平均 15 回合回报；平滑性权重取 0.1/0.5/0.9，各评估 32768 回合，统计未乘权重的累计平滑性回报。固定等权 PPO 收敛更快；真机舞蹈与双圈旋转主要使用人工调权。（图 4–7，第 6–7 页）",
+          "高层评估：图 8 展示随动作变化的权重，图 9 比较 2 帧与 30 帧判别器窗口；80000 个 30 秒回合中，HLP 相对固定等权的 MAE 为 9.55° 对 10.02°。另行训练的评估判别器使用 3200 万个 30 帧窗口训练、800 万个窗口评估，logit 为 −15.48 对 −18.02。（§7.3、表 2，第 8–9 页）"
+        ]
+      },
+      "en": {
+        "title": "AMOR: Adaptive Character Control through Multi-Objective Reinforcement Learning",
+        "authors": "Lucas N. Alegre, Agon Serifi, Ruben Grandia, David Müller, Espen Knoop, Moritz Bächer",
+        "institutions": "Universidade Federal do Rio Grande do Sul; Disney Research, Switzerland",
+        "status": "Method and experiments reviewed; code and supplementary video not checked",
+        "takeaway": "Conditions a motion tracker on reward preferences for post-training tuning, then trains a high-level PPO policy to choose trade-offs through the frozen controller.",
+        "tags": [
+          "AMOR",
+          "Multi-Objective RL",
+          "Preference Conditioning",
+          "MOPPO",
+          "Hierarchical RL",
+          "Motion Tracking",
+          "Sim-to-Real"
+        ],
+        "mainContent": "AMOR addresses repeated retraining caused by fixed tracking-reward weights by conditioning one policy on body state, reference-motion context, and reward preferences, trained with multi-objective PPO. After training, users can tune weights directly or freeze the controller and train a state- and context-dependent high-level weight selector using conditional discriminator rewards. Experiments demonstrate tracking–smoothness trade-offs and manual robot tuning; the high-level policy reduces joint-angle MAE from 10.02° to 9.55°, about 4.7%, relative to equal fixed weights.",
+        "innovations": [
+          "Adds motion context to preference-conditioned MORL so one controller represents trade-offs across reference motions and reward preferences, adjustable through its inputs after training. (§4.2–5, pp. 4–5)",
+          "MOPPO learns a weight-conditioned vector value function and retains per-objective advantages before scalarizing them with the current preference for the PPO clipped update. (Eqs. 4–5, p. 4)",
+          "Uses reward weights as high-level actions: a frozen AMOR controller supports a learned state-dependent selector trained on a new high-level reward, demonstrated with a reference-latent-conditioned discriminator. (§6, Fig. 3, pp. 5–6)"
+        ],
+        "implementation": [
+          "Sample an episode-specific preference from Dirichlet(1,…,1) in each environment and hold it fixed during the episode. Scalarize vector GAE advantages as \\(A_t^{\\mathbf w}=\\mathbf w^\\top\\mathbf A_t\\), normalize within each mini-batch, and use the result for PPO updates. (§4.2–5, pp. 4–5)",
+          "Motion context is \\(c_t=(m_t,z_t)\\): the current reference frame plus a VAE encoding of a window of past and future reference frames. The reference encoder produces \\(z_t\\); the high-level policy outputs reward weights \\(\\mathbf w_t\\). (§5–6, pp. 4–5)",
+          "Seven objectives cover upper-body, lower-body, and foot joints, end-effector poses, root orientation, velocities, and smoothness. Smoothness penalizes torques, first and second action differences, and joint accelerations; objectives retain prior scaling and survival bonuses. (Table 1, p. 5)",
+          "Train the high-level policy with ordinary PPO and a final softmax for nonnegative, unit-sum weights. A discriminator of observation windows conditioned on reference latents supplies \\(r_t^D=-\\log(1-D(O_t\\mid z_t))\\). The high-level policy learns from trajectory rewards while AMOR remains frozen; §6 does not separately specify the high-level GAE formula. (§6, Eq. 7, p. 5)",
+          "Train separate controllers for a 36-DoF simulated humanoid and a 20-DoF robot using 1870 CMU clips/8.5 hours and 214 Reallusion clips/0.5 hours. Use 8192 Isaac Gym environments, 250 Hz simulation, 50 Hz policies, and about 300000 iterations per character, taking roughly five days on an RTX 4090. (§7.1, p. 6)",
+          "Low-level evaluation samples 8192 preferences for idle, walking, and dancing and averages 15 episodes per preference. Smoothness weights 0.1/0.5/0.9 are evaluated over 32768 episodes each using unweighted smoothness returns. Equal-weight PPO converges faster; robot dancing and double-pirouette demonstrations mainly use manual tuning. (Figs. 4–7, pp. 6–7)",
+          "High-level evaluation visualizes changing weights and compares 2-frame versus 30-frame discriminator windows. Over 80000 thirty-second episodes, HLP achieves 9.55° MAE versus 10.02° with equal fixed weights. A separate evaluator trained on 32 million thirty-frame windows and evaluated on 8 million gives logits −15.48 versus −18.02. (§7.3, Table 2, pp. 8–9)"
+        ]
+      }
     }
   ]
 }
