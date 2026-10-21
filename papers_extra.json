@@ -5196,6 +5196,105 @@
           "High-level evaluation visualizes changing weights and compares 2-frame versus 30-frame discriminator windows. Over 80000 thirty-second episodes, HLP achieves 9.55° MAE versus 10.02° with equal fixed weights. A separate evaluator trained on 32 million thirty-frame windows and evaluated on 8 million gives logits −15.48 versus −18.02. (§7.3, Table 2, pp. 8–9)"
         ]
       }
+    },
+    {
+      "id": "workhorse-human-data-loco-manipulation",
+      "aliases": [
+        "Workhorse",
+        "2610.09117"
+      ],
+      "categories": [
+        "loco-manipulation",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.09117v2",
+      "project": "https://hybridrobotics.github.io/workhorse/",
+      "arxiv": "https://arxiv.org/abs/2610.09117",
+      "year": "2026",
+      "venue": "arXiv:2610.09117v2",
+      "zh": {
+        "title": "Workhorse: Learning Robust Whole-Body Humanoid Loco-Manipulation from Human Data",
+        "authors": "Songbo Hu, Qiayuan Liao, Yufeng Chi, Kevin Zakka, Yakun Sophia Shao, Pieter Abbeel, Koushil Sreenath",
+        "institutions": "University of California, Berkeley",
+        "status": "摘要与方法已阅读（§III–IV；实验待阅读）",
+        "takeaway": "人类演示提供动作范例，视觉规划器生成未来五部位目标，强化学习跟踪器把目标变成全身关节控制，部署时靠实际反馈持续重规划。",
+        "tags": [
+          "Workhorse",
+          "Human Demonstrations",
+          "Five-Link Interface",
+          "Flow Matching",
+          "Diffusion Transformer",
+          "Whole-Body Tracking",
+          "Model-Based RL",
+          "Humanoid",
+          "Sim-to-Real"
+        ],
+        "mainContent": "Workhorse 研究人形机器人如何仅凭第一视角 RGB 与本体感知，自主规划接触密集的全身移动操作。它以躯干、双手腕和双脚的位姿为共享接口，从同一批无需机器人参与采集的人类演示中分别训练 flow-matching 视觉规划器和强化学习全身跟踪器，并用数据增强适应两者部署时的误差。真实 G1 展示搬箱、踢箱、接箱以及推倒和爬上行李箱；摘要报告重建房间仿真中的搬箱成功率为 77%，受到 40 N·s 推扰时为 64%。",
+        "innovations": [
+          "共享五部位接口：传递任务空间位姿，而非机器人全关节轨迹；同一批人类运动分别训练规划器与跟踪器，无需按机器人身材缩放或重定向演示。（图 2，§IV-A，第 3–4 页）",
+          "分别处理闭环误差：规划器训练时扰动历史并同步修改图像，但保留干净的未来标签；跟踪器训练时让指令在重规划之间漂移、重规划时跳变，并针对收到的指令计算奖励。（图 5–6，§IV-B.3、IV-C.2，第 4–5 页）",
+          "任务精度与身体协调分开约束：手腕和躯干在世界系中评分，脚在躯干系中评分；IK 全身姿态提供风格奖励，补足五部位目标没有唯一确定的身体构型。（表 I，§IV-C.1，第 5 页）",
+          "异步部署衔接：使用时间戳处理感知和推理延迟，执行前转换躯干坐标系，并在 flow 积分中利用前一片段的重叠动作保持计划连续。（图 7，§IV-D，第 6 页）"
+        ],
+        "implementation": [
+          "1. 数据准备｜胸前相机记录 30 fps 第一视角视频，胸前、双手和双脚的 5 个 Vive 追踪器记录统一世界系中的 60 Hz 位姿。拍手同步后，将位姿重采样到 50 Hz；每次任务重复前的 T-pose 用于切分数据。录制时改变光照、物体位置并扰动物体，不推扰演示者。（图 3，§III，第 3 页）",
+          "1. 目标转换｜以相机、手掌中心和脚底中心定义对齐坐标系，用固定的追踪器安装变换与机器人连杆安装变换生成五部位目标。保留原始空间目标，不缩放动作；身体差异由机器人专用跟踪器适应，可达性仍受身体尺寸限制。（式 1，§IV-A，第 3–4 页）",
+          "1. IK 辅助｜采集时实时 IK 检查手部可达性，提醒演示者修正；离线 IK 全身姿态用于机器人图像渲染、跟踪器回合初始化和姿态风格奖励。IK 解可以在相邻帧间不连续，不作为必须执行的全关节指令轨迹。（§III-B、IV-C.1，第 3、5 页）",
+          "2. 规划器输入输出｜以最新图像时刻 t0 为基准，输入 4 张间隔 0.24 s 的图像和 9 个间隔 0.12 s 的五部位历史状态，后者附带各时刻的投影重力和世界系躯干高度。输出 58 个间隔 0.02 s 的五部位目标，论文记片段时长为 1.16 s；位姿表达在 t0 的躯干系中。（§IV-B.1，第 4 页）",
+          "2. 规划器学习｜从零训练的 ResNet-18 将每张图像编码为一个 token，每个身体历史样本也编码为一个 token，DiT 通过 cross-attention 读取条件。flow matching 学习条件动作生成，未来标签来自人类演示。按标准线性 FM 理解，可用真实片段与噪声构造中间状态并回归更新方向；这是机制解释，本文未展开具体损失与噪声调度。（§IV-B.1，第 4 页）",
+          "2. 外观适配｜离线用 SAM 3 分割人与搬运物体，用 LaMa 修补人体像素；MoGe-2 估计背景深度并以地面校准尺度。MuJoCo 在原相机视角渲染 IK 机器人姿态，再按深度合成，减少训练时看见人体、部署时看见机器人身体的差异。（图 5a，§IV-B.2，第 4 页）",
+          "2. 历史增强｜对五部位施加整体刚体随机游走，整体扰动在 t0 为单位变换、向更早历史累积，手腕和脚再叠加较小随机游走。同步更新重力、高度与相机图像扭曲，添加光照变化并随机遮蔽历史样本和部位；未来动作标签保持干净演示。（图 5b–c、6a，§IV-B.3，第 5 页）",
+          "3. 跟踪器输入输出｜只读取当前本体感知及五部位指令，不读取 RGB。指令包含当前至未来 0.2 s 的 6 组目标，间隔 0.04 s，表达在当前躯干系中；本体感知包含 IMU 角速度、关节位置和速度、上一时刻关节目标。输出机器人关节目标位置。（§IV-C，第 5 页）",
+          "3. 强化学习｜用 mjlab 仿真转移数据拟合动力学网络，在该网络预测的 rollout 上训练 actor 与 critic。每回合从随机演示时刻的 IK 姿态加扰动开始，随机化质量、摩擦、编码器偏置和脚底几何；每个机器人、每个任务单独训练，无需真实机器人数据。（§IV-C.3，第 5–6 页）",
+          "3. 奖励设计｜单位权重的高斯核相加，再减关节目标变化率和关节越限惩罚。风格项以 IK 参考约束全身 14 个连杆；任务项在世界系跟踪躯干与手腕、在躯干系跟踪脚，并在演示脚摆动时奖励约 10 cm 的脚踝高度，兼顾操作精度与平衡调整。（表 I，§IV-C.1，第 5 页）",
+          "3. 指令增强｜训练中每隔随机 0.2–1 s 模拟重规划，期间整体指令漂移线性增长，幅度最多为水平 10 cm 和绕躯干 yaw 10°，重规划时漂移归零。跟踪奖励对扰动后的指令计算；跟踪器无法区分规划误差与有意动作，剩余误差留给下一次视觉重规划修正。（图 6b，§IV-C.2，第 5 页）",
+          "4. 部署生成｜相机与机载状态估计提供真实机器人历史，不再输入人类未来动作，也不需要外部动捕。规划器以 5 Hz 运行，每次通过 10 步 Euler 积分生成整段 58 步目标；10 次生成更新与片段内 58 个物理时间点是不同概念。（图 2，§IV-B.1、IV-D，第 4、6 页）",
+          "4. 部署对齐｜每个目标带有 t0 + k·0.02 s 的时间戳，跳过片段到达时已过期的目标。每个控制时刻插值得到未来 0.2 s 的 6 组目标，并从观察时刻躯干系转换到当前躯干系；生成新片段时将上一片段的重叠动作在 flow 积分中做 inpainting，使前后计划连续。（图 7，§IV-D，第 6 页）",
+          "4. 闭环执行｜跟踪器以 50 Hz 根据目标窗口和当前本体感知输出关节目标，执行后的实际图像与状态再进入下一轮规划。例如物体被拿走后规划器改变后续目标，身体偏离时跟踪器持续调整控制。两套策略分别训练；跨机器人复用同一批演示，但需要重新测量 mounts、更换模型并重训两套策略。（图 2，§IV-A、IV-D，第 4、6 页）"
+        ]
+      },
+      "en": {
+        "title": "Workhorse: Learning Robust Whole-Body Humanoid Loco-Manipulation from Human Data",
+        "authors": "Songbo Hu, Qiayuan Liao, Yufeng Chi, Kevin Zakka, Yakun Sophia Shao, Pieter Abbeel, Koushil Sreenath",
+        "institutions": "University of California, Berkeley",
+        "status": "Abstract and methods reviewed (§III–IV); experimental sections pending",
+        "takeaway": "Human demonstrations supply examples; a visual planner generates future five-link targets, an RL tracker turns them into whole-body joint commands, and actual feedback drives repeated replanning.",
+        "tags": [
+          "Workhorse",
+          "Human Demonstrations",
+          "Five-Link Interface",
+          "Flow Matching",
+          "Diffusion Transformer",
+          "Whole-Body Tracking",
+          "Model-Based RL",
+          "Humanoid",
+          "Sim-to-Real"
+        ],
+        "mainContent": "Workhorse learns to plan contact-rich humanoid loco-manipulation from egocentric RGB and proprioception. A flow-matching visual planner and an RL whole-body tracker are trained separately from the same robot-free human demonstrations, sharing torso, wrist, and foot poses and using augmentation to tolerate each other’s deployment errors. A real G1 demonstrates box transport, kicking, catching, and suitcase toppling and climbing; the abstract reports 77% simulated box-transport success in the reconstructed room and 64% under 40 N·s pushes.",
+        "innovations": [
+          "A shared five-link interface passes task-space poses rather than full robot joint trajectories. The same human motions train both policies separately without scaling or robot-specific motion retargeting. (Fig. 2, §IV-A, pp. 3–4)",
+          "Complementary augmentation addresses closed-loop errors: perturb planner histories and warp images while preserving clean future labels; make tracker commands drift between replans and jump at replanning, and score the received commands. (Figs. 5–6, §IV-B.3, IV-C.2, pp. 4–5)",
+          "Separate task precision from whole-body coordination: score wrists and torso in the world frame and feet in the torso frame, while IK-based style rewards constrain the body configuration left undetermined by five-link targets. (Table I, §IV-C.1, p. 5)",
+          "Asynchronous deployment uses timestamps for sensing and inference delays, transforms targets between torso frames, and inpaints overlapping actions from the preceding chunk during flow integration for continuity. (Fig. 7, §IV-D, p. 6)"
+        ],
+        "implementation": [
+          "1. Data collection | A chest camera records 30 fps egocentric video; five Vive trackers on the chest, hands, and feet record 60 Hz poses in one world frame. Synchronize with claps, resample poses to 50 Hz, and split repetitions using T-poses. Vary lighting and object placement and perturb objects, never the demonstrator. (Fig. 3, §III, p. 3)",
+          "1. Target conversion | Define alignment frames at the camera, palm centers, and sole centers. Fixed tracker and robot-link mounting transforms yield five-link targets without rescaling the demonstrated motion. A robot-specific tracker accommodates embodiment differences, subject to physical reachability. (Eq. 1, §IV-A, pp. 3–4)",
+          "1. Auxiliary IK | Online IK flags unreachable hands so the demonstrator can correct the pose. Offline whole-body IK poses support image rendering, tracker episode initialization, and style rewards. Adjacent IK solutions may be discontinuous; they are not mandatory full-joint command trajectories. (§III-B, IV-C.1, pp. 3, 5)",
+          "2. Planner interface | At the newest image time t0, use four images spaced 0.24 s apart and nine five-link history samples spaced 0.12 s apart, with per-sample projected gravity and world-frame torso height. Output 58 five-link targets spaced 0.02 s apart, a 1.16 s chunk as described in the paper, in the torso frame at t0. (§IV-B.1, p. 4)",
+          "2. Planner learning | A ResNet-18 trained from scratch produces one token per image, each body-history sample supplies another token, and a DiT reads conditions through cross-attention. Flow matching learns conditional action generation from human future-motion labels. Standard linear FM can be understood as interpolating between noise and a real chunk and regressing update directions; this explains the mechanism, since the paper does not specify its exact loss or noise schedule. (§IV-B.1, p. 4)",
+          "2. Appearance adaptation | Offline, SAM 3 segments the person and carried object; LaMa inpaints the person’s pixels. MoGe-2 estimates background depth, scaled against the floor. MuJoCo renders the IK robot from the recorded camera pose and composites it using depth, reducing the human-to-robot body appearance gap. (Fig. 5a, §IV-B.2, p. 4)",
+          "2. History augmentation | Apply a shared rigid random walk to the five links, anchored to the identity at t0 and accumulated backward in history, plus smaller independent wrist and foot walks. Update gravity, height, and image warps consistently; vary lighting and mask history samples and links. Keep future action labels clean. (Figs. 5b–c, 6a, §IV-B.3, p. 5)",
+          "3. Tracker interface | Read proprioception and five-link commands without RGB. Commands contain six target samples 0.04 s apart from the current time through the next 0.2 s, expressed in the current torso frame. Proprioception includes IMU angular velocity, joint positions and velocities, and previous joint setpoints. Output robot joint-position setpoints. (§IV-C, p. 5)",
+          "3. Reinforcement learning | Fit a dynamics network to transitions simulated in mjlab, then train an actor and critic on rollouts predicted by that network. Initialize episodes from perturbed IK poses at sampled demonstration times; randomize mass, friction, encoder bias, and sole geometry. Train separately per robot and task without real-robot data. (§IV-C.3, pp. 5–6)",
+          "3. Rewards | Sum unit-weight Gaussian kernels and subtract joint-setpoint-rate and joint-limit penalties. IK-based style terms score all 14 links; task terms score torso and wrists in the world frame and feet in the torso frame, with a 10 cm ankle-height target during demonstrated foot swings to support clearance and balance adjustments. (Table I, §IV-C.1, p. 5)",
+          "3. Command augmentation | Simulate replanning at random intervals of 0.2–1 s. Between replans, rigid command drift grows linearly, reaching at most 10 cm horizontal displacement and 10° torso-centered yaw; reset drift at replanning. Score tracking against the perturbed command: the tracker cannot separate planner error from intended motion, so the next visual replan corrects the resulting error. (Fig. 6b, §IV-C.2, p. 5)",
+          "4. Deployment generation | The camera and onboard state estimation provide actual robot histories, without human future actions or external motion capture. The planner runs at 5 Hz and uses ten Euler steps to generate a complete 58-step chunk. Ten generation updates and the chunk’s 58 physical-time samples are distinct. (Fig. 2, §IV-B.1, IV-D, pp. 4, 6)",
+          "4. Deployment alignment | Timestamp target k at t0 + k·0.02 s and skip expired targets when the chunk arrives. At each control step, interpolate six targets over the next 0.2 s and transform them from the observation-time torso frame into the current torso frame. Inpaint overlapping actions from the preceding chunk during flow integration for continuity. (Fig. 7, §IV-D, p. 6)",
+          "4. Closed-loop execution | At 50 Hz, the tracker maps the target window and current proprioception to joint setpoints; resulting images and states feed the next replan. Object removal changes subsequent planner targets, while body deviations trigger ongoing tracker adjustments. The policies train separately; another robot reuses the demonstrations but needs new mounts, models, and retraining of both policies. (Fig. 2, §IV-A, IV-D, pp. 4, 6)"
+        ]
+      }
     }
   ]
 }
