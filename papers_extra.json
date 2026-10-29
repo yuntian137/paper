@@ -4901,7 +4901,7 @@
         "authors": "Daniel Morton, Pranit Mohnot, Marco Pavone",
         "institutions": "Stanford University; NVIDIA Research",
         "status": "v1 引言与方法已阅读（§1–2；附录 B、C.3）",
-        "takeaway": "在不修改预训练 RL 跟踪策略的前提下，用接触一致的 CBF-QP 修正输入参考或输出力矩，并尽量保留原运动任务。",
+        "takeaway": "把避碰、关节限位等要求写成“安全余量不能下降得太快”的控制约束，每步求解优化，修正参考动作或输出力矩，保持原 RL 策略不变。",
         "tags": [
           "ConstrainedMimic",
           "Control Barrier Functions",
@@ -4911,18 +4911,24 @@
           "Runtime Safety",
           "Unitree G1"
         ],
-        "mainContent": "ConstrainedMimic 面向人形机器人部署时新增的安全约束，以及安全参考动作仍可能因跟踪误差产生不安全执行的问题。方法在重定向、已有参考动作过滤和策略输出力矩过滤三个位置引入 CBF-QP，结合接触约束模型与任务一致的修正目标。当前卡片依据所读 v1：作者在仿真 Unitree G1 上展示自碰撞与外部避障、关节限位和质心投影约束，摘要报告部署频率可达 300–500 Hz。",
+        "mainContent": "ConstrainedMimic 在预训练 RL 跟踪策略的前后增加安全过滤：输入端修正参考动作，输出端修正策略所对应的关节力矩。过滤器先用控制屏障函数（CBF）表示离危险边界还有多少余量，再用系统模型算出某个控制输入会怎样改变余量，通过二次规划（QP）选出满足安全约束且尽量保留原任务的控制。当前卡片依据 v1：作者在仿真 Unitree G1 上展示自碰撞与外部避障、关节限位和质心投影约束，摘要报告部署频率可达 300–500 Hz。",
         "innovations": [
           "双端安全接口：输入端修正运动学参考，输出端修正策略控制指令，可叠加到未修改的预训练跟踪策略上。（图 1；§1.2、§2）",
           "接触一致的约束构造：在完整的接触约束运动学或动力学上建立 CBF，使安全修正符合当前支撑模式。（式 5、9）",
           "任务一致的修正目标：运动学层保留主要任务及其零空间姿态；动力学层进一步优先考虑支撑接触力，减少过滤对原控制行为的干扰。（式 7–11）"
         ],
         "implementation": [
-          "安全定义：安全集合为 \\(\\mathcal C=\\{z:h(z)\\geq0\\}\\)。对 \\(\\dot z=f(z)+g(z)u\\)，施加 \\(L_fh+L_gh\\,u\\geq-\\alpha(h)\\)，限制安全余量下降速度。（式 1；附录 B）",
+          "先定义安全余量：\\(z\\) 是当前状态，\\(h(z)\\) 是由状态算出的标量；\\(h>0\\) 表示在安全区域内，\\(h=0\\) 是边界，\\(h<0\\) 表示违规。以避碰为例，可取 \\(h=d-d_{\\min}\\)，其中 \\(d\\) 是物体表面间距、\\(d_{\\min}\\) 是最小允许间距。这是理解用的距离例子；论文具体几何约束见式 2–4。",
+          "式 1 的系统模型：\\(\\dot z=f(z)+g(z)u\\)。\\(u\\) 是待求控制输入，\\(f\\) 表示不含该输入的状态变化，\\(g\\) 把输入映射为状态变化；点号表示对时间求导。本文运动学层优化速度，动力学层优化关节力矩。（§2.1–2.4）",
+          "式 1 左边来自链式法则：\\(\\dot h=\\frac{\\partial h}{\\partial z}\\dot z=\\underbrace{\\frac{\\partial h}{\\partial z}f(z)}_{L_fh}+\\underbrace{\\frac{\\partial h}{\\partial z}g(z)}_{L_gh}u\\)。\\(L_fh\\) 是系统自身运动造成的余量变化率，\\(L_gh\\,u\\) 是控制输入造成的变化率；二者相加就是安全余量每秒如何变化。李导数在这里是这两项的记号。（式 1；附录 B）",
+          "式 1 的要求：\\(\\dot h\\geq-\\alpha(h)\\)。\\(\\alpha\\) 决定允许余量下降多快；用常见选择 \\(\\alpha(h)=kh\\)、\\(k>0\\) 解释：余量较大时允许继续接近边界，但越靠近边界，允许的接近速度越小；在 \\(h=0\\) 时要求 \\(\\dot h\\geq0\\)。\\(\\alpha\\) 是余量变化率的调节函数，不是多个安全目标间的权重。",
+          "数值示例（用于解释，非论文实验）：假设间距可直接通过相对速度控制，即 \\(\\dot d=u\\)。若安全余量为 0.10 m 且 \\(k=2\\,\\mathrm{s}^{-1}\\)，CBF 要求 \\(u\\geq-0.20\\,\\mathrm{m/s}\\)；负号表示靠近，正号表示远离。因此名义速度 −0.50 m/s 需要修正，−0.10 m/s 可通过这条约束；到安全边界时要求 \\(u\\geq0\\)。",
+          "怎样得到新指令：附录式 41 先给出基础过滤器 \\(\\min_u\\|u-u_{\\mathrm{nom}}\\|_2^2\\)，同时满足式 1；\\(u_{\\mathrm{nom}}\\) 是原指令，\\(u\\) 是修正结果。当前状态固定时，式 1 对 \\(u\\) 是线性不等式。本文进一步用任务空间加权目标衡量修改的影响，见下列方法；安全不等式与目标函数的权重是两个层次。",
           "约束实例：关节限位 \\(h=[q-q_{\\min};q_{\\max}-q]\\)；球体间避碰 \\(h_{ij}=\\|x_i(q)-x_j(q)\\|_2-r_i-r_j\\)；质心水平投影约束 \\(h=b-Ax_{\\mathrm{CoM}}(q)\\)。最后一项约束支撑多边形内的位置。（式 2–4）",
-          "受约束重定向：使用 \\(\\dot q=N_cu\\)，最小化 \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\)，同时施加 CBF、速度限制与松弛变量。人体到 G1 使用 14 个配对任务，求出速度后按受约束运动学积分。（式 5–6；附录 C.3）",
-          "已有参考动作过滤：最小化 \\(\\left\\|\\begin{bmatrix}W_tJ_{t|c}\\\\W_nN_{t|c}\\end{bmatrix}(\\dot q-\\dot q_{\\mathrm{nom}})\\right\\|_2^2\\)，其中两项分别衡量任务运动和零空间姿态的变化；过滤修改参考运动，不删除不安全帧。（式 7–8；最后一句为流程解释）",
-          "动力学过滤：状态为 \\(z=[q,\\dot q]\\)，优化驱动关节力矩 \\(\\Gamma_{\\mathrm{body}}\\)；目标保留接触力、任务加速度与零空间姿态加速度，并限制力矩。位置屏障在力矩控制下通常为相对阶二，采用 \\(h_2=\\dot h+\\alpha_1(h)\\)、\\(\\dot h_2+\\alpha_2(h_2)\\geq0\\)。（式 9–11；附录 B，式 42–43）",
+          "受约束重定向：\\(\\dot q=N_cu\\) 中，\\(q\\) 是机器人位形，\\(u\\) 是候选速度，\\(N_c\\) 把它投影到当前脚接触允许的运动方向。最小化 \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\)：\\(J_{i|c}u\\) 是机器人第 i 个任务的速度，\\(\\nu_i\\) 是希望实现的速度，\\(W_i\\) 是跟踪权重。人体到 G1 用 14 个配对任务；加 CBF、速度限制和松弛后求解，再积分更新参考姿态。（式 5–6；附录 C.3）",
+          "已有参考动作过滤：\\(\\dot q_{\\mathrm{nom}}\\) 是原参考速度，优化新的速度 \\(\\dot q\\)。式 8 的目标是 \\(\\|W_tJ_{t|c}(\\dot q-\\dot q_{\\mathrm{nom}})\\|_2^2+\\|W_nN_{t|c}(\\dot q-\\dot q_{\\mathrm{nom}})\\|_2^2\\)：\\(J_{t|c}\\) 提取主要任务运动的变化，\\(N_{t|c}\\) 提取任务零空间中的姿态变化，\\(W_t,W_n\\) 决定各项修改代价。过滤会改变参考运动而非删除不安全帧；已满足所有条件时无需修正。（式 7–8；流程解释）",
+          "动力学过滤与高阶 CBF：状态 \\(z=[q,\\dot q]\\)，输入为关节力矩 \\(\\Gamma_{\\mathrm{body}}\\)。力矩先改变加速度，因此位置余量的 \\(\\dot h\\) 往往不显含力矩，需要再求一次导数。附录构造 \\(h_2=\\dot h+\\alpha_1(h)\\)，再要求 \\(\\dot h_2+\\alpha_2(h_2)\\geq0\\)，由此限制力矩。QP 尽量保持原接触力、任务加速度和姿态加速度，并施加力矩限幅。（式 9–11；附录 B，式 42–43）",
+          "安全保证与冲突处理：连续时间、模型准确且始终可满足未放松的 CBF 条件等前提下，安全集合可保持不变；例如 \\(\\dot h\\geq-kh\\) 给出 \\(h(t)\\geq h(0)e^{-kt}\\geq0\\)。实践中式 44 加入非负松弛 \\(t_i\\)，允许 \\(\\dot h_i\\geq-\\alpha_i(h_i)-t_i\\)，并在目标中惩罚 \\(\\rho^\\top t\\)。它让冲突时仍可求解，但不等于为不同安全约束建立严格优先级。（附录 B、B.1；指数下界为该条件的直接推导）",
           "控制接口：先由 PD 目标计算并裁剪名义力矩，过滤后反算新位置目标。省略 body 下标时，\\(q_{\\mathrm{des}}^*=q+K_p^{-1}[\\Gamma^*-K_d(\\dot q_{\\mathrm{des}}-\\dot q)]\\)；原 RL 策略权重不更新。（式 12–13；§1.2）",
           "实现采用 JAX：frax 计算运动学与动力学，cbfpy 构造可微 CBF 项，qpax 求解 QP。v1 实验使用预训练 TWIST2 与 SONIC；这里记录实现流程，实验尚未逐项精读。（§2.1；§3 开头；附录 C.1、C.3）"
         ]
@@ -4932,7 +4938,7 @@
         "authors": "Daniel Morton, Pranit Mohnot, Marco Pavone",
         "institutions": "Stanford University; NVIDIA Research",
         "status": "v1 introduction and method reviewed (§§1–2; Appendices B, C.3)",
-        "takeaway": "Uses contact-consistent CBF-QPs to modify reference inputs or output torques around an unchanged pretrained RL tracker while preserving its motion tasks.",
+        "takeaway": "Turns collision and joint-limit requirements into bounds on how fast safety margins may decrease, then optimizes reference motion or output torque at each step without updating the RL policy.",
         "tags": [
           "ConstrainedMimic",
           "Control Barrier Functions",
@@ -4942,18 +4948,24 @@
           "Runtime Safety",
           "Unitree G1"
         ],
-        "mainContent": "ConstrainedMimic addresses deployment-time safety constraints and unsafe execution caused by tracking errors even when references are safe. It introduces CBF-QPs inside retargeting, on existing motion references, and on policy-output torques, using contact-constrained models and task-consistent modification objectives. This card covers the reviewed v1: simulated Unitree G1 demonstrations include self- and external-collision avoidance, joint limits, and CoM projection constraints, with deployment frequencies of 300–500 Hz reported in the abstract.",
+        "mainContent": "ConstrainedMimic adds safety filters before and after a pretrained RL tracker: modify reference motion at the input or the associated joint torques at the output. Control barrier functions (CBFs) encode margins to unsafe boundaries; a system model determines how an input changes those margins, and a quadratic program (QP) selects an admissible input while preserving the original tasks. This card covers v1: simulated Unitree G1 demonstrations include self- and external-collision avoidance, joint limits, and CoM projection constraints, with 300–500 Hz reported in the abstract.",
         "innovations": [
           "Two-sided safety interfaces: modify kinematic references before the policy and control commands after it, retaining unchanged pretrained tracking policies. (Fig. 1; §§1.2, 2)",
           "Contact-consistent constraint construction: build CBFs on full contact-constrained kinematics or dynamics so modifications respect the current support mode. (Eqs. 5, 9)",
           "Task-consistent objectives: preserve motion tasks and nullspace posture at the kinematic level, and additionally prioritize support contact forces at the dynamic level. (Eqs. 7–11)"
         ],
         "implementation": [
-          "Safety definition: \\(\\mathcal C=\\{z:h(z)\\geq0\\}\\). For \\(\\dot z=f(z)+g(z)u\\), impose \\(L_fh+L_gh\\,u\\geq-\\alpha(h)\\) to bound the decrease in safety margin. (Eq. 1; Appendix B)",
+          "Define a safety margin: \\(z\\) is the current state and \\(h(z)\\) is a scalar computed from it; \\(h>0\\) is inside the safe region, \\(h=0\\) is its boundary, and \\(h<0\\) is a violation. An illustrative collision margin is \\(h=d-d_{\\min}\\), with surface separation \\(d\\) and required minimum separation \\(d_{\\min}\\). This is an explanatory example; the paper uses the geometries in Eqs. 2–4.",
+          "System model in Eq. 1: \\(\\dot z=f(z)+g(z)u\\). The decision variable \\(u\\) is the control input, \\(f\\) describes state change independent of that input, and \\(g\\) maps input to state change. A dot denotes a time derivative. The paper optimizes velocity at the kinematic level and joint torque at the dynamic level. (§§2.1–2.4)",
+          "The left side of Eq. 1 follows from the chain rule: \\(\\dot h=\\frac{\\partial h}{\\partial z}\\dot z=\\underbrace{\\frac{\\partial h}{\\partial z}f(z)}_{L_fh}+\\underbrace{\\frac{\\partial h}{\\partial z}g(z)}_{L_gh}u\\). The two Lie-derivative terms describe margin change caused by the drift and by the input; their sum is the margin change per unit time. (Eq. 1; Appendix B)",
+          "Eq. 1 requires \\(\\dot h\\geq-\\alpha(h)\\). The function \\(\\alpha\\) determines how quickly the margin may decrease. For the common illustrative choice \\(\\alpha(h)=kh\\), \\(k>0\\), approaching the boundary is allowed with a large margin, but the permitted approach speed shrinks near the boundary; at \\(h=0\\), require \\(\\dot h\\geq0\\). This function regulates margin change, rather than weighting different safety objectives.",
+          "Numerical illustration, not a paper experiment: assume direct relative-velocity control \\(\\dot d=u\\). With 0.10 m margin and \\(k=2\\,\\mathrm{s}^{-1}\\), the CBF requires \\(u\\geq-0.20\\,\\mathrm{m/s}\\); negative means approaching and positive means separating. A nominal −0.50 m/s must be modified, whereas −0.10 m/s satisfies this constraint. At the boundary require \\(u\\geq0\\).",
+          "Computing the new command: Appendix Eq. 41 gives the basic filter \\(\\min_u\\|u-u_{\\mathrm{nom}}\\|_2^2\\) subject to Eq. 1, with original command \\(u_{\\mathrm{nom}}\\) and modified command \\(u\\). At a fixed state, Eq. 1 is linear in \\(u\\). The paper then measures intervention using task-space weighted objectives; safety inequalities and objective weights serve different roles.",
           "Constraint examples: joint limits \\(h=[q-q_{\\min};q_{\\max}-q]\\), sphere separation \\(h_{ij}=\\|x_i(q)-x_j(q)\\|_2-r_i-r_j\\), and CoM horizontal projection \\(h=b-Ax_{\\mathrm{CoM}}(q)\\). The last constraint keeps the projection inside the support polygon. (Eqs. 2–4)",
-          "Constrained retargeting: use \\(\\dot q=N_cu\\), minimize \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\), and enforce CBFs, velocity bounds, and slack variables. Human-to-G1 mapping uses 14 paired tasks; integrate the optimized velocity through constrained kinematics. (Eqs. 5–6; Appendix C.3)",
-          "Existing-reference filtering: minimize \\(\\left\\|\\begin{bmatrix}W_tJ_{t|c}\\\\W_nN_{t|c}\\end{bmatrix}(\\dot q-\\dot q_{\\mathrm{nom}})\\right\\|_2^2\\), measuring changes to task motion and nullspace posture. Filtering modifies reference motion rather than deleting unsafe frames. (Eqs. 7–8; final sentence interprets the workflow)",
-          "Dynamic filtering: state \\(z=[q,\\dot q]\\), input actuated torque \\(\\Gamma_{\\mathrm{body}}\\). Preserve contact forces, task accelerations, and nullspace posture accelerations subject to safety and torque bounds. Position barriers typically have relative degree two under torque control, using \\(h_2=\\dot h+\\alpha_1(h)\\) and \\(\\dot h_2+\\alpha_2(h_2)\\geq0\\). (Eqs. 9–11; Appendix B, Eqs. 42–43)",
+          "Constrained retargeting: in \\(\\dot q=N_cu\\), \\(q\\) is configuration, \\(u\\) a candidate velocity, and \\(N_c\\) projects it onto motions allowed by the current foot contacts. Minimize \\(\\sum_i\\|W_i(J_{i|c}u-\\nu_i)\\|_2^2\\): \\(J_{i|c}u\\) is robot task velocity, \\(\\nu_i\\) its desired value, and \\(W_i\\) a tracking weight. Human-to-G1 uses 14 paired tasks; solve with CBFs, velocity bounds and slack, then integrate to update the reference pose. (Eqs. 5–6; Appendix C.3)",
+          "Existing-reference filtering: optimize velocity \\(\\dot q\\) relative to nominal reference velocity \\(\\dot q_{\\mathrm{nom}}\\). Eq. 8 minimizes \\(\\|W_tJ_{t|c}(\\dot q-\\dot q_{\\mathrm{nom}})\\|_2^2+\\|W_nN_{t|c}(\\dot q-\\dot q_{\\mathrm{nom}})\\|_2^2\\). The Jacobian extracts changes in main task motion, the projector extracts changes in task-nullspace posture, and the weights set modification costs. Filtering changes motion rather than deleting frames; a command satisfying all conditions needs no modification. (Eqs. 7–8; workflow interpretation)",
+          "Dynamic filtering and higher-order CBFs: state \\(z=[q,\\dot q]\\), input joint torque \\(\\Gamma_{\\mathrm{body}}\\). Torque changes acceleration first, so a position margin derivative \\(\\dot h\\) typically does not explicitly contain torque. Differentiate again: construct \\(h_2=\\dot h+\\alpha_1(h)\\) and impose \\(\\dot h_2+\\alpha_2(h_2)\\geq0\\) to constrain torque. The QP preserves nominal contact forces, task accelerations and posture accelerations subject to torque bounds. (Eqs. 9–11; Appendix B, Eqs. 42–43)",
+          "Guarantees and conflicts: forward invariance requires conditions including continuous-time execution, an accurate model, and continual feasibility of the unrelaxed CBF condition. For example, \\(\\dot h\\geq-kh\\) implies \\(h(t)\\geq h(0)e^{-kt}\\geq0\\). Eq. 44 adds nonnegative slack \\(t_i\\), allowing \\(\\dot h_i\\geq-\\alpha_i(h_i)-t_i\\) and penalizing \\(\\rho^\\top t\\) in the objective. This helps maintain solvability but does not establish strict priorities among safety constraints. (Appendices B, B.1; the exponential bound is a direct derivation)",
           "Control interface: convert PD targets to clipped nominal torque, filter it, and recover a position target. Omitting body subscripts, \\(q_{\\mathrm{des}}^*=q+K_p^{-1}[\\Gamma^*-K_d(\\dot q_{\\mathrm{des}}-\\dot q)]\\). The RL policy weights remain unchanged. (Eqs. 12–13; §1.2)",
           "Implementation uses JAX, frax for kinematics/dynamics, cbfpy for differentiable CBF terms, and qpax for QPs. v1 experiments use pretrained TWIST2 and SONIC; this card records the implementation workflow, while experiments have not been reviewed individually. (§2.1; opening of §3; Appendices C.1, C.3)"
         ]
