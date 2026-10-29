@@ -56,7 +56,7 @@ const uiText = {
     arxiv: "arXiv",
     promptButton: "精读 Prompt v4",
     promptModalTitle: "论文精读 Prompt v4",
-    promptModalDescription: "可先生成精读报告，再用导师式 Prompt 深入讨论；也可直接用随读答疑 Prompt 配合 PDF 阅读。论文处理均在外部模型会话中进行。",
+    promptModalDescription: "四套 Prompt 均加入简短的论文定位要求，再按需精读或随读答疑。论文处理均在外部模型会话中进行。",
     promptPreview: "预览全文",
     copyFullPrompt: "复制全文",
     promptCopied: "已复制全文",
@@ -123,7 +123,7 @@ const uiText = {
     arxiv: "arXiv",
     promptButton: "Reading Prompts v4",
     promptModalTitle: "Paper Reading Prompts v4",
-    promptModalDescription: "Generate a report and follow up with the tutor prompt, or use the PDF reading Q&A prompt as you read. All paper processing happens in an external model conversation.",
+    promptModalDescription: "All four prompts include brief paper positioning before a report or reading Q&A. All paper processing happens in an external model conversation.",
     promptPreview: "Preview full prompt",
     copyFullPrompt: "Copy full prompt",
     promptCopied: "Full prompt copied",
@@ -144,7 +144,7 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20261009-rongrong-qa";
+const readingPromptsPath = "reading_prompts_v4.json?v=20261029-four-prompts";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
