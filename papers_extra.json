@@ -5301,6 +5301,106 @@
           "4. Closed-loop execution | At 50 Hz, the tracker maps the target window and current proprioception to joint setpoints; resulting images and states feed the next replan. Object removal changes subsequent planner targets, while body deviations trigger ongoing tracker adjustments. The policies train separately; another robot reuses the demonstrations but needs new mounts, models, and retraining of both policies. (Fig. 2, §IV-A, IV-D, pp. 4, 6)"
         ]
       }
+    },
+    {
+      "id": "str-spatiotemporal-retargeting",
+      "aliases": [
+        "STR / MCA",
+        "STR",
+        "MCA",
+        "STRL",
+        "Spatiotemporal Retargeting",
+        "Mechanics-Aware Contact Anchoring"
+      ],
+      "categories": [
+        "bfm-data",
+        "loco-manipulation",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.30540v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2610.30540",
+      "year": "2026",
+      "venue": "arXiv:2610.30540v1",
+      "zh": {
+        "title": "Motion Retargeting with Spatiotemporal Preferences for Humanoid Loco-Manipulation",
+        "authors": "Xiongbo Shi, Shihang Du, Zongyou Yu, Ao Zhou, Xudong Zhang, Ziyu Lin, Haodong Zhang, Junqiao Zhao, Guang Chen",
+        "institutions": "Physical Intelligence Lab, Tongji University; Shanghai Innovation Institute; RobotScale.AI",
+        "status": "部分已读：引言、相关工作、方法、关键实验与附录；MCA 为复习重点（本地 v1，未复现代码）",
+        "takeaway": "MCA 从示范手腕附近初始化物体表面锚点，交替求接触力与调整力臂，再让机器人手对齐精修后的固定接触目标。",
+        "tags": [
+          "MCA",
+          "STR",
+          "Contact Anchoring",
+          "Interaction Mesh",
+          "Motion Retargeting",
+          "Loco-Manipulation",
+          "PPO",
+          "Unitree G1",
+          "Unitree R1"
+        ],
+        "mainContent": "本文针对人形机器人搬运等任务中手与物体接触不准、重定向计算分配不均的问题，提出 STR，并配套 PPO 跟踪训练 STRL。复习重点 MCA 先根据示范物体运动和近似质量、惯量估计所需合力与力矩，再交替估计接触力和调整物体表面锚点，将位置与固定表面方向交给逐帧机器人优化；STR 同时给关键帧更多迭代、给关键部位更高交互误差权重。表 I 中完整 STR 的接触覆盖 PECR / 连续性 ECC 为 80.19% / 72.54%，OmniRetarget 为 33.65% / 24.63%；这些结果评价整体方法，未独立识别 MCA 力学精修的贡献。",
+        "innovations": [
+          "MCA 接触目标设计：在物体表面初始化双手锚点，通过受摩擦与压紧限制的接触力分配和力矩误差驱动的位置调整，精修固定物体局部接触目标；选定的表面方向保持不变。（第 5 页，式 5–7；附录 C-F–I，第 13–14 页）",
+          "STR 时空资源分配：视频语义选择运动信号和关键部位，轨迹分析确定阶段起始关键帧；求解预算按帧分配，交互残差按顶点及阶段进程加权，保留完整逐帧参考。（第 3–6 页，图 2，式 1–4、9）",
+          "STRL 配套训练：沿用 PPO 动作跟踪，加入关键阶段先验与失败率驱动的起点采样，以及对物体局部接触目标的位置奖励。（第 6–7 页，式 10–13）"
+        ],
+        "implementation": [
+          "MCA ① 初始化｜先确定持续接触区间，在源物体原点高度最高的代表帧，将示范左右手腕转换到物体坐标系；联合选择一对相对表面区域，使手腕到区域的距离和最小，再取区域内最近点作为初始锚点。初值来自人体手腕，优化变量是物体表面接触位置。（第 5 页式 5；附录 C-D/F，第 12–13 页）",
+          "MCA ② 物体需求｜平滑示范的物体平移与角速度并求导，以近似质量、惯量计算所需接触合力与合力矩：\\(F_t^{\\mathrm{req}}=m_d(\\ddot z_{O,t}^{H}-g)\\)，\\(\\tau_t^{\\mathrm{req}}=I_t\\dot\\omega_t+\\omega_t\\times(I_t\\omega_t)\\)。表 VI 使用设计质量 2 kg、物体坐标系惯量 0.04 I₃ kg·m²；这是模型输入，不是真实接触力测量。（第 12–13 页，表 VI、式 22）",
+          "MCA ③ 固定点求力｜固定锚点，联合求接触区间内各帧的力 \\(f_{t,p}\\)，使合力与合力矩接近物体需求；每个点的力矩为 \\(r_{t,p}\\times f_{t,p}\\)。约束包括正向压紧、法向力范围和摩擦锥，并正则化力的大小及相邻帧变化。（第 5 页式 6；第 13 页式 23–24）",
+          "MCA ④ 固定力调点｜固定刚估计的接触力，在所选表面区域的切平面坐标内移动锚点：移动改变力臂，因此能减少力矩误差；位移正则化使其保持接近初始示范位置。固定力时合力不变，该子步骤主要改善力矩匹配。每只手在整个接触区间共享一个锚点；每次调整后投影回表面，进行三轮力分配—锚点调整—投影，再最终分配一次力。（第 13 页式 25）",
+          "MCA ⑤ 交给机器人｜精修后构造固定物体局部位置目标 \\(a_p^\\star=a_p-d_{0,p}n_p\\) 与方向目标 \\(-n_p\\)，其中向内偏移为 0.3 mm。后续用机器人真实手部接触几何的支撑点做正运动学，跟踪位置 \\(h_{t,p}(q)\\approx a_p^\\star\\) 和方向 \\(v_{t,p}(q)\\approx-n_p\\)；接触激活在起始 5 帧渐入，并可跨越相继阶段。（第 5 页式 7；第 12–14 页，表 VI、式 20、26）",
+          "MCA ⑥ 求解边界｜MCA 是机器人逐帧 SQP 前的近似力学数值优化，通过模型评价力与锚点，没有在仿真器中试抓，也没有在这一步求机器人关节配置。机器人可达性与关节约束由后续 STR 求解处理；中间接触力帮助设计锚点，不直接作为 PD 或策略的力指令。附录 C-G 明确说明软性 wrench 匹配不建立动态可行性。（第 5–6、12–14 页）",
+          "STR 输入与阶段｜使用与视频对齐的 SMPL 人体运动和物体轨迹；VLM 从预设信号库选择速度信号及关键部位，轨迹变化与阈值用于定位关键阶段，阶段第一帧作为关键帧。输出是机器人稠密参考，重定向期间物体轨迹固定。（第 3–4 页，式 1）",
+          "STR 三种量要分开｜拉普拉斯坐标 \\(\\delta_{t,i}=x_{t,i}-\\sum_{j\\in\\mathcal N_t(i)}\\omega_{ij}x_{t,j}\\) 使用均匀邻居权重；空间倍率与时间因子改变的是误差前的 \\(\\alpha_{t,i}\\)，不改邻居平均权重 \\(\\omega_{ij}\\)；MCA 则精修接触目标 \\(a_p^\\star\\)。源与目标在每帧共享源图连接与拉普拉斯矩阵。（第 5 页式 4；第 14 页式 28）",
+          "STR 时空偏好｜所选手部、其他身体顶点、相邻物体顶点的基础倍率分别为 4、2、2，其余为 1；时间因子在关键帧峰值后衰减到正下限，再将顶点权重归一化为均值 1。首帧、后续关键帧、普通帧的 SQP 上限为 50 / 4 / 2；普通帧仍有部位侧重与接触目标，上一帧解初始化下一帧。（第 4–6 页式 2–4；第 12 页表 VI）",
+          "STR 机器人优化｜逐帧求 \\(\\Delta q\\)，综合加权交互网格残差、接触位置、接触方向、时间连续性与关节正则项，同时施加线性化非穿透、支撑脚、配置范围与步长限制。每次接受更新后重新线性化，直到收敛或预算用尽；网格代表点与手部几何支撑点承担不同作用。（第 5–6 页式 7–9；附录 C-E/I/J）",
+          "STRL 跟踪｜PPO actor 接收本体状态、参考命令与前一动作，输出转换为 PD 关节位置目标；critic 额外接收身体与物体特权状态。阶段起点优先级为 \\(\\pi_j\\propto |I_j|w_j(f_j+\\beta)\\)，并混入全局均匀采样。新增奖励为 \\(r_n^{\\mathrm{contact}}=\\gamma_n\\exp(-e_{c,n}^2/\\sigma^2)\\)，其中目标随实际物体位姿移动；正文式 12 与附录 B-E 定义的位置奖励没有显式接触力项。（第 6–7 页式 10–13；第 12 页式 18）",
+          "结果与范围｜表 I：完整 STR / OmniRetarget 的 PECR 为 80.19 / 33.65%，ECC 为 72.54 / 24.63%，平均 SQP 迭代为 353.10 / 1471.10；STR 仍有 4.84% 穿透时长与 0.82 cm 最大深度。表 III：OmniRetarget+RL、STR+RL、STR+STRL 成功率为 32.97%、81.25%、86.56%。G1 用于仿真，R1 用于实机；附录 A-B 说明历史评估的参考、奖励版本及训练预算存在差异，未单独隔离接触奖励效果。（第 7–8、11 页）",
+          "消融归因｜表 II 的 w/o spatial 同时将交互权重设为 1、删除接触位置和方向目标；PECR / ECC 从完整方法的 80.19 / 72.54% 降至 34.25 / 24.10%。w/o temporal 同时改变预算、阶段权重时序及接触激活。没有单独比较“初始几何锚点 vs MCA 精修锚点”，也没有在相同接触目标下单独去掉部位权重，因此无法把接触提升单独归因于 MCA 或时空加权。（第 8 页表 II；第 12 页附录 C-B）"
+        ]
+      },
+      "en": {
+        "title": "Motion Retargeting with Spatiotemporal Preferences for Humanoid Loco-Manipulation",
+        "authors": "Xiongbo Shi, Shihang Du, Zongyou Yu, Ao Zhou, Xudong Zhang, Ziyu Lin, Haodong Zhang, Junqiao Zhao, Guang Chen",
+        "institutions": "Physical Intelligence Lab, Tongji University; Shanghai Innovation Institute; RobotScale.AI",
+        "status": "Partially read: introduction, related work, method, selected experiments and appendices; MCA-focused notes (local v1; code not reproduced)",
+        "takeaway": "MCA initializes object-surface anchors near demonstrated wrists, alternates contact-force estimation with moment-arm adjustment, and asks robot hands to track the refined fixed contact targets.",
+        "tags": [
+          "MCA",
+          "STR",
+          "Contact Anchoring",
+          "Interaction Mesh",
+          "Motion Retargeting",
+          "Loco-Manipulation",
+          "PPO",
+          "Unitree G1",
+          "Unitree R1"
+        ],
+        "mainContent": "The paper addresses inaccurate body–object contacts and inefficient retargeting computation in humanoid carrying tasks through STR, followed by PPO-based STRL tracking. The focus of these notes is MCA: source object motion and approximate mass/inertia specify a required wrench; alternating force allocation and surface-anchor adjustment produces fixed position and direction targets for frame-wise robot optimization, alongside keyframe budgets and weighted interaction residuals. In Table I, full STR achieves PECR/ECC of 80.19%/72.54% versus 33.65%/24.63% for OmniRetarget; these evaluate the combined method rather than isolating mechanics-based anchor refinement.",
+        "innovations": [
+          "MCA contact-target design: initialize bimanual surface anchors, alternate force allocation under compression/friction limits with moment-error-driven position refinement, and retain selected surface directions to supply fixed object-local targets. (p. 5, Eqs. 5–7; Appendix C-F–I, pp. 13–14)",
+          "STR computation and objective priorities: video interpretation selects signals and body parts, trajectory analysis locates stage-onset keyframes, frame budgets allocate computation, and vertex/stage weights emphasize interaction residuals while retaining dense references. (pp. 3–6, Figure 2, Eqs. 1–4 and 9)",
+          "STRL training additions: retain PPO tracking while adding training-start priorities from key-stage priors and failure rates, plus a position reward for object-local contact targets. (pp. 6–7, Eqs. 10–13)"
+        ],
+        "implementation": [
+          "MCA 1 — Initialize: determine the sustained contact interval and choose the frame of maximum source object-origin height. Express demonstrated wrists in object coordinates, jointly select opposing surface regions minimizing summed wrist-to-region distances, and use nearest points as initial anchors. Human wrists initialize object-surface variables. (p. 5, Eq. 5; Appendix C-D/F, pp. 12–13)",
+          "MCA 2 — Required wrench: smooth source object translation/angular velocity and differentiate. Approximate mass and inertia give \\(F_t^{\\mathrm{req}}=m_d(\\ddot z_{O,t}^{H}-g)\\) and \\(\\tau_t^{\\mathrm{req}}=I_t\\dot\\omega_t+\\omega_t\\times(I_t\\omega_t)\\). Table VI uses design mass 2 kg and object-frame inertia 0.04 I₃ kg·m²; these are model inputs, not measured contact forces. (pp. 12–13, Table VI, Eq. 22)",
+          "MCA 3 — Allocate forces at fixed anchors: jointly estimate \\(f_{t,p}\\) over the contact interval to match required resultant force and moment, with each moment \\(r_{t,p}\\times f_{t,p}\\). Enforce compression, normal-force bounds, and friction cones, while regularizing force magnitude and temporal changes. (p. 5, Eq. 6; p. 13, Eqs. 23–24)",
+          "MCA 4 — Move anchors at fixed forces: optimize tangent-plane coordinates inside selected regions. Changing moment arms reduces moment error; displacement regularization keeps anchors near initialization. The resultant force stays unchanged in this subproblem. Each hand shares one anchor across the contact interval. Project updates back to surfaces; perform three allocation–adjustment–projection rounds followed by final force allocation. (p. 13, Eq. 25)",
+          "MCA 5 — Robot targets: form fixed object-local targets \\(a_p^\\star=a_p-d_{0,p}n_p\\) and \\(-n_p\\), with 0.3 mm inward offset. Forward kinematics of physical robot-hand support geometry then tracks \\(h_{t,p}(q)\\approx a_p^\\star\\) and \\(v_{t,p}(q)\\approx-n_p\\). Contact activation ramps over 5 frames and can span consecutive stages. (p. 5, Eq. 7; pp. 12–14, Table VI, Eqs. 20 and 26)",
+          "MCA 6 — Scope: this is approximate mechanics-based numerical optimization before frame-wise robot SQP, without simulator grasp trials or robot joint optimization inside MCA. Subsequent STR handles robot reachability and joint constraints. Estimated forces design anchors rather than directly commanding the policy or PD controller. Appendix C-G explicitly states that soft wrench matching does not establish dynamic feasibility. (pp. 5–6 and 12–14)",
+          "STR inputs/stages: use video-aligned SMPL human motion and object trajectories. A VLM selects velocity signals from a predefined bank and key body parts; trajectory changes and thresholds resolve stages, whose first frames are keyframes. Retargeting produces dense robot references while fixing the object trajectory. (pp. 3–4, Eq. 1)",
+          "STR three distinct quantities: Laplacian coordinates \\(\\delta_{t,i}=x_{t,i}-\\sum_{j\\in\\mathcal N_t(i)}\\omega_{ij}x_{t,j}\\) use uniform neighbor weights. Part multipliers and temporal factors change residual weights \\(\\alpha_{t,i}\\), not neighbor averaging weights \\(\\omega_{ij}\\); MCA refines contact targets \\(a_p^\\star\\). Source and target share source-graph connectivity and the same Laplacian within each frame. (p. 5, Eq. 4; p. 14, Eq. 28)",
+          "STR priorities: selected hand, other selected body, and adjacent object vertices have base multipliers 4, 2, and 2, versus 1 elsewhere. A keyframe-peaked temporal factor decays to a positive floor; vertex weights are normalized to mean one. Initial/key/ordinary frame SQP caps are 50/4/2. Ordinary frames retain part emphasis and contact objectives; each solution initializes the next frame. (pp. 4–6, Eqs. 2–4; p. 12, Table VI)",
+          "STR robot solve: optimize \\(\\Delta q\\) per frame using weighted interaction residuals, anchor positions, surface directions, temporal continuity, and joint regularization under linearized nonpenetration, stance-foot, configuration, and step constraints. Relinearize accepted updates until convergence or the iteration cap. Interaction-graph representatives and geometric hand support points serve different roles. (pp. 5–6, Eqs. 7–9; Appendix C-E/I/J)",
+          "STRL tracking: the PPO actor consumes proprioception, reference commands, and previous action, mapped to PD joint-position targets; the critic additionally gets privileged body/object states. Stage priorities satisfy \\(\\pi_j\\propto |I_j|w_j(f_j+\\beta)\\), mixed with global uniform starts. Added reward \\(r_n^{\\mathrm{contact}}=\\gamma_n\\exp(-e_{c,n}^2/\\sigma^2)\\) tracks anchors attached to the actual object pose. Eq. 12 and Appendix B-E contain no explicit contact-force factor in this position reward. (pp. 6–7, Eqs. 10–13; p. 12, Eq. 18)",
+          "Results/scope: full STR versus OmniRetarget has PECR 80.19/33.65%, ECC 72.54/24.63%, and mean SQP iterations 353.10/1471.10. STR still has penetration duration 4.84% and maximum depth 0.82 cm. Table III success rates are 32.97%, 81.25%, and 86.56% for OmniRetarget+RL, STR+RL, and STR+STRL. G1 is simulated and R1 tested on hardware. Appendix A-B notes differing archived reference/reward versions and training budgets, so these evaluations do not isolate the contact reward. (pp. 7–8 and 11)",
+          "Ablation attribution: w/o spatial jointly makes interaction weights uniform and removes both position and direction objectives; PECR/ECC drop from 80.19/72.54% to 34.25/24.10%. w/o temporal changes budgets, stage-weight timing, and contact activation together. There is no geometric-initial-anchor versus MCA-refined-anchor comparison, nor an isolated part-weight ablation at fixed contact targets, so contact gains cannot be assigned independently to MCA or spatiotemporal weights. (p. 8, Table II; p. 12, Appendix C-B)"
+        ]
+      }
     }
   ]
 }

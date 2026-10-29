@@ -43,5 +43,13 @@
     "en": {
       "note": "Personal assessment: feels like staking out a research niche; retain the idea at low priority. Post-training preference tuning provides a usable interface, but HLP is mainly compared with equal fixed weights and reduces MAE by only 0.47° (about 4.7%); Table 2 reports no across-training-seed uncertainty or confidence intervals. Without well-tuned global or per-motion fixed-weight baselines, the contribution of dynamic adaptation is not isolated. Mutual non-dominance among sampled policies does not establish proximity to the true optimal front. Hardware results mainly use manual tuning and should be distinguished from simulated HLP evaluations. Novelty has not been systematically audited and code has not been reproduced."
     }
+  },
+  "str-spatiotemporal-retargeting": {
+    "zh": {
+      "note": "本次复习重点是 MCA：人类手腕提供几何初值，物体运动与近似质量/惯量提供力学需求，固定锚点求力、固定力调锚点，最后由机器人运动学把手的接触支撑点贴到固定物体局部目标。MCA 中移动点改变的是力臂；它没有在仿真器里试抓，也没有更新机器人关节。另一个要分清的层次是：均匀邻居权重决定拉普拉斯坐标如何计算，STR 的时空权重决定哪些坐标残差更重要，MCA 决定接触目标放在哪里。阅读评价：STR 是前端参考优化，STRL 仍是 PPO mimic 框架上的采样与奖励增强；这只是方法定位，不代表已经严格证明贡献大小。尤其不能把接触收益直接认定为 MCA 力学精修的独立贡献：w/o spatial 同时删除了部位加权及接触位置、方向目标。应在相同权重、方向目标、接触激活及求解预算下对比初始几何锚点与精修锚点，再在相同锚点下单独去掉部位权重。"
+    },
+    "en": {
+      "note": "MCA is the focus of this reading: human wrists initialize geometry; source object motion and approximate mass/inertia specify mechanical demand; fixed anchors give forces, then fixed forces guide anchor movement; robot kinematics finally aligns geometric hand support points with fixed object-local targets. Moving anchors changes moment arms. MCA does not run simulator grasp trials or update robot joints. Keep three layers separate: uniform neighbor weights define Laplacian coordinates, STR residual weights prioritize those coordinates, and MCA selects contact targets. Reading assessment: STR optimizes references upstream, while STRL augments PPO mimic sampling and rewards; this positioning does not prove relative contribution sizes. In particular, contact gains cannot be attributed independently to mechanical refinement: w/o spatial also removes part weighting and both contact objectives. Compare initial versus refined anchors at fixed weights, direction targets, activation, and solver budget, then separately remove part weighting at fixed anchors."
+    }
   }
 }
