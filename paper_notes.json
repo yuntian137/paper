@@ -51,5 +51,13 @@
     "en": {
       "note": "MCA is the focus of this reading: human wrists initialize geometry; source object motion and approximate mass/inertia specify mechanical demand; fixed anchors give forces, then fixed forces guide anchor movement; robot kinematics finally aligns geometric hand support points with fixed object-local targets. Moving anchors changes moment arms. MCA does not run simulator grasp trials or update robot joints. Keep three layers separate: uniform neighbor weights define Laplacian coordinates, STR residual weights prioritize those coordinates, and MCA selects contact targets. Reading assessment: STR optimizes references upstream, while STRL augments PPO mimic sampling and rewards; this positioning does not prove relative contribution sizes. In particular, contact gains cannot be attributed independently to mechanical refinement: w/o spatial also removes part weighting and both contact objectives. Compare initial versus refined anchors at fixed weights, direction targets, activation, and solver budget, then separately remove part weighting at fixed anchors."
     }
+  },
+  "ddppo-gradient-information-policy-optimization": {
+    "zh": {
+      "note": "随读理解：直接改的是环境模型对输入导数的学习及其在 actor 反传中的使用，不是事后纠正一个已算出的策略梯度。可以联系 Sobolev training，但值与导数联合监督、随机投影和有限差分已有先例；本文的辨识度在模型误差到策略优化的理论联系与双模型使用方式。保留的疑问：若 \\(v=hu\\)，方向差分的截断误差为 \\(O(h)\\)；有随机噪声时，更近的邻居也可能使导数估计噪声更大，方向覆盖不足还会遗漏完整 Jacobian 的误差。式（9）虽未除以距离，真实输出差中的噪声仍存在。定理给的是模型误差的条件性上界，论文未给出由有限方向的经验损失直接控制完整 Jacobian 误差的一般保证。"
+    },
+    "en": {
+      "note": "Reading interpretation: the direct intervention is learning environment input derivatives and using them in actor backpropagation, rather than correcting an already computed policy gradient afterward. The Sobolev connection is useful, but joint value/derivative supervision, random projections, and finite differences have precedents; the distinctive contribution is the model-error-to-policy-optimization analysis and two-model usage. Open concern: for \\(v=hu\\), directional finite differences have \\(O(h)\\) truncation error; stochastic noise can make derivative estimates noisier for closer neighbors, while limited direction coverage leaves full-Jacobian error unidentified. Although Eq. (9) does not divide by distance, noise remains in observed output differences. The theorems give conditional model-error bounds, without a general guarantee translating the finite-direction empirical loss into full-Jacobian accuracy."
+    }
   }
 }
