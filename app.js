@@ -144,7 +144,7 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20261029-four-prompts";
+const readingPromptsPath = "reading_prompts_v4.json?v=20261101-expression";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
