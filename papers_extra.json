@@ -5492,6 +5492,92 @@
           "Theoretical scope | Analysis assumes smoothness, boundedness, and ergodicity. Appendix C.1 states that its Theorem 1 derivation applies when the dynamics Lipschitz constant is below 1; more general dynamics require additional trajectory-error control. Model bias limits the guaranteed accuracy near a stationary point. (§4.1, Appendix C)"
         ]
       }
+    },
+    {
+      "id": "nablamimic-differentiable-simulation",
+      "aliases": [
+        "∇Mimic",
+        "NablaMimic",
+        "NablaEngine"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "bfm-tracking",
+        "locomotion"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.41654v1",
+      "project": "https://github.com/OamIcs/NablaMimic",
+      "arxiv": "https://arxiv.org/abs/2610.41654v1",
+      "year": "2026",
+      "venue": "arXiv:2610.41654v1",
+      "zh": {
+        "title": "∇Mimic: Ultra-Efficient Humanoid Control with Differentiable Simulation",
+        "authors": "Weyl Lu, Yubei Chen",
+        "institutions": "University of California, Davis",
+        "status": "核心方法与关键实验已整理，附录 B–C 已核查；未复现代码",
+        "takeaway": "用带解析反向传播的 G1 专用物理仿真库直接提供动力学梯度，配合逐样本裁剪和有界动作目标回归，高效训练全身动作跟踪策略。",
+        "tags": [
+          "NablaEngine",
+          "Differentiable Simulation",
+          "First-Order Policy Gradient",
+          "Per-Sample Gradient Clipping",
+          "Action-Target Regression",
+          "BPTT",
+          "Unitree G1",
+          "Motion Tracking"
+        ],
+        "mainContent": "接触丰富的人形动作跟踪中，直接通过物理仿真反传会遇到少数极端梯度和昂贵的求导开销。∇Mimic 在反传各步按样本裁剪动作梯度，将其转换为尺度受控的动作目标并多步回归策略；NablaEngine 则以 G1 专用 CUDA 实现执行 MuJoCo 动力学及解析反向传播。作者在全部 40 条 LAFAN1 动作上训练一个策略，报告单张 RTX PRO 6000 约 20 分钟达到 0.82 归一化回报，1.8 小时达到 0.874。",
+        "innovations": [
+          "梯度失效机制｜比较仿真器与世界模型梯度，发现多数样本的信号接近，少数接触与几何奇异事件产生的极端尾部可支配整批更新；这解释了全局梯度裁剪难以保留正常样本信号的原因。（§4，图 2–3）",
+          "逐样本稳定化｜在 BPTT 每个反向时间步，将一个环境的动作梯度向量范数限制在批次中位数的 3 倍，随后再次裁剪窗口动作梯度，限制离群样本的影响。（§5.1，式 4）",
+          "动作目标与多步回归｜借鉴 PODS，将裁剪梯度转成 \\(y=a+\\delta\\tilde g/\\operatorname{RMS}(\\tilde g)\\)，多次拟合同一窗口的目标。与裁剪结合后，每个样本目标的逐关节 RMS 位移至多为 \\(\\sqrt{2}\\kappa\\delta\\)，论文设置约 0.13 rad；该推导约束目标位移。（§5.2–5.3，式 5–6）",
+          "专用可微仿真系统｜NablaEngine 对运动学、碰撞、约束求解和积分实现解析 adjoint，并融合 GPU kernel；在同一 RTX PRO 6000、4096 个环境下，前向加梯度计算比所比较的 MuJoCo Warp adjoint 实现快 11.5 倍。（§6，表 3）"
+        ],
+        "implementation": [
+          "1. 数据与控制｜使用重定向到 G1 的全部 40 条 LAFAN1 动作，共 264,705 帧、约 2.45 小时。控制频率为 50 Hz，每个控制步包含 4 个 5 ms 物理子步；策略读取最近 10 帧本体观测和未来 10 帧参考，输出 29 维参考关节角残差，参考加残差构成 PD 目标。（§3、§5.5、§7.1）",
+          "2. 训练流程｜当前策略采集状态进入 FIFO replay；从中抽取起点展开 H=64 步物理轨迹，反传窗口回报和末端 critic 价值。处理后的动作梯度生成固定目标，再由独立 Adam 执行多步策略回归；critic 用 TD(λ) 拟合。消融分别检查裁剪、回归次数、窗口长度和残差动作。（算法 1，§5，图 4、表 2）",
+          "3. 库的形态｜NablaEngine 是 Python 包与专用 CUDA 动态库：底层源代码由 nvcc 编译，PyTorch 通过 autograd.Function 接入，JAX 通过 custom_vjp 接入。前向保存接触、约束和求解器状态到 tape，反向程序计算状态与动作的梯度；动力学与反向规则由物理算法定义。（§6、附录 B；官方仓库 docs/api.md、docs/api_torch.md）",
+          "4. 接触求导与加速｜固定接触集合、有效约束和限幅分支，对接触求解的最优性条件做隐式微分。一个环境映射到一个 32 线程 warp；每个物理子步前向运行两个 kernel，整个控制步的反向融合为一个 megakernel。4096 个环境前向为 1.21 ms，前向加反向为 1.78 ms。（§6、附录 B，表 3）",
+          "5. Exact 与训练模式｜训练默认在自接触核心距离低于 1 mm 时冻结法向导数，在胶囊体夹角低于约 2° 时固定最近点线段参数，并对力饱和执行器保留阻尼导数项。引擎另有 exact 模式用于导数检验；这些反向选项共享相同的前向计算。（§6、附录 B）",
+          "6. 数值正确性｜用 16,384 个状态对照 float64 MuJoCo，前向速度的中位相对误差为 8.5×10⁻⁷。梯度检验按状态组抽样，以中心有限差分检查解析 VJP；表 7 平滑且无执行器饱和组的动作梯度中位相对误差为 1.9×10⁻⁶。（附录 C，表 7–9）",
+          "7. 分离算法与引擎｜保持绝对动作版算法和奇异梯度规则一致，在 NablaEngine 与 MuJoCo Warp adjoint 上训练：按更新次数的学习曲线基本重合，按时间 NablaEngine 约快 4.7 倍。前者 3 个种子、后者 1 个种子；这个对照检验引擎对计算速度的贡献。（§7.3，图 5）",
+          "8. 评估与比较｜策略在 MuJoCo Warp 中逐条从动作首帧评估，关闭随机化与观测噪声。20 分钟达到的 0.82 是归一化回报；SuperMimic 的 1.2 小时为其原文报告的单张 H100 结果，硬件不同。本文主要训练配置使用 RTX PRO 6000；验证范围为 G1 平地仿真与这 40 条动作的训练覆盖，真机部署和更大动作库留待后续。（§7–8，表 4）"
+        ]
+      },
+      "en": {
+        "title": "∇Mimic: Ultra-Efficient Humanoid Control with Differentiable Simulation",
+        "authors": "Weyl Lu, Yubei Chen",
+        "institutions": "University of California, Davis",
+        "status": "Core methods and key experiments summarized; Appendices B–C checked; code not reproduced",
+        "takeaway": "Uses a G1-specific physics library with an analytic backward pass to supply dynamics gradients, then combines per-sample clipping and bounded action-target regression for efficient whole-body tracking.",
+        "tags": [
+          "NablaEngine",
+          "Differentiable Simulation",
+          "First-Order Policy Gradient",
+          "Per-Sample Gradient Clipping",
+          "Action-Target Regression",
+          "BPTT",
+          "Unitree G1",
+          "Motion Tracking"
+        ],
+        "mainContent": "Direct backpropagation through contact-rich humanoid simulation encounters rare extreme gradients and costly differentiation. ∇Mimic clips action gradients per sample during backward passes, converts them into scale-controlled action targets, and fits the policy through multiple regression steps; NablaEngine executes MuJoCo dynamics and their analytic adjoint in G1-specific CUDA code. One policy tracks all 40 LAFAN1 clips, reaching a normalized return of 0.82 in about 20 minutes and 0.874 in 1.8 hours on one RTX PRO 6000.",
+        "innovations": [
+          "Gradient failure mechanism | Compare simulator and world-model gradients: most samples provide similar signals, while extreme tails near contact and geometric singularities can dominate a batch update, explaining why global gradient clipping suppresses useful signals from ordinary samples. (§4, Figures 2–3)",
+          "Per-sample stabilization | At each reverse BPTT step, cap each environment's action-gradient vector norm at three times the batch median, then clip the window action gradients again to limit outlier influence. (§5.1, Eq. 4)",
+          "Action targets and multistep regression | Building on PODS, form \\(y=a+\\delta\\tilde g/\\operatorname{RMS}(\\tilde g)\\) and fit the same window targets repeatedly. Together with clipping, each sample's per-joint RMS target displacement is at most \\(\\sqrt{2}\\kappa\\delta\\), about 0.13 rad in the reported setting; the derivation bounds target displacement. (§5.2–5.3, Eqs. 5–6)",
+          "Specialized differentiable simulation | NablaEngine implements analytic adjoints for kinematics, collision, constraint solving, and integration with fused GPU kernels. Forward plus gradient computation is 11.5 times faster than the compared MuJoCo Warp adjoint implementation on the same RTX PRO 6000 with 4096 worlds. (§6, Table 3)"
+        ],
+        "implementation": [
+          "1. Data and control | All 40 G1-retargeted LAFAN1 clips contain 264,705 frames and about 2.45 hours of motion. Control runs at 50 Hz with four 5 ms physics substeps. The policy consumes 10 past proprioceptive frames and 10 future reference frames, predicting 29 joint-angle residuals; reference plus residual defines the PD targets. (§3, §5.5, §7.1)",
+          "2. Training | Collect current-policy states into FIFO replay, sample starting states, and differentiate H=64 physical rollout windows with terminal critic bootstrapping. Processed action gradients define fixed targets for multiple regression steps under a separate Adam optimizer; fit the critic with TD(λ). Ablations examine clipping, regression steps, horizon, and residual actions. (Algorithm 1, §5, Figure 4, Table 2)",
+          "3. Library structure | NablaEngine combines a Python package with a specialized CUDA shared library compiled by nvcc. PyTorch connects through autograd.Function and JAX through custom_vjp. The forward pass records contacts, constraints, and solver state on a tape; its backward computes state and action derivatives from the physical algorithms. (§6, Appendix B; official docs/api.md and docs/api_torch.md)",
+          "4. Contact differentiation and speed | Hold contact sets, active constraints, and clamp branches fixed and implicitly differentiate the contact solve's optimality conditions. One world maps to a 32-thread warp; each physics substep uses two forward kernels, while one megakernel reverses the entire control step. For 4096 worlds, forward takes 1.21 ms and forward plus backward 1.78 ms. (§6, Appendix B, Table 3)",
+          "5. Exact and training modes | Training defaults freeze self-contact normal derivatives below a 1 mm core distance, fix closest-point segment parameters for capsule angles below about 2°, and retain an actuator damping derivative under force saturation. A separate exact mode supports derivative checks; all backward variants share the same forward computation. (§6, Appendix B)",
+          "6. Numerical correctness | Across 16,384 states, median forward velocity error against float64 MuJoCo is 8.5×10⁻⁷. Gradient checks sample states by group and compare analytic VJPs with central finite differences; Table 7 reports median action-gradient error of 1.9×10⁻⁶ on smooth states without actuator saturation. (Appendix C, Tables 7–9)",
+          "7. Separate engine and algorithm | With the absolute-action algorithm and singular-gradient rules matched, learning curves on NablaEngine and the MuJoCo Warp adjoint overlap per update, while NablaEngine is about 4.7 times faster by wall clock. The comparison uses three NablaEngine seeds and one MuJoCo Warp seed, isolating the engine's computational contribution. (§7.3, Figure 5)",
+          "8. Evaluation and comparison | Evaluate each clip from its first frame in MuJoCo Warp with randomization and observation noise disabled. The 0.82 reached in 20 minutes is normalized return; SuperMimic's 1.2-hour figure is taken from its paper on one H100, a different GPU. Main runs here use an RTX PRO 6000. Evidence covers G1 flat-ground simulation and training coverage of these 40 clips; hardware deployment and larger libraries remain future work. (§7–8, Table 4)"
+        ]
+      }
     }
   ]
 }
