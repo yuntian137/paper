@@ -5578,6 +5578,87 @@
           "8. Evaluation and comparison | Evaluate each clip from its first frame in MuJoCo Warp with randomization and observation noise disabled. The 0.82 reached in 20 minutes is normalized return; SuperMimic's 1.2-hour figure is taken from its paper on one H100, a different GPU. Main runs here use an RTX PRO 6000. Evidence covers G1 flat-ground simulation and training coverage of these 40 clips; hardware deployment and larger libraries remain future work. (§7–8, Table 4)"
         ]
       }
+    },
+    {
+      "id": "itpo-offline-rl-differentiable-world-models",
+      "aliases": [
+        "ITPO",
+        "DiffMPC",
+        "FlowMPC",
+        "MPCwDWM"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "vla-world-model",
+        "locomotion"
+      ],
+      "pdf": "https://arxiv.org/pdf/2603.22430v2",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2603.22430",
+      "year": "2026",
+      "venue": "arXiv:2603.22430v2",
+      "zh": {
+        "title": "Inference Time Policy Optimization for Offline RL with Differentiable World Models",
+        "authors": "Rohan Deb, Steven J. Wright, Arindam Banerjee",
+        "institutions": "University of Illinois Urbana-Champaign; University of Wisconsin–Madison",
+        "status": "方法与理论附录已阅读，关键实验已核查（v2；未复现代码）",
+        "takeaway": "离线训练好世界模型和策略后，每个执行步从当前状态做想象 rollout，对回报反传更新策略参数；世界模型、奖励模型和 critic 始终冻结。",
+        "tags": [
+          "ITPO",
+          "DiffMPC",
+          "FlowMPC",
+          "Offline RL",
+          "Differentiable World Model",
+          "BPTT",
+          "MPC",
+          "Inference-Time Adaptation"
+        ],
+        "mainContent": "离线 RL 策略通常在训练结束后直接执行，本文利用额外的推理计算改进当前状态下的决策。MPCwDWM 从实际观测状态出发，在可微世界模型中生成短期轨迹，用预测奖励与终端 critic 组成回报，对策略参数做梯度上升后再执行动作；执行过程中不重新训练世界模型。DiffMPC 在 D4RL MuJoCo 与 AntMaze 上改善预训练离线策略，FlowMPC 用一步 MeanFlow 转移模型降低想象与反传成本。",
+        "innovations": [
+          "执行时的策略参数优化：将短时模型 rollout 的回报梯度用于部署阶段的 actor 更新，围绕每个当前状态反复规划和执行。（§4，算法 1，第 6–7 页）",
+          "可微生成动力学：将扩散采样重参数化为状态、动作和固定噪声的函数，保留对状态与动作的导数，使梯度穿过采样器及多步闭环轨迹。（§3.1，附录 B，第 4–5、20–25 页）",
+          "推理成本折中：FlowMPC 以一步 MeanFlow 替代多步去噪，并用预训练策略倾斜的损失分配模型容量，减少每次想象转移的计算。（§6，附录 F，第 11–12 页）"
+        ],
+        "implementation": [
+          "1. 离线训练｜用固定转移数据训练条件动力学采样器与奖励模型，预训练带行为克隆正则的 actor–critic；实验主要以 ReBRAC 初始化，并补充 SAC-RND。（§3、§5，附录 D.6）",
+          "2. 执行流程｜观察当前状态，采样 M 条长度 H 的想象轨迹；累加折扣预测奖励并加入末端 critic 的动作价值，对 actor 做 E 次梯度上升，再用更新后的策略执行一个实际动作，进入下一个状态。（§4，算法 1，第 6–7 页）",
+          "3. 更新边界｜部署时只改策略参数，动力学、奖励模型和 critic 权重固定，但保留它们对输入的导数。实际新状态提供下一轮想象的起点，算法没有将新 transition 回灌以训练 WM。（§4，算法 1）",
+          "4. 梯度依据｜定理 B.1 在固定噪声及各模块可微的条件下，给出状态、动作对策略参数的敏感度递推与总回报梯度，并展开扩散去噪层的 Jacobian；证明使用链式法则，未给真实回报单调改进或收敛率保证。（附录 B.2，第 21–25 页）",
+          "5. 实验与延迟｜MuJoCo 表 1 的平均归一化分数从 ReBRAC 的 93.9 提升至 DiffMPC 的 98.5。Hopper full-replay 中，H=5、K=10、E=1 时约 195–199 ms/步，原策略约 0.4 ms/步，执行时 rollout 与反传占据主要开销。（表 1、5–6，第 8、11 页）",
+          "6. 与 SuperMimic 对照｜二者都通过可微世界模型、短期想象轨迹和末端价值反传更新 actor。SuperMimic 在训练中循环采样、拟合 WM 和改进策略，部署直接运行控制器；本文把 actor 改进放在每个执行步，WM 固定。环境采样本身不是区别，区别在于何时补充数据、训练模型和更新策略。（本文 §4；SuperMimic §3）"
+        ]
+      },
+      "en": {
+        "title": "Inference Time Policy Optimization for Offline RL with Differentiable World Models",
+        "authors": "Rohan Deb, Steven J. Wright, Arindam Banerjee",
+        "institutions": "University of Illinois Urbana-Champaign; University of Wisconsin–Madison",
+        "status": "Methods and theory appendix read; key experiments checked (v2; code not reproduced)",
+        "takeaway": "After offline pretraining, imagine rollouts from the current state before every action and backpropagate return to update policy parameters; keep dynamics, reward, and critic weights frozen.",
+        "tags": [
+          "ITPO",
+          "DiffMPC",
+          "FlowMPC",
+          "Offline RL",
+          "Differentiable World Model",
+          "BPTT",
+          "MPC",
+          "Inference-Time Adaptation"
+        ],
+        "mainContent": "Offline RL policies usually execute directly after training; this work spends additional inference compute to refine decisions at the encountered state. MPCwDWM imagines short trajectories from the observed state through a differentiable world model, combines predicted rewards with a terminal critic, and performs policy-parameter gradient ascent before acting; the world model is not retrained during execution. DiffMPC improves pretrained offline policies on D4RL MuJoCo and AntMaze, while FlowMPC replaces iterative denoising with a one-step MeanFlow transition model to reduce rollout and backward costs.",
+        "innovations": [
+          "Inference-time policy-parameter optimization: apply short-horizon model-return gradients to actor updates during deployment, repeatedly planning from the current state and executing an action. (§4, Algorithm 1, pp. 6–7)",
+          "Differentiable generative dynamics: reparameterize diffusion sampling as a function of state, action, and fixed noise, preserving input derivatives through the sampler and closed-loop rollouts. (§3.1, Appendix B, pp. 4–5 and 20–25)",
+          "Inference-compute tradeoff: FlowMPC replaces iterative denoising with one-step MeanFlow and allocates model capacity with a pretrained-policy-tilted loss. (§6, Appendix F, pp. 11–12)"
+        ],
+        "implementation": [
+          "1. Offline training | Fit a conditional dynamics sampler and reward model on fixed transitions, and pretrain a behavior-cloning-regularized actor–critic. Main experiments initialize with ReBRAC, with an additional SAC-RND study. (§3, §5, Appendix D.6)",
+          "2. Execution | Observe the current state and sample M imagined trajectories of length H. Sum discounted predicted rewards and the terminal critic’s action value, take E actor-gradient-ascent steps, execute one actual action with the updated policy, and repeat from the next observed state. (§4, Algorithm 1, pp. 6–7)",
+          "3. Update boundary | Only policy parameters change during deployment. Freeze dynamics, reward, and critic weights while retaining their input derivatives. New observed states seed subsequent imagination; the algorithm does not feed new transitions back into WM training. (§4, Algorithm 1)",
+          "4. Gradient basis | Theorem B.1 assumes fixed noise and differentiable components, derives state/action sensitivities and return gradients, and expands Jacobians through diffusion steps. Its proof uses the chain rule; it provides no monotonic real-return-improvement or convergence-rate guarantee. (Appendix B.2, pp. 21–25)",
+          "5. Evidence and latency | MuJoCo Table 1 reports an average normalized score of 98.5 for DiffMPC versus 93.9 for ReBRAC. On Hopper full-replay, H=5, K=10, E=1 costs approximately 195–199 ms per step versus about 0.4 ms for the original policy; inference rollouts and backpropagation dominate. (Tables 1 and 5–6, pp. 8 and 11)",
+          "6. SuperMimic comparison | Both backpropagate actor updates through a differentiable world model with short imagined rollouts and terminal-value bootstrapping. SuperMimic alternates simulator collection, WM fitting, and policy improvement during training, then directly executes the controller. ITPO improves the actor at each execution step through a fixed WM. Environment sampling itself is not the distinction; the difference is when data collection, model fitting, and policy updates occur. (ITPO §4; SuperMimic §3)"
+        ]
+      }
     }
   ]
 }

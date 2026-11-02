@@ -59,5 +59,13 @@
     "en": {
       "note": "Reading interpretation: the direct intervention is learning environment input derivatives and using them in actor backpropagation, rather than correcting an already computed policy gradient afterward. The Sobolev connection is useful, but joint value/derivative supervision, random projections, and finite differences have precedents; the distinctive contribution is the model-error-to-policy-optimization analysis and two-model usage. Open concern: for \\(v=hu\\), directional finite differences have \\(O(h)\\) truncation error; stochastic noise can make derivative estimates noisier for closer neighbors, while limited direction coverage leaves full-Jacobian error unidentified. Although Eq. (9) does not divide by distance, noise remains in observed output differences. The theorems give conditional model-error bounds, without a general guarantee translating the finite-direction empirical loss into full-Jacobian accuracy."
     }
+  },
+  "itpo-offline-rl-differentiable-world-models": {
+    "zh": {
+      "note": "本次阅读判断：可微 WM + 想象 rollout + BPTT 更新 policy 与 SuperMimic 属于同一路线，主要区别是把优化放在执行阶段。部署指离线训练结束后的任务执行或评测，每步冻结 WM、奖励模型和 critic，只更新 actor；真实观测只提供想象起点。离线数据也来自某个策略与环境的交互，数据来源本身不构成思想区别。当前更看好 SuperMimic 将主要优化成本放在训练阶段的路线，尤其考虑实时机器人控制；这是个人研究取舍，两篇任务与评估不同，没有直接比较性能高低。"
+    },
+    "en": {
+      "note": "Reading assessment: differentiable WM + imagined rollouts + BPTT policy updates follow the same route as SuperMimic; the main distinction is moving optimization into execution. Deployment means task execution or evaluation after offline training: freeze WM, reward, and critic weights and update only the actor at each step, with actual observations supplying imagination start states. Offline data also originates from policy–environment interaction, so data origin is not the conceptual distinction. I currently favor SuperMimic's placement of the main optimization cost in training, especially for real-time robot control. This is a personal research preference; the papers use different tasks and evaluations without a direct performance comparison."
+    }
   }
 }
