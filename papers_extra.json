@@ -5659,6 +5659,94 @@
           "6. SuperMimic comparison | Both backpropagate actor updates through a differentiable world model with short imagined rollouts and terminal-value bootstrapping. SuperMimic alternates simulator collection, WM fitting, and policy improvement during training, then directly executes the controller. ITPO improves the actor at each execution step through a fixed WM. Environment sampling itself is not the distinction; the difference is when data collection, model fitting, and policy updates occur. (ITPO §4; SuperMimic §3)"
         ]
       }
+    },
+    {
+      "id": "ame-2-attention-based-neural-map-encoding",
+      "aliases": [
+        "AME-2",
+        "Attention-Based Neural Map Encoding"
+      ],
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2601.08485v3",
+      "project": "https://sites.google.com/leggedrobotics.com/ame-2",
+      "arxiv": "https://arxiv.org/abs/2601.08485",
+      "year": "2026",
+      "venue": "IEEE Transactions on Robotics (conditionally accepted; arXiv:2601.08485v3)",
+      "zh": {
+        "title": "Agile and Generalized Legged Locomotion via Attention-Based Neural Map Encoding",
+        "authors": "Chong Zhang, Victor Klemm, Fan Yang, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Secure, Reliable, and Intelligent Systems Lab, ETH Zurich; ETH AI Center",
+        "status": "重点阅读（本地 arXiv v3；方法、训练、建图与消融；未复现代码）",
+        "takeaway": "用全局地形与机器人状态决定要关注的局部接触信息，再把带不确定性的在线神经建图放进学生训练闭环，学习兼顾动态攀爬、稀疏落脚和未见组合地形的控制策略。",
+        "tags": [
+          "AME-2",
+          "Cross-Attention",
+          "Neural Elevation Mapping",
+          "Uncertainty",
+          "Teacher-Student RL",
+          "PPO",
+          "Sparse Footholds",
+          "ANYmal-D",
+          "TRON1"
+        ],
+        "mainContent": "本文研究视觉遮挡、地图误差与稀疏落脚条件下，如何同时实现敏捷运动和跨地形泛化。AME-2 用全局地形特征与本体状态生成注意力查询，选择局部几何信息；独立的神经建图流程预测高程及不确定性，并结合里程计融合多帧观测。教师先使用真值来源的地图做 PPO，学生再在在线建图下结合动作蒸馏、地图表示对齐与 RL 学习。作者在 ANYmal-D 四足和 TRON1 双足上分别训练控制器，展示未见组合地形与真机上的攀爬、跳跃和精确支撑。",
+        "innovations": [
+          "全局情境指导局部选择：在 AME-1 的本体状态条件化注意力基础上，新增全局地形特征参与 Query，并将全局特征与注意力汇总的局部特征共同传给动作网络，支持随地形变化的接触模式。（第 4–5 页，图 3；第 16 页 VIII-A）",
+          "带不确定性的轻量建图：逐帧预测局部高程及方差，用里程计对齐并采用概率式 Winner-Take-All 更新全局地图，再查询机器人周围的地图；同一流程用于并行仿真与部署。（第 8–10 页，图 5，式 6–9）",
+          "在线建图下的教师—学生 RL：动作蒸馏、地图嵌入对齐与 PPO 共同训练学生，将教师的运动能力迁移到部分可观测的真实感知条件。（第 6 页 IV-C；第 14 页图 16）",
+          "跨平台统一任务设计：以到达位置和朝向目标驱动运动，并使用共享奖励与训练设置分别训练四足和双足策略，允许全身接触行为出现。（第 6–8 页，表 I）"
+        ],
+        "implementation": [
+          "1. 执行闭环｜深度点云 → 局部网格 → 高程与不确定性预测 → 里程计融合 → 机器人中心地图 → AME-2 与本体编码 → 关节位置目标 → PD。策略为 50 Hz，真机 PD 为 400 Hz。（第 4 页 III-B；图 2、3、5）",
+          "2. 编码与观测｜逐点局部特征经 MLP 与 MaxPool 汇总全局特征，全局特征和本体嵌入共同生成 Query，逐点特征提供 Key/Value。教师地图点为三维坐标，学生另加不确定性通道；教师使用基座线速度，学生改用过去 20 步本体历史与 LSIO 编码。critic 使用真值地图、接触状态等特权信息。（第 4–5 页，图 3）",
+          "3. 训练安排｜Isaac Gym 与 PPO，4800 个并行环境；教师 80000 次迭代，学生 40000 次。学生动作蒸馏与表示损失系数分别为 0.02、0.2，表示损失为师生地图嵌入的 MSE；最初 5000 次关闭 PPO surrogate loss。建图网络的监督训练与策略训练分别定义。（第 6、8、19 页，表 IV）",
+          "4. 建图数据与损失｜随机位姿下从运动地形、堆叠箱体、随机高度场和悬浮箱体采样，加入遮挡、缺点、异常点与噪声，以真值高程监督。每台机器人使用 5400 万帧，建图模型不到 1 小时收敛；采用带 stop-gradient 权重的 beta-NLL（beta=0.5），同时优化高程和方差，并按真值地形的总变差提高复杂样本的权重。（第 9–10 页，图 6–7，式 9–10）",
+          "5. Winner-Take-All 记忆点｜通过有效性检查后，每格按新旧估计的相对精度随机保留一整份高度与方差。新预测的有效方差下限为旧方差的一半；重复相同的遮挡预测不会仅因融合次数增加而持续降低方差。（第 9 页，式 6–8）",
+          "6. 任务与课程｜位置与朝向奖励主要在回合末段生效，另加向目标移动、站稳、全身接触和执行器约束项。训练使用 dense、climbing、sparse 三类基本地形，逐步提升难度；教师训练前 20% 迭代逐步增加地图噪声和初始朝向随机性。（第 6–8 页，表 I，图 4）",
+          "7. 组合泛化实验｜ANYmal-D 上在相同环境设置下重训 AME-1 与 MoE 教师，使用真值来源的地图比较架构。重训 AME-1 在纯稀疏 Test 1 的成功率为 99.2%，在稀疏支撑与攀爬组合 Test 2 为 29.2%；本篇教师在 Test 2 为 96.0%。实验针对基本能力在未见组合中的衔接。（第 14 页，图 16）",
+          "8. 消融与失败排除｜学生消融分别去除 RL、表示损失、不确定性输入或教师监督；建图在同一批 rollout 轨迹上评测，并观察对应学生的闭环表现。传统建图即使去掉传感器噪声、使用真值状态并忽略计算限制，仍会因遮挡缺失导致攀爬失败；时序建图基线曾错误补出脚下平地。（第 14–16 页，表 III，图 16–19）",
+          "9. 研究思路与边界｜从敏捷性与泛化的能力缺口，分别定位组合地形下的接触信息选择、遮挡下的几何可信度、学生部署迁移，再以架构对比、模块消融和失败案例检验。本文使用 2.5-D 高程图；未见地形的技能切换仍是主要失败环节，注意力可视化提供机制解释，泛化改善来自所测地形上的实验。（第 16–17 页 VIII）"
+        ]
+      },
+      "en": {
+        "title": "Agile and Generalized Legged Locomotion via Attention-Based Neural Map Encoding",
+        "authors": "Chong Zhang, Victor Klemm, Fan Yang, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Secure, Reliable, and Intelligent Systems Lab, ETH Zurich; ETH AI Center",
+        "status": "Selected sections reviewed (local arXiv v3: method, training, mapping, and ablations); code not reproduced",
+        "takeaway": "Use global terrain context and robot state to select local contact-relevant information, then train a student with uncertainty-aware online neural mapping for dynamic climbing, sparse footholds, and unseen terrain combinations.",
+        "tags": [
+          "AME-2",
+          "Cross-Attention",
+          "Neural Elevation Mapping",
+          "Uncertainty",
+          "Teacher-Student RL",
+          "PPO",
+          "Sparse Footholds",
+          "ANYmal-D",
+          "TRON1"
+        ],
+        "mainContent": "The paper studies agile and generalizable locomotion under visual occlusions, mapping errors, and sparse footholds. AME-2 conditions attention queries on global terrain features and proprioception to select local geometry, while a separately trained neural mapper predicts elevations and uncertainties and fuses frames with odometry. A teacher learns with ground-truth-derived maps using PPO; a student then combines action distillation, map-representation alignment, and RL with online mapping. Separate controllers trained for the ANYmal-D quadruped and TRON1 biped demonstrate climbing, jumping, and precise support on unseen terrain combinations and real hardware.",
+        "innovations": [
+          "Global context guides local selection: extend AME-1 proprioception-conditioned attention with global terrain features in the query, and pass global and attention-pooled local features together to the action network to support terrain-dependent contact patterns. (pp. 4–5, Fig. 3; p. 16, VIII-A)",
+          "Lightweight uncertainty-aware mapping: predict per-frame local elevations and variances, align them using odometry, update a global map with probabilistic Winner-Take-All, and query robot-centric maps. The same pipeline runs in parallel simulation and deployment. (pp. 8–10, Fig. 5, Eqs. 6–9)",
+          "Teacher–student RL with online mapping: jointly train the student with action distillation, map-embedding alignment, and PPO to transfer teacher skills to partially observable sensing conditions. (p. 6, IV-C; p. 14, Fig. 16)",
+          "Unified cross-platform task design: use position-and-heading goal reaching with shared rewards and training settings to train separate quadruped and biped policies, allowing whole-body contacts to emerge. (pp. 6–8, Table I)"
+        ],
+        "implementation": [
+          "1. Execution loop | Depth cloud → local grid → elevation/uncertainty prediction → odometry-based fusion → robot-centric map → AME-2 and proprioception encoders → joint-position targets → PD. Policies run at 50 Hz and hardware PD at 400 Hz. (p. 4, III-B; Figs. 2, 3, 5)",
+          "2. Encoding and observations | An MLP and max pooling aggregate pointwise local features into global features. Global and proprioceptive embeddings generate the query; pointwise features provide keys/values. Teacher map points contain 3D coordinates; student points add uncertainty. The teacher receives base linear velocity, while the student uses 20-step proprioceptive history and LSIO. The critic receives privileged ground-truth maps and contact states. (pp. 4–5, Fig. 3)",
+          "3. Training schedule | Isaac Gym and PPO with 4800 parallel environments; train teachers for 80000 iterations and students for 40000. Student action-distillation and representation-loss coefficients are 0.02 and 0.2; representation loss is MSE between teacher/student map embeddings. Disable the PPO surrogate loss for the first 5000 student iterations. Mapping supervision and policy training are defined separately. (pp. 6, 8, 19, Table IV)",
+          "4. Mapping data and loss | Sample random poses over locomotion terrains, stacked boxes, random heightfields, and floating boxes; add occlusions, missing points, outliers, and noise, with ground-truth elevation labels. Each robot uses 54 million frames and its mapping model converges in under one hour. A stop-gradient-weighted beta-NLL with beta=0.5 jointly trains elevation and variance, with additional sample weighting. (pp. 9–10, Figs. 6–7, Eqs. 9–10)",
+          "5. Winner-Take-All memory aid | After validity checks, each cell probabilistically retains a complete elevation/variance estimate according to relative precision. Effective incoming variance is lower-bounded by half the prior variance; repeated identical occluded predictions do not continually reduce variance merely through repeated fusion. (p. 9, Eqs. 6–8)",
+          "6. Task and curricula | Position and heading rewards are primarily active near episode end, with additional goal-motion, standing, whole-body-contact, and actuator-constraint terms. Train on dense, climbing, and sparse primitives with increasing difficulty; ramp mapping noise and initial-heading randomness over the first 20% of teacher iterations. (pp. 6–8, Table I, Fig. 4)",
+          "7. Compositional-generalization experiment | Retrain AME-1 and MoE teachers in the same ANYmal-D environment setup, comparing architectures with ground-truth-derived maps. Repurposed AME-1 achieves 99.2% on sparse Test 1 but 29.2% on Test 2 combining sparse support and climbing; this paper teacher achieves 96.0% on Test 2. The experiment targets skill composition on unseen combinations. (p. 14, Fig. 16)",
+          "8. Ablations and failure isolation | Remove student RL, representation loss, uncertainty input, or teacher supervision. Evaluate mapping on the same rollout trajectories and examine corresponding student closed-loop performance. Classical mapping still causes occlusion-related climbing failure with sensor noise removed, ground-truth state estimation, and compute limits ignored; a recurrent mapper incorrectly fills flat ground beneath the feet. (pp. 14–16, Table III, Figs. 16–19)",
+          "9. Research logic and scope | Decompose the agility/generalization gap into contact-relevant selection on combined terrains, confidence in occluded geometry, and deployable student transfer; test designs through architecture comparisons, ablations, and failure cases. The method uses 2.5-D elevation maps; skill transitions remain a major source of unseen-terrain failure. Attention visualization supports interpretation, while generalization improvements are empirical on the evaluated terrains. (pp. 16–17, VIII)"
+        ]
+      }
     }
   ]
 }
