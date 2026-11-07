@@ -5326,6 +5326,441 @@
       }
     },
     {
+      "id": "lpn-action-jacobian-penalty",
+      "aliases": [
+        "LPN",
+        "Linear Policy Net",
+        "Action Jacobian Penalty"
+      ],
+      "categories": [
+        "bfm-tracking",
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2602.18312v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2602.18312",
+      "year": "2026",
+      "venue": "arXiv:2602.18312",
+      "zh": {
+        "title": "Learning Smooth Time-Varying Linear Policies with an Action Jacobian Penalty",
+        "authors": "Zhaoming Xie, Kevin Karol, Jessica Hodgins",
+        "institutions": "Robotics AI Institute, USA",
+        "status": "正文已阅读（本地 arXiv v1，§1–7；未复现代码）",
+        "takeaway": "把“网络给目标、PD 做反馈”扩展为“网络给时变线性反馈律、最新 state 持续修正关节目标”：网络或参数更新可以更慢，闭环反馈继续运行，再用 Action Jacobian Penalty 压低状态敏感性与动作抖动。",
+        "tags": [
+          "LPN",
+          "Time-Varying Linear Feedback",
+          "Action Jacobian Penalty",
+          "Policy Smoothness",
+          "Multi-Rate Control",
+          "PPO",
+          "DeepMimic",
+          "Spot"
+        ],
+        "mainContent": "本文解决 DeepMimic 式动作模仿中策略利用高频控制信号、动作变化惩罚又需要逐任务调参的问题。Linear Policy Net（LPN）只根据参考动作生成反馈矩阵与前馈项，再用当前全身状态计算关节目标，最后由底层 PD 转为执行力矩；对状态的动作 Jacobian 恰好就是反馈矩阵，因此可低成本直接正则化。方法覆盖仿真人形行走、翻腾、跑酷和乒乓球步法，并在带臂 Spot 上验证；真机示例离线预计算控制参数，以 15 Hz 更新参数、30 Hz 根据状态计算关节目标。",
+        "innovations": [
+          "显式时变线性反馈：参考动作驱动网络输出控制参数，当前状态通过反馈矩阵进入动作；对给定参考序列，得到随时间变化的仿射控制律，可跨关节利用全身反馈。（图 2，§5–5.1，第 4 页）",
+          "直接惩罚状态敏感性：将完整动作 Jacobian 的 Frobenius 范数平方加入 PPO loss，不再仅靠相邻动作差的奖励间接发现平滑行为；所有报告实验统一使用权重 10。（§4，第 3–4 页）",
+          "结构使正则化便宜：反馈矩阵不依赖当前状态，动作 Jacobian 等于该矩阵，求惩罚与参数梯度只需普通前向、反向传播。普通 FF 网络计算 Jacobian 惩罚时每轮 PPO 约慢 1.5 倍，LPN 避免这部分额外求导开销。（§4、5.3，第 4–5 页）",
+          "控制参数更新与状态反馈解耦：固定参考下可以离线生成矩阵序列，在线只做矩阵运算，并让参数更新慢于关节目标更新。这是对已有“慢策略 + 快 PD”层级的进一步扩展；底层仍使用关节 PD。（§5.2、6.4，第 4、7 页）"
+        ],
+        "implementation": [
+          "1. 输入与输出｜参考状态 \\(\\hat{s}_t\\) 经两层、隐藏宽度 256 的 MLP，输出 \\(K_t\\in\\mathbb{R}^{m\\times n}\\) 和 \\(k_t\\in\\mathbb{R}^{m}\\)；实际关节目标为 \\(a_t=K_t s_t+k_t+\\hat{a}_t\\)，其中 \\(\\hat{a}_t\\) 是参考关节角。网络不读取当前实际状态；实际状态通过显式线性分支进入动作。（图 2，§5、6，第 4–5 页）",
+          "1. 反馈信息｜状态包括根部相对参考的位置与朝向偏差、根部线速度与角速度、关节位置与速度。反馈可以将躯干或其他关节的变化传到当前关节目标；“扩展 PD 参数化”可作为理解类比，但本文学习的是目标角上的全身反馈矩阵与前馈项，不能直接写成学习底层 PD 增益。（§3、5.1，第 3–4 页）",
+          "2. 训练目标｜\\(\\mathcal{L}=\\mathcal{L}_{\\mathrm{PPO}}+10\\|\\partial a_t/\\partial s_t\\|_F^2=\\mathcal{L}_{\\mathrm{PPO}}+10\\|K_t\\|_F^2\\)。对当前状态求偏导时固定参考输入；若让网络也读取当前状态，这个等式通常就不再成立。PPO 的探索动作仍是原来 \\(m\\) 维关节目标，未把全部矩阵元素改成高维随机动作。（§3–5.3，第 3–5 页）",
+          "2. 模仿学习｜MuJoCo 仿真 120 Hz，常规策略关节目标更新 30 Hz；奖励由根部位置、根部朝向和关节角跟踪构成，权重分别为 0.3、0.3、0.4，并使用参考状态初始化与提前终止。PPO 用 50 个并行环境每轮采集 2500 个样本，探索高斯协方差为 0.01I；多数任务约 2000 轮、500 万样本收敛，论文报告约 1 小时。（§3，第 3 页）",
+          "3. 部署频率｜将当前反馈矩阵、前馈项与最新状态相乘，重新得到关节目标，再交给底层 PD。带臂 Spot 的 pacing 示例离线预计算矩阵序列，参数按 15 Hz 切换、关节目标按 30 Hz 闭环重算；部署不需要在线查询神经网络。文中 500 Hz 或更高的 PD 频率是对常见机器人控制层级的背景描述，没有给出这次 Spot 底层 PD 的实测频率。（§5.2、6.4，第 4、7 页）",
+          "3. 低频边界｜仿真人形的参数更新率原为 30 Hz；walking 可降到 10 Hz 保持表现，其他测试动作降到 30 Hz 以下会失败。因此应记为“部分任务允许低频参数更新，同时保留较快状态反馈”，不能泛化为所有动态动作都能低频更新。（§6.3，第 6–7 页）",
+          "4. 对照结果｜walking、backflip、footwork 的比较取 3 个训练随机种子的平均。表 1 中 LPN 的高频能量指标分别为 0.9、8.7、1.3，无正则 FF 为 8.8、26.6、27.1；LPN 学习收敛快，但 backflip 的平滑指标逊于 FF + Jacobian 和合适的动作变化奖励设置。不是所有指标都由 LPN 最优。（表 1，§6.2，第 5–6 页）",
+          "4. 真机任务｜Spot 搭载机械臂；pacing 参考来自周期 0.6 s 的手工正弦步态，训练时机械臂目标每 0.5 s 随机变化。另一示例将单刚体轨迹优化产生的跳跃与运动学 MPC 生成的挥臂参考同步，再训练 LPN 执行；参考生成与在线反馈控制是不同环节。（§6.4，第 7 页）",
+          "4. 结论范围｜Jacobian 惩罚限制动作对状态的敏感性，不约束控制参数随时间的变化，因此不保证时间上的动作变化一定小。本文以较短、给定参考的 DeepMimic 式动作模仿为主，技能蒸馏展示了指定动作衔接，尚未实现任意技能之间的切换。（§7，第 7 页）"
+        ]
+      },
+      "en": {
+        "title": "Learning Smooth Time-Varying Linear Policies with an Action Jacobian Penalty",
+        "authors": "Zhaoming Xie, Kevin Karol, Jessica Hodgins",
+        "institutions": "Robotics AI Institute, USA",
+        "status": "Main text reviewed (local arXiv v1, §§1–7); code not reproduced",
+        "takeaway": "Extend network-generated targets with PD feedback into network-generated time-varying linear feedback laws: fresh state continuously corrects joint targets while network or parameter updates can run more slowly, and an action Jacobian penalty reduces state sensitivity and jitter.",
+        "tags": [
+          "LPN",
+          "Time-Varying Linear Feedback",
+          "Action Jacobian Penalty",
+          "Policy Smoothness",
+          "Multi-Rate Control",
+          "PPO",
+          "DeepMimic",
+          "Spot"
+        ],
+        "mainContent": "The paper addresses high-frequency control artifacts in DeepMimic-style motion imitation and task-specific tuning of action-change rewards. A Linear Policy Net (LPN) maps only the reference motion to feedback matrices and feedforward terms; current whole-body state produces joint targets, which a low-level PD controller converts to actuation torques. The action Jacobian with respect to state equals the feedback matrix, making direct regularization inexpensive. Experiments cover simulated humanoid locomotion, acrobatics, parkour, and table-tennis footwork, plus an armed Spot robot; the hardware example precomputes controller parameters offline and updates them at 15 Hz while recomputing joint targets from state at 30 Hz.",
+        "innovations": [
+          "Explicit time-varying linear feedback: a reference-conditioned network outputs controller parameters, and current state enters actions through a feedback matrix. A fixed reference sequence gives a time-varying affine control law with whole-body, cross-joint feedback. (Fig. 2, §§5–5.1, p. 4)",
+          "Direct state-sensitivity regularization: add the squared Frobenius norm of the full action Jacobian to the PPO loss rather than relying only on consecutive-action rewards to discover smooth behavior. All reported experiments use weight 10. (§4, pp. 3–4)",
+          "Structure makes regularization inexpensive: since the matrix is independent of current state, it equals the action Jacobian, and ordinary forward/backward passes evaluate and differentiate its penalty. A conventional FF network takes about 1.5 times as long per PPO iteration with Jacobian regularization; LPN avoids that extra differentiation overhead. (§§4, 5.3, pp. 4–5)",
+          "Separate parameter updates from state feedback: a fixed reference permits offline precomputation, online matrix operations, and parameter updates slower than joint-target updates. This extends the existing slow-policy/fast-PD hierarchy while retaining joint-level PD. (§§5.2, 6.4, pp. 4, 7)"
+        ],
+        "implementation": [
+          "1. Interface | A two-layer MLP with hidden width 256 maps reference state \\(\\hat{s}_t\\) to \\(K_t\\in\\mathbb{R}^{m\\times n}\\) and \\(k_t\\in\\mathbb{R}^{m}\\). Joint targets are \\(a_t=K_t s_t+k_t+\\hat{a}_t\\), with reference joint angles \\(\\hat{a}_t\\). The network does not read actual current state; the explicit linear branch supplies that feedback. (Fig. 2, §§5, 6, pp. 4–5)",
+          "1. Feedback features | Use root position/orientation displacement from the reference, root linear/angular velocities, and joint positions/velocities. Whole-body changes can affect each joint target through cross-joint feedback. Extending PD parameterization is a useful analogy, but the learned quantities are whole-body joint-target feedback matrices and feedforward terms, not low-level PD gains. (§§3, 5.1, pp. 3–4)",
+          "2. Objective | \\(\\mathcal{L}=\\mathcal{L}_{\\mathrm{PPO}}+10\\|\\partial a_t/\\partial s_t\\|_F^2=\\mathcal{L}_{\\mathrm{PPO}}+10\\|K_t\\|_F^2\\). Hold the reference fixed when differentiating with respect to current state; allowing the network to depend on current state generally breaks this equality. PPO exploration remains over \\(m\\)-dimensional joint targets rather than treating all matrix entries as a high-dimensional stochastic action. (§§3–5.3, pp. 3–5)",
+          "2. Imitation training | MuJoCo runs at 120 Hz with standard joint-target policy updates at 30 Hz. Root-position, root-orientation, and joint-angle rewards have weights 0.3, 0.3, and 0.4; use reference state initialization and early termination. PPO collects 2500 samples per iteration across 50 environments with Gaussian exploration covariance 0.01I. Most tasks converge in about 2000 iterations and 5 million samples, reported as roughly one hour. (§3, p. 3)",
+          "3. Deployment rates | Apply current feedback/feedforward parameters to fresh state to recompute joint targets, then pass them to low-level PD. The armed Spot pacing example precomputes matrix sequences offline, updates parameters at 15 Hz, and recomputes closed-loop joint targets at 30 Hz without online neural inference. The discussion of PD at 500 Hz or above describes common robotics hierarchies; the paper does not specify the actual low-level Spot PD rate in this experiment. (§§5.2, 6.4, pp. 4, 7)",
+          "3. Low-rate boundary | Simulated humanoid parameters are normally updated at 30 Hz. Walking retains performance at 10 Hz, whereas the other tested motions fail below 30 Hz. Thus some tasks tolerate slower parameter updates while retaining faster state feedback; this is not established for every dynamic motion. (§6.3, pp. 6–7)",
+          "4. Comparisons | Walking, backflip, and footwork comparisons average three training seeds. Table 1 reports LPN high-frequency energy metrics of 0.9, 8.7, and 1.3 versus 8.8, 26.6, and 27.1 for unregularized FF. LPN converges quickly, but backflip smoothness is worse than FF with Jacobian regularization or an appropriately tuned action-change reward; LPN is not best on every metric. (Table 1, §6.2, pp. 5–6)",
+          "4. Hardware tasks | Spot carries an arm. Its pacing reference is a handcrafted sinusoid with a 0.6 s gait cycle, and training changes arm targets randomly every 0.5 s. Another example synchronizes hopping from single-rigid-body trajectory optimization with an arm-stroke reference from kinematic MPC before training LPN. Reference generation and online feedback control are separate stages. (§6.4, p. 7)",
+          "4. Scope | The Jacobian penalty constrains sensitivity to state rather than temporal variation of controller parameters, so it does not guarantee small action changes over time. The work focuses on relatively short, reference-driven DeepMimic-style imitation; skill distillation demonstrates selected transitions rather than arbitrary skill switching. (§7, p. 7)"
+        ]
+      }
+    },
+    {
+      "id": "todorov-jordan-2002-optimal-feedback-control",
+      "aliases": [
+        "OFC · Todorov & Jordan",
+        "Optimal Feedback Control",
+        "最优反馈控制",
+        "最小干预原则"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "locomotion"
+      ],
+      "pdf": "",
+      "project": "https://doi.org/10.1038/nn963",
+      "arxiv": "",
+      "year": "2002",
+      "venue": "Nature Neuroscience 5, 1226–1235",
+      "zh": {
+        "title": "Optimal feedback control as a theory of motor coordination",
+        "authors": "Emanuel Todorov, Michael I. Jordan",
+        "institutions": "Department of Cognitive Science, University of California, San Diego；Division of Computer Science and Department of Statistics, University of California, Berkeley",
+        "status": "正文重点已整理（理论、方法与主要实验；补充材料未核查）",
+        "takeaway": "冗余自由度可以用来互相补偿噪声：最优反馈控制只纠正影响任务表现的偏差，允许不影响任务的运动细节变化。",
+        "tags": [
+          "Optimal Feedback Control",
+          "Minimal Intervention",
+          "Motor Coordination",
+          "Redundancy",
+          "LQG",
+          "Signal-Dependent Noise"
+        ],
+        "mainContent": "本文解释为什么人能稳定完成任务，而每次的关节与手部轨迹细节却不相同。方法以任务误差和控制努力为目标，结合动力学、信号依赖运动噪声及带延迟的噪声观测，求出根据状态估计实时选动作的反馈策略。最小干预原则由此产生：抑制影响任务表现的偏差，同时允许冗余方向的变化；人体实验与仿真检验了这种变化结构及其随任务要求的改变。",
+        "innovations": [
+          "把随机最优反馈控制用作运动协调的统一解释框架，从任务目标推导控制规律和行为变化，而不预先指定完整期望轨迹。（期刊页 1226–1227）",
+          "提出最小干预原则，并对较一般的随机系统作局部分析：纠偏与偏差引起的最优剩余代价变化相关；冗余要结合时间、动力学和未来任务代价理解。（期刊页 1228–1229）",
+          "展示运动协同、表面上的自由度冻结及离散协调模式可以从任务最优控制中涌现，无需将这些简化规则预先写入控制器。（图 6，期刊页 1232–1233）",
+          "用任务约束改变后的跨试次变化结构区分理论：平均路径相近时，增加中间目标仍会改变沿途位置方差；结果支持反馈策略随任务要求调整。（图 3，期刊页 1230–1231）"
+        ],
+        "implementation": [
+          "1. 动力学｜仿真在 LQG 框架中加入乘性运动噪声：\\(x_{t+\\Delta t}=Ax_t+Bu_t+\\sum_i C_i u_t\\varepsilon_{i,t}\\)。状态包含位置、速度、肌肉力与任务常量；控制信号经低通滤波生成力。（Methods，期刊页 1234）",
+          "2. 目标与状态估计｜任务误差用二次项 \\(x_t^\\top Q_t x_t\\) 表示，另加二次控制努力惩罚。位置、速度和力通过带延迟与噪声的传感器获得，前向模型结合反馈与先前控制信号估计当前状态。（期刊页 1227、1234）",
+          "3. 闭环执行｜求出的控制律为 \\(u_t=-L_t\\hat{x}_t\\)：\\(L_t\\) 是时变反馈增益，\\(\\hat{x}_t\\) 是内部状态估计。执行时更新估计并重算动作，逐时刻利用冗余，而不把运动预先固定为唯一轨迹。（Methods，期刊页 1234）",
+          "4. 验证｜目标序列实验检验不同任务约束下的位置方差（图 3）；击球数据与投掷仿真比较变化和时间相关性（图 4）；揉纸实验展示高关节变化与任务成功共存（图 5）；伸缩臂模型检验协同和扰动补偿（图 6）。",
+          "5. 范围｜这是熟练运动的计算层理论；一般非线性系统用于局部理论分析，具体仿真使用线性模型。学习机制仅有初步探索，不能据此认定大脑采用了文中的具体求解算法。（Discussion、Methods，期刊页 1233–1234）"
+        ]
+      },
+      "en": {
+        "title": "Optimal feedback control as a theory of motor coordination",
+        "authors": "Emanuel Todorov, Michael I. Jordan",
+        "institutions": "Department of Cognitive Science, University of California, San Diego; Division of Computer Science and Department of Statistics, University of California, Berkeley",
+        "status": "Key theory, methods, and main experiments summarized; supplementary material not checked",
+        "takeaway": "Redundant degrees of freedom can compensate for noise: optimal feedback corrects deviations that affect task performance while allowing task-irrelevant movement details to vary.",
+        "tags": [
+          "Optimal Feedback Control",
+          "Minimal Intervention",
+          "Motor Coordination",
+          "Redundancy",
+          "LQG",
+          "Signal-Dependent Noise"
+        ],
+        "mainContent": "The paper explains how reliable task outcomes coexist with variable joint and hand trajectories. It optimizes task error and control effort under plant dynamics, signal-dependent motor noise, and delayed noisy observations to obtain feedback policies acting on estimated state. The resulting minimal intervention principle suppresses performance-relevant deviations while tolerating redundant variation; human experiments and simulations test the predicted variability structure and its dependence on task requirements.",
+        "innovations": [
+          "Develop stochastic optimal feedback control into a unified explanation of motor coordination, deriving control laws and behavioral variation from task goals without prescribing a complete desired trajectory. (pp. 1226–1227)",
+          "Introduce the minimal intervention principle and analyze a broad class of stochastic systems locally: corrective action relates to changes in optimal cost-to-go, so redundancy depends on time, dynamics, and future task costs. (pp. 1228–1229)",
+          "Show that motor synergies, apparent freezing of degrees of freedom, and discrete coordination modes can emerge from task-optimal feedback without imposing these simplifying rules. (Fig. 6, pp. 1232–1233)",
+          "Test theories through task-dependent trial-to-trial variability: adding intermediate targets changes positional variance despite similar average paths, supporting feedback policies that adapt to task requirements. (Fig. 3, pp. 1230–1231)"
+        ],
+        "implementation": [
+          "1. Dynamics | Simulations extend the LQG framework with multiplicative motor noise: \\(x_{t+\\Delta t}=Ax_t+Bu_t+\\sum_i C_i u_t\\varepsilon_{i,t}\\). State includes positions, velocities, muscle forces, and task constants; control signals are low-pass filtered to generate force. (Methods, p. 1234)",
+          "2. Objective and estimation | Represent task error with a quadratic term \\(x_t^\\top Q_t x_t\\) and add quadratic control effort. Position, velocity, and force measurements are delayed and noisy; a forward model combines feedback with prior controls to estimate current state. (pp. 1227, 1234)",
+          "3. Closed-loop execution | The control law is \\(u_t=-L_t\\hat{x}_t\\), with time-varying feedback gains \\(L_t\\) and internal state estimate \\(\\hat{x}_t\\). Update estimates and recompute actions during execution, exploiting redundancy moment by moment rather than fixing one trajectory. (Methods, p. 1234)",
+          "4. Validation | Target sequences test positional variance under different constraints (Fig. 3); hitting data and throwing simulations compare variability and temporal correlations (Fig. 4); paper crumpling shows substantial joint variation alongside task success (Fig. 5); a telescopic arm tests synergies and perturbation compensation (Fig. 6).",
+          "5. Scope | This is a computational-level theory of skilled movement. Local theoretical analysis considers general nonlinear systems, whereas concrete simulations use linear models. Learning receives preliminary exploration; the results do not identify the brain with the particular solution algorithm. (Discussion and Methods, pp. 1233–1234)"
+        ]
+      }
+    },
+    {
+      "id": "ttco-humanoid-behavior-foundation-models",
+      "aliases": [
+        "TTCO",
+        "Test-Time Command Optimization"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "bfm-tracking",
+        "bfm-adaptation",
+        "loco-manipulation",
+        "imitation-teleop"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.14896v2",
+      "project": "https://bfmttc.github.io/",
+      "arxiv": "https://arxiv.org/abs/2610.14896",
+      "year": "2026",
+      "venue": "arXiv:2610.14896v2",
+      "zh": {
+        "title": "Test-Time Compute for Humanoid Behavior Foundation Models",
+        "authors": "Weiji Xie, Junsong Wu, Zibo Zhou, Yueru Chen, Xingyi Wang, Zhenhua Xiong, Weinan Zhang, Chenjia Bai",
+        "institutions": "Institute of Artificial Intelligence (TeleAI), China Telecom; Shanghai Jiaotong University; Zhejiang University; Gamma Robotics",
+        "status": "正文与关键附录已阅读（本地 v2；未复现代码）",
+        "takeaway": "冻结 BFM，在仿真里反复试改参考运动的输入副本，让实际执行更接近不变的原目标；优化的是 command 数据，不是 encoder 参数，结果也能作为高层策略的动作标签。",
+        "tags": [
+          "TTCO",
+          "Test-Time Compute",
+          "CEM",
+          "Sampling-Based MPC",
+          "Command Optimization",
+          "Action Relabeling",
+          "Humanoid",
+          "G1"
+        ],
+        "mainContent": "现有 BFM 直接接收参考运动时，实际执行仍会出现全局漂移和手脚位置偏差。TTCO 在冻结 BFM 外增加基于采样的滚动时域指令优化，通过 BFM 与物理动力学闭环仿真评价候选，调整输入运动而保持原参考目标不变。在三个 BFM 和 12,273 条 AMASS 动作上，平均全局身体位置误差在仿真中降低 79–84%；离线优化还可从记录的机器人运动反求目标 BFM 的身体指令标签，用于下游策略学习和跨 BFM 示范复用。",
+        "innovations": [
+          "指令补偿的跨模型验证：区分参考运动、输入 command 和实际执行，在 HEFT、SONIC、TWIST2 上系统验证冻结控制器后的搜索收益；其控制结构可理解为指令空间的采样式 MPC。（§3.1–3.2、4.1，图 1、3，表 1，第 3–7 页）",
+          "计算预算分配：以 K=INH/E 衡量每个执行步对应的候选仿真量，拟合包含有限视野误差和采样误差的启发式代理代价模型，联合选择迭代数、候选数、视野和执行间隔；在新动作与三个 BFM 上，相对同预算最佳实测配置的平均 regret 为 4.60%。（§3.3、4.3，式 5–10，图 6，第 5–8 页）",
+          "控制器专用动作重标注：以记录的实际运动为固定目标，针对部署所用的目标 BFM 离线优化身体指令，使缺少原始身体指令的数据和其他 BFM 采集的示范也能用于高层监督学习。（§4.4，表 2–3，第 8–9 页）"
+        ],
+        "implementation": [
+          "1. 优化对象｜参考运动保持不变，优化根部位置、根部朝向和 29 个关节角的指令偏移，每个时间节点共 35 维。偏移裁剪到归一化范围后按物理尺度缩放并线性插值；H=40 时使用 5 个节点，共 175 个决策变量。姿态修改后重新计算速度和身体运动特征。（附录 B.2、C.1，式 20–22，第 18–21 页）",
+          "2. 闭环仿真｜每轮 N 条候选从同一个机器人、控制器及观测历史状态出发。冻结 BFM 根据各自模拟反馈产生底层动作，物理仿真推进 H 步，评价实际执行与原参考的误差。（图 3、式 2–4，第 4–5 页）",
+          "3. CEM 搜索｜从逐坐标高斯分布采样节点偏移，挑选最低代价的 M 个精英，更新均值和标准差并保留最小探索尺度；重复 I 轮后，选所有轮次评估过的最低代价候选。在仿真中执行其前 E 步后重规划；下一次均值由上次最佳偏移前移、尾部补零初始化。这是数值搜索，不是训练一个 goal 修正网络。（附录 B.3，式 23，第 19 页）",
+          "4. 评分｜运行代价比较执行关节角、全局身体位置和朝向，另惩罚输入指令相对参考的变形及执行关节速度；末端项比较最终关节角与身体位置。主实验的速度跟踪项权重为 0。评分目标始终是原参考，不随指令修改。（附录 B.1，式 14–19，第 18 页）",
+          "5. 跟踪实验｜G1 身体 29 DoF，MuJoCo Warp，物理步长 0.005 s，BFM 50 Hz。全 AMASS 评估采用 (I,N,H,E)=(4,80,40,20)、9 个精英，预算比 K=640；规划 0.8 s、仿真执行 0.4 s 后重规划。平均全局身体位置误差：HEFT 0.271→0.057 m，SONIC 0.615→0.127 m，TWIST2 1.095→0.173 m；三个模型的关节加速度均增加。（表 1，附录 C.1–C.2，第 6、21 页）",
+          "6. test-time 的参照｜相对于预训练 BFM，这是冻结参数后的使用阶段计算；相对于待训练的高层策略，同一过程属于训练前的标签生成。离线执行计算与 BFM 的 test-time 阶段可以同时成立。（§3、4.4，第 3–5、9 页）",
+          "7. 标签生成｜以记录的机器人实际运动为参考，TTCO 反求能让目标 BFM 尽量复现它的身体输入指令。保留原示范图像、本体感知和手部动作标签，将优化身体指令作为高层策略的监督答案；SONIC 的优化指令随后再编码为 motion token，编码器和 BFM 不在这一步微调。（§4.4，附录 C.5.1、C.5.4，第 9、33–34 页）",
+          "8. 跨域鲁棒性｜下游标签优化采用 (I,N,H,E)=(7,39,37,5)。每条候选在 4 个随机场景中评价并取平均代价；随机化接触摩擦、关节 armature、关节摩擦损耗、执行器强度和初始速度。所有候选及各次迭代共用当次场景，下一次重规划重采样。（附录 C.5.2，表 20，第 33 页）",
+          "9. 真正训练与部署｜仿真训练 Diffusion Policy，真机微调 GR00T N1.7-3B 的动作头并冻结视觉、语言骨干。部署时根据当前图像、本体感知及可选语言条件预测指令片段，身体指令交给冻结 BFM、手部指令走独立接口；不在线运行 CEM，也不按时间直接播放训练标签。（附录 A.2、C.5.3–C.5.4，第 17、33–35 页）",
+          "10. 直接执行与学习要分开｜图 4 的两段真机动作跟踪展示采用预先优化指令的开环播放，底层 BFM 仍使用机器人反馈；表 3 的移动操作则部署训练好的高层策略。图 3 每 E 步重规划发生于仿真，不能当作真机实时 TTCO 的证据。（图 3–4、表 3，第 4、6、9 页）",
+          "11. 下游证据｜SONIC→SONIC 的仿真平均成功率：原始指令标签 75.8%、优化标签 56.7%、状态标签 0%；真机对应为 60.4%、64.2%、2.5%。真机 SONIC→HEFT 的优化标签为 48.8%，原始标签 1.7%、状态标签 12.1%；跨 BFM 仿真收益依配对与任务变化。（表 2–3、25，第 9、36 页）",
+          "12. 局限｜当前实现尚未达到满意的真机实时优化速度；跟踪精度提升伴随更高关节加速度与抖动，残余误差仍会限制精确接触和全身协同任务。（§5，第 10 页）"
+        ]
+      },
+      "en": {
+        "title": "Test-Time Compute for Humanoid Behavior Foundation Models",
+        "authors": "Weiji Xie, Junsong Wu, Zibo Zhou, Yueru Chen, Xingyi Wang, Zhenhua Xiong, Weinan Zhang, Chenjia Bai",
+        "institutions": "Institute of Artificial Intelligence (TeleAI), China Telecom; Shanghai Jiaotong University; Zhejiang University; Gamma Robotics",
+        "status": "Main text and key appendices read (local v2; code not reproduced)",
+        "takeaway": "Freeze the BFM and search over an input copy of the reference motion in simulation so execution better matches the unchanged target. Optimize command data, not encoder weights; the commands can also label high-level policy training.",
+        "tags": [
+          "TTCO",
+          "Test-Time Compute",
+          "CEM",
+          "Sampling-Based MPC",
+          "Command Optimization",
+          "Action Relabeling",
+          "Humanoid",
+          "G1"
+        ],
+        "mainContent": "Humanoid BFMs can drift globally and miss hand or foot targets when given the desired motion directly. TTCO adds sampling-based receding-horizon command optimization around a frozen BFM, evaluating candidates through closed-loop BFM-and-physics rollouts while keeping the reference fixed. Across three BFMs and 12,273 AMASS motions, mean global body-position error falls by 79–84% in simulation; offline optimization also infers target-BFM body-command labels from recorded robot motions for downstream learning and demonstration reuse across BFMs.",
+        "innovations": [
+          "Cross-model command-compensation evidence: distinguish desired reference, input command, and executed motion, and systematically evaluate search around frozen HEFT, SONIC, and TWIST2 controllers. The control structure is sampling-based MPC in command space. (§3.1–3.2, 4.1, Figs. 1, 3, Table 1, pp. 3–7)",
+          "Compute allocation: measure candidate rollout effort per executed step with K=INH/E and fit a heuristic surrogate combining finite-horizon and sampling errors to jointly select iterations, candidates, horizon, and execution interval. Mean regret against the best measured allocation at the same budget is 4.60% on new motions across three BFMs. (§3.3, 4.3, Eqs. 5–10, Fig. 6, pp. 5–8)",
+          "Controller-specific action relabeling: keep recorded achieved motion as the reference and optimize body commands offline for the target execution BFM, enabling high-level supervision without original body-command labels and demonstration reuse across BFMs. (§4.4, Tables 2–3, pp. 8–9)"
+        ],
+        "implementation": [
+          "1. Decision variables | Keep the reference fixed and optimize root-position, root-orientation, and 29 joint-position command offsets: 35 coordinates per knot. Clip normalized offsets, apply physical scales, and interpolate linearly. H=40 uses five knots and 175 decision variables. Recompute velocities and body-motion features from modified poses. (Appendices B.2, C.1, Eqs. 20–22, pp. 18–21)",
+          "2. Closed-loop rollouts | Start all N candidates from identical robot, controller, and observation-history states. The frozen BFM uses each rollout’s simulated feedback to produce low-level actions; physics advances H steps, and executed motion is scored against the original reference. (Fig. 3, Eqs. 2–4, pp. 4–5)",
+          "3. CEM search | Sample knot offsets from a coordinate-wise Gaussian, select the M lowest-cost elites, and update means and standard deviations with a minimum exploration scale. After I iterations, execute the first E steps of the best evaluated candidate across iterations in simulation and replan. Initialize the next mean by shifting the previous best offsets and zero-filling the tail. This is numerical search, not training a goal-correction network. (Appendix B.3, Eq. 23, p. 19)",
+          "4. Cost | Running terms score executed joint positions, world-frame body positions, and orientations, plus command deformation relative to the reference and executed joint speed. Terminal terms score final joint and body positions. The reported velocity-tracking weight is zero. The original scoring target remains unchanged throughout command search. (Appendix B.1, Eqs. 14–19, p. 18)",
+          "5. Tracking evaluation | Use a 29-DoF G1 body, MuJoCo Warp, 0.005 s physics steps, and 50 Hz BFMs. Full-AMASS evaluation uses (I,N,H,E)=(4,80,40,20), nine elites, and K=640: plan 0.8 s and execute 0.4 s in simulation before replanning. Mean global body-position errors are HEFT 0.271→0.057 m, SONIC 0.615→0.127 m, and TWIST2 1.095→0.173 m; joint acceleration rises for all three. (Table 1, Appendices C.1–C.2, pp. 6, 21)",
+          "6. Meaning of test-time | For the pretrained BFM, optimization spends compute during post-training use with frozen weights. For the downstream high-level policy, the same process generates labels before training. Offline computation and BFM test-time computation can describe the same operation. (§3, 4.4, pp. 3–5, 9)",
+          "7. Label construction | Use recorded achieved robot motion as the reference and infer body-input commands that make the target BFM approximately reproduce it. Keep original images, proprioception, and hand labels, and use optimized body commands as supervision. For SONIC, encode optimized commands into motion tokens afterward; neither its encoder nor the BFM is fine-tuned in this step. (§4.4, Appendices C.5.1, C.5.4, pp. 9, 33–34)",
+          "8. Transfer robustness | Downstream label optimization uses (I,N,H,E)=(7,39,37,5). Score each candidate by its mean cost in four randomized scenarios covering contact friction, joint armature, joint friction loss, actuation strength, and initial velocities. All candidates and iterations share the current scenario set; resample at the next replan. (Appendix C.5.2, Table 20, p. 33)",
+          "9. Learned models and deployment | Train Diffusion Policy in simulation and fine-tune the GR00T N1.7-3B action head for hardware while freezing vision and language backbones. Deployment predicts command chunks from current images, proprioception, and optional language, sends body commands to the frozen BFM, and controls hands separately. It runs no online CEM and does not replay stored training labels by time. (Appendices A.2, C.5.3–C.5.4, pp. 17, 33–35)",
+          "10. Separate playback from policy learning | Fig. 4 plays preoptimized commands open-loop on hardware while the BFM retains robot feedback. Table 3 instead deploys a trained high-level policy. Replanning every E steps in Fig. 3 occurs in simulation and does not establish real-time hardware TTCO. (Figs. 3–4, Table 3, pp. 4, 6, 9)",
+          "11. Downstream evidence | SONIC→SONIC simulated mean success is 75.8% with original labels, 56.7% with optimized labels, and 0% with state labels; hardware means are 60.4%, 64.2%, and 2.5%. Hardware SONIC→HEFT reaches 48.8% with optimized labels versus 1.7% original and 12.1% state. Simulated cross-BFM gains depend on pairing and task. (Tables 2–3, 25, pp. 9, 36)",
+          "12. Limitations | The implementation does not yet provide satisfactory real-time command optimization on hardware. Better tracking comes with higher joint acceleration and jitter, and residual errors still constrain precise contacts and coordinated whole-body tasks. (§5, p. 10)"
+        ]
+      }
+    },
+    {
+      "id": "pwm-policy-learning-multi-task-world-models",
+      "aliases": [
+        "PWM",
+        "Policy Learning with Multi-Task World Models",
+        "Policy Learning with Large World Models"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "vla-world-model",
+        "locomotion",
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2407.02466",
+      "project": "https://imgeorgiev.com/pwm/",
+      "arxiv": "https://arxiv.org/abs/2407.02466",
+      "year": "2025",
+      "venue": "ICLR 2025 / arXiv:2407.02466 (2024)",
+      "zh": {
+        "title": "PWM: Policy Learning with Multi-Task World Models",
+        "authors": "Ignat Georgiev, Varun Giridhar, Nicklas Hansen, Animesh Garg",
+        "institutions": "Georgia Institute of Technology; University of California, San Diego",
+        "status": "正文方法与主要实验已读，关键附录已核查；官方实现部分核查，未复现",
+        "takeaway": "先用多任务离线数据训练共享世界模型，再固定模型，在想象轨迹上反向传播回报，为每个任务快速训练独立策略；部署时直接出动作。",
+        "tags": [
+          "PWM",
+          "Multi-Task World Model",
+          "Model-Based RL",
+          "Analytic Policy Gradient",
+          "Actor-Critic",
+          "SimNorm",
+          "Offline Pretraining"
+        ],
+        "mainContent": "PWM 研究如何从预训练的多任务世界模型中高效学出连续控制策略。方法先通过监督学习训练任务条件的状态编码器、潜在动力学和奖励模型，再固定世界模型，用短时域想象轨迹、末端价值估计和穿过模型的一阶梯度，分别训练各任务的 actor–critic。MT30/MT80 实验使用 48M 参数世界模型，每个任务训练 10k 次梯度更新约需 9.3 分钟，无需额外环境交互；部署时执行策略，不做在线规划。作者通过接触、混沌动力学示例及消融说明，模型的梯度质量和优化结果不能仅用预测误差衡量。",
+        "innovations": [
+          "将世界模型视作提供一阶梯度的可微分模拟器：短时域展开预测奖励，末端由价值网络补偿，通过整条计算图更新策略。（§3.3，式 6–9、算法 1，第 5 页）",
+          "将多任务监督建模与强化学习解耦：共享一个任务条件世界模型，再快速提取各任务的独立专家策略；主方案不是单个通用多任务策略。（§3.3、4.2、附录 F.2，第 5、7、20–21 页）",
+          "分析模型平滑性与梯度质量：球撞墙和双摆示例展示，适当正则化或更长的模型训练时域可改善优化结果及梯度信噪比，即使预测误差没有更低。（§3.1–3.2，图 2–3，第 3–4 页）"
+        ],
+        "implementation": [
+          "1. 任务与接口｜MT30 包含不同控制系统及目标，例如 walker-stand、walker-walk、walker-run；MT80 再加入 50 个 MetaWorld 操作任务。任务不是随机初始化或随机 seed。官方实现将状态补零到任务集合的最大维度，动作采用统一最大维度，执行时只截取当前环境需要的分量；任务嵌入拼接到编码器、动力学和奖励网络的输入。（§4.2、图 15–16；官方 train_multitask.py、world_model.py）",
+          "2. 模型预训练｜编码器将真实状态映射为固定维度 latent，动力学预测下一步 latent，奖励头预测奖励；多步自回归训练用潜在一致性损失和奖励交叉熵，目标侧状态编码停止梯度。48M 配置的 latent 为 768 维，模型训练时域 H=16，折扣为 0.99；编码器和动力学输出使用 SimNorm。（式 10、表 1，第 5、7、16 页）",
+          "3. 策略目标｜论文式（6）为 \\(\\mathcal{L}_{\\pi}(\\theta)=\\mathbb{E}[\\sum_{h=1}^{H-1}\\gamma^h R_{\\phi}(z_h,a_h,e)+\\gamma^H V_{\\psi}(z_H)]\\)。从任务数据抽取起始状态，后续动作由当前策略产生，后续 latent 与奖励由模型产生；沿轨迹反向传播并对该目标做梯度上升，而不是模仿离线动作。（算法 1，第 5 页）",
+          "4. 参数与梯度｜策略提取时固定世界模型权重，但保留动力学和奖励对状态、动作的导数，梯度因此仍能传回 actor。critic 用想象轨迹上的 TD(λ) 目标训练；使用 3 个 critic，λ=0.95，策略学习时域 H=16。（式 7–9、表 1，第 5、16 页）",
+          "5. 奖励读出｜奖励采用 SymLog 空间的 two-hot 离散回归。附录 C 说明策略优化时省略 SymExp 逆变换，使用对数空间的伪奖励；这与直接最大化原始标量奖励的数值形式有区别。（附录 C 第 1 项，第 15 页）",
+          "6. 训练与部署｜多任务策略提取使用离线数据和固定模型，单任务接触实验则允许在线微调模型。MT30/MT80 的每任务 10k 次策略更新在 RTX6000 上约需 9.3 分钟，不包含世界模型预训练成本；最终部署无需在线规划。（§4.1–4.2、附录 C，第 6–7、15 页）",
+          "7. 实验与边界｜高维单任务实验覆盖最多 152 维动作，但最高维 SNU Humanoid 的扩展效果较弱。多任务实验使用既有 TD-MPC2 数据和模型架构；模型质量消融显示 PWM 需要训练充分的模型。作者在局限性中强调大量预训练数据的依赖。（§4.1、4.3、6，图 8b，第 6、8–9 页）"
+        ]
+      },
+      "en": {
+        "title": "PWM: Policy Learning with Multi-Task World Models",
+        "authors": "Ignat Georgiev, Varun Giridhar, Nicklas Hansen, Animesh Garg",
+        "institutions": "Georgia Institute of Technology; University of California, San Diego",
+        "status": "Methods and main experiments read; key appendices and selected official code checked; not reproduced",
+        "takeaway": "Pretrain a shared world model on multi-task offline data, freeze it, and backpropagate imagined returns to quickly train a separate policy per task; deploy the policy directly.",
+        "tags": [
+          "PWM",
+          "Multi-Task World Model",
+          "Model-Based RL",
+          "Analytic Policy Gradient",
+          "Actor-Critic",
+          "SimNorm",
+          "Offline Pretraining"
+        ],
+        "mainContent": "PWM studies efficient continuous-control policy extraction from pretrained multi-task world models. It first fits task-conditioned state encoders, latent dynamics, and reward models with supervised learning, then freezes the world model and trains separate actor–critics using short imagined rollouts, terminal-value bootstrapping, and first-order gradients through the model. MT30/MT80 experiments use a 48M-parameter world model and 10k policy updates per task, taking about 9.3 minutes without additional environment interaction; deployment needs no online planning. Contact and chaotic-dynamics examples and ablations show that prediction error alone does not determine gradient quality or policy optimization outcomes.",
+        "innovations": [
+          "Treat the learned world model as a differentiable simulator supplying first-order policy gradients: optimize predicted rewards over short rollouts and bootstrap their terminal value through the full computation graph. (§3.3, Eqs. 6–9, Algorithm 1, p. 5)",
+          "Decouple multi-task supervised modeling from reinforcement learning: share a task-conditioned world model and efficiently extract separate task experts rather than using one universal multi-task policy as the main approach. (§3.3, 4.2, Appendix F.2, pp. 5, 7, 20–21)",
+          "Analyze smoothness and gradient quality: ball–wall and double-pendulum examples show that suitable regularization or longer model-training horizons can improve optimization and gradient signal-to-noise even without lower prediction error. (§3.1–3.2, Figs. 2–3, pp. 3–4)"
+        ],
+        "implementation": [
+          "1. Tasks and interfaces | MT30 covers different control systems and objectives, including walker-stand, walker-walk, and walker-run; MT80 adds 50 MetaWorld manipulation tasks. Tasks are distinct problems, not random initial states or seeds. Official code zero-pads observations to the largest task dimension, uses a common maximum action dimension, and slices actions to the current environment dimension at execution. Task embeddings are concatenated to encoder, dynamics, and reward inputs. (§4.2, Figs. 15–16; official train_multitask.py and world_model.py)",
+          "2. Model pretraining | Encode real states into fixed-size latents, predict subsequent latents and rewards, and train autoregressively with latent consistency and reward cross-entropy; stop gradients through target-side state encodings. The 48M configuration uses 768-dimensional latents, model-training horizon H=16, and discount 0.99. Encoder and dynamics outputs use SimNorm. (Eq. 10, Table 1, pp. 5, 7, 16)",
+          "3. Actor objective | Paper Eq. (6) is \\(\\mathcal{L}_{\\pi}(\\theta)=\\mathbb{E}[\\sum_{h=1}^{H-1}\\gamma^h R_{\\phi}(z_h,a_h,e)+\\gamma^H V_{\\psi}(z_H)]\\). Seed rollouts with task-dataset states; the current policy supplies subsequent actions and the model supplies subsequent latents and rewards. Backpropagate along trajectories and ascend this objective rather than imitate logged actions. (Algorithm 1, p. 5)",
+          "4. Weights and gradients | Freeze world-model weights during policy extraction while retaining dynamics and reward derivatives with respect to states and actions, so gradients still reach the actor. Fit critics with TD(λ) targets on imagined trajectories; use three critics, λ=0.95, and policy horizon H=16. (Eqs. 7–9, Table 1, pp. 5, 16)",
+          "5. Reward readout | Fit rewards with two-hot discrete regression in SymLog space. Appendix C omits the SymExp inverse during policy optimization and uses log-space pseudo-rewards, which differs numerically from directly maximizing raw scalar rewards. (Appendix C, item 1, p. 15)",
+          "6. Training and deployment | Multi-task policy extraction uses offline data and a frozen model, whereas contact-rich single-task experiments allow online model fine-tuning. For MT30/MT80, 10k policy updates take about 9.3 minutes per task on an RTX6000, excluding world-model pretraining. Deployment uses no online planning. (§4.1–4.2, Appendix C, pp. 6–7, 15)",
+          "7. Evidence and limits | Single-task experiments reach 152 action dimensions, but scaling is weaker on the largest SNU Humanoid task. Multi-task experiments reuse TD-MPC2 data and model architecture; model-quality ablations show that PWM needs well-trained models. The limitations explicitly acknowledge dependence on substantial pretraining data. (§4.1, 4.3, 6, Fig. 8b, pp. 6, 8–9)"
+        ]
+      }
+    },
+    {
+      "id": "supermimic-differentiable-world-model",
+      "aliases": [
+        "SuperMimic"
+      ],
+      "categories": [
+        "bfm-tracking",
+        "bfm-dynamics",
+        "locomotion",
+        "sim2real",
+        "vla-world-model"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.28480v1",
+      "project": "https://supermimic.github.io/",
+      "arxiv": "https://arxiv.org/abs/2610.28480v1",
+      "year": "2026",
+      "venue": "CoRL 2026 (Oral) / arXiv:2610.28480v1",
+      "zh": {
+        "title": "SuperMimic: Scaling Humanoid Whole-Body Control with One Differentiable World Model",
+        "authors": "Qiayuan Liao, Yiyang Shao, Junfeng Long, Kevin Zakka, Roberto Horowitz, Pieter Abbeel, Koushil Sreenath",
+        "institutions": "University of California, Berkeley",
+        "status": "正文与关键附录已阅读（本地 v1；未复现代码）",
+        "takeaway": "用一个在线学习的可微世界模型复用所有动作的身体动力学，在短时想象轨迹中直接反传回报，以 SHAC 式 actor–critic 高效训练可部署的人形跟踪策略。",
+        "tags": [
+          "SuperMimic",
+          "Differentiable World Model",
+          "Model-Based RL",
+          "BPTT",
+          "Short-Horizon Actor-Critic",
+          "Motion Tracking",
+          "GAE",
+          "Unitree G1",
+          "Sim-to-Real"
+        ],
+        "mainContent": "大规模人形动作跟踪通常依赖昂贵的无模型强化学习。SuperMimic 交替采集当前策略的仿真转移、拟合共享可微世界模型，再通过短时想象轨迹的 BPTT 与末端价值估计更新策略，原始刚体仿真器无需可微。作者报告单张 H100 训练 3 小时后超过 SONIC 发布检查点的归一化回报，在 129,514 条基准动作中失败 25 条，双 GPU 训练 9.8 小时后零失败，并在真实 Unitree G1 上展示多类高难动作。",
+        "innovations": [
+          "跨动作复用动力学：一个世界模型学习同一机器人共享的身体与接触规律；数据时长从 1 小时扩至 264 小时时，8 步预测误差保持在 0.007–0.011，达到目标回报的计算成本缓慢增长。（§4.1–4.2，图 3，第 6–7 页）",
+          "兼容普通刚体仿真器的可微策略学习：从仿真记录学习代理模型，在其上运行 SHAC 式短视野 actor–critic；仿真采集、模型拟合和策略改进持续交替进行。（图 2，§3，第 4–6 页）",
+          "分离效率来源：实际使用的批量范围内，模型推演比仿真器快 10 倍以上；在模型内训练的 PPO 对照中，解析梯度更新用约少 64 倍的想象步数达到其最佳回报。（图 5，§4.2，第 7–8 页）",
+          "同一动作跟踪策略部署到真实 G1，并初步展示共享模型和动作 decoder 支持速度接口；速度任务直接用自身奖励训练 encoder，而非只依赖参考跟踪信号。（§4.4–4.5，图 6–7，第 8–9 页）"
+        ],
+        "implementation": [
+          "1. 数据与采集｜使用过滤后的 G1 重定向 BONES-SEED：129,514 条动作、约 264.56 小时。当前策略在 MuJoCo Warp 中执行加噪动作，每维噪声为 N(0, 0.1²)；buffer 记录实际执行动作及仿真转移。所述流程没有报告混入专家策略 rollout，参考动作提供目标与重置起点。（§3.1，附录 D–E，第 4、15–17 页）",
+          "1. Replay buffer｜每 GPU 4096 个环境，每个环境保留最近 1000 步，单 GPU 最多约 409.6 万个交互步；新数据替换最旧数据。1000 步是容量，不是 episode 长度，期间可包含多次终止与重置。模型训练抽连续短窗口，策略训练抽起始状态；具体内存布局和跨回合窗口处理未在文中展开。（图 2，算法 A.1，表 A.5，第 4、15–16 页）",
+          "1. 终止与重置｜根部高度相对参考误差超过 0.25 m，或重力方向 z 分量的倾斜误差超过 0.8 时终止；不按末端偏差终止。重置点按 1 s 动作分箱采样：50% 均匀、40% 偏向当前低回报、10% 按历史困难采样权重，覆盖不同动作阶段。（附录 A、D.1，第 13、15 页）",
+          "2. 世界模型｜动力学 MLP 隐藏层为 [2048, 2048, 2048]，输入状态、动作和随机化上下文，预测下一状态；另提供奖励、无噪观测和终止概率，可学习或解析计算。用记录初始状态和动作自回归展开 k=8 步，最小化状态、奖励、观测误差及终止 BCE；每次更新用 10 批、每批 2048 个窗口。（式 1，表 A.4–A.5，第 5、15–16 页）",
+          "3. 跟踪策略结构｜未来 10 帧参考目标经过 motion encoder 得到 32 维、tanh 有界的 z；共享 decoder 结合 z 和最近 10 帧本体观测输出 29 维归一化关节设定值。encoder 和 decoder 隐藏层均为 [2048, 1024, 512, 256]，主跟踪策略通过同一个回报目标联合训练。（附录 A–C，式 A.1，表 A.4，第 13–15 页）",
+          "3. 策略目标｜从 buffer 状态出发，当前策略在固定模型内展开 H=32 步，优化 \\(\\hat J=\\mathbb E[\\sum_{t=0}^{H-1}\\gamma^t\\hat c_t\\hat r_{t+1}+\\gamma^H\\hat c_H V_\\psi(\\hat s_H,g_H,\\xi)]\\)。存活权重满足 \\(\\hat c_{t+1}=\\hat c_t(1-\\hat d_{t+1})\\)，critic 补足窗口后的回报。（式 2，第 5 页）",
+          "3. 梯度与部署｜actor 的回报梯度穿过模型对状态和动作的雅可比，用 BPTT 更新 encoder、decoder；模型权重只在该次 actor 更新中固定，输入梯度保留。它不使用 PPO 的概率比裁剪目标；部署时运行策略，不需要 8 步模型拟合或 32 步想象优化。控制周期为 0.02 s。（§3.3，图 5，附录 A，第 5、8、13 页）",
+          "4. Critic 与 GAE｜critic 为 [256, 128] MLP，每个接口独立。令 \\(V_t=V_\\psi(\\hat s_t,g_t,\\xi)\\)，从 \\(\\hat R_H=V_H\\) 反向递推 \\(\\hat R_t=\\hat r_{t+1}+\\gamma(1-\\hat d_{t+1})[(1-\\lambda)V_{t+1}+\\lambda\\hat R_{t+1}]\\)，固定这些目标后最小化价值均方误差。这里 GAE 构造 critic 目标，不给 actor 的概率梯度加权；gamma=0.99、lambda=0.95，每次 5 epochs、每 epoch 4 个 minibatch。（式 3，表 A.4–A.5，第 5、15–16 页）",
+          "5. 窗口消融｜k=8 是模型拟合窗口，H=32 是策略展开视野，不是更新间隔或部署预测长度，也没有固定倍数关系。H 测试了 8、16、32、64、128：带 critic 的 H=16 匹配无 critic 的 H=32，默认 H=32 最快达到回报 0.82；H=128 更慢且最终回报下降。（图 4，§4.3，第 7–8 页）",
+          "6. 速度接口｜velocity encoder 读取速度指令和观测历史特征，输出相同的 z；速度任务回报只更新该 encoder，共享 decoder 仍由动作跟踪任务训练。在参考指令 rollout 上，额外用权重 0.1 的 latent MSE 对齐 motion encoder，目标 latent stop-gradient。冻结 decoder 权重仍允许梯度经其输入传回速度 encoder。（附录 B、G.1，第 14、18–19 页）",
+          "7. 结果范围｜3 小时计算包括采样、模型和策略训练，超过的是 SONIC 发布检查点的归一化回报；比较使用不同 GPU 和训练数据规模。129,514 条动作均属于双方训练覆盖基准，25/179/0 次失败衡量覆盖能力。零失败来自双 GPU 9.8 小时结果，真实 G1 则展示跳跃、侧滚与翻转。（§4.1、4.4，附录 F，第 6、8–9、18 页）",
+          "8. 作者后续方向｜测试让速度任务奖励也更新共享 decoder，确认并发训练是否有额外收益；使用真机数据修正世界模型并进行系统辨识；从平地扩展到地形和物体交互。当前速度接口是初步研究，不能据此断言联合更新 decoder 一定更好。（§6，第 9 页）"
+        ]
+      },
+      "en": {
+        "title": "SuperMimic: Scaling Humanoid Whole-Body Control with One Differentiable World Model",
+        "authors": "Qiayuan Liao, Yiyang Shao, Junfeng Long, Kevin Zakka, Roberto Horowitz, Pieter Abbeel, Koushil Sreenath",
+        "institutions": "University of California, Berkeley",
+        "status": "Main text and key appendices reviewed (local v1; code not reproduced)",
+        "takeaway": "Shares humanoid dynamics across motions through an online learned differentiable world model, then uses short imagined rollouts and a SHAC-style actor–critic to train a deployable tracker.",
+        "tags": [
+          "SuperMimic",
+          "Differentiable World Model",
+          "Model-Based RL",
+          "BPTT",
+          "Short-Horizon Actor-Critic",
+          "Motion Tracking",
+          "GAE",
+          "Unitree G1",
+          "Sim-to-Real"
+        ],
+        "mainContent": "Large-scale humanoid motion tracking usually requires expensive model-free reinforcement learning. SuperMimic alternates policy-driven simulator data collection, shared world-model fitting, and policy improvement through short imagined rollouts with BPTT and terminal-value bootstrapping, without differentiating the original simulator. The authors report surpassing the normalized return of the released SONIC checkpoint after 3 hours on one H100, with 25 failures among 129,514 benchmark motions, zero failures after 9.8 hours on two GPUs, and diverse acrobatic demonstrations on a physical Unitree G1.",
+        "innovations": [
+          "Amortized dynamics across motions: one model captures shared body and contact dynamics. Its 8-step prediction error remains within 0.007–0.011 as motion data grows from 1 to 264 hours, while compute to a target return grows slowly. (§4.1–4.2, Figure 3, pp. 6–7)",
+          "Differentiable policy learning compatible with standard rigid-body simulators: a learned surrogate supports SHAC-style short-horizon actor–critic updates, while simulator collection, model fitting, and policy improvement alternate throughout training. (Figure 2, §3, pp. 4–6)",
+          "Separated efficiency mechanisms: model rollouts are more than 10 times faster than simulation at practical batch sizes; analytic-gradient updates reach the best return of PPO trained inside the same model with about 64 times fewer imagined steps. (Figure 5, §4.2, pp. 7–8)",
+          "One tracker transfers to physical G1 hardware, and a preliminary velocity interface uses its own task reward to train an encoder through the shared dynamics and action decoder, beyond reference-tracking supervision alone. (§4.4–4.5, Figures 6–7, pp. 8–9)"
+        ],
+        "implementation": [
+          "1. Data and collection | Filtered G1-retargeted BONES-SEED contains 129,514 clips and about 264.56 hours. The current policy acts in MuJoCo Warp with independent N(0, 0.1²) action noise; executed actions and simulator transitions enter replay. The described loop reports no expert-policy rollout mixture; reference motions supply goals and reset points. (§3.1, Appendices D–E, pp. 4, 15–17)",
+          "1. Replay buffer | Each GPU has 4096 environments and retains the latest 1000 steps per environment, up to about 4.096 million interaction steps. New records replace the oldest. Capacity is not episode length: multiple episodes may occur within those records. Model fitting samples short consecutive windows; policy fitting samples start states. Exact memory layout and cross-episode window handling are not detailed. (Figure 2, Algorithm A.1, Table A.5, pp. 4, 15–16)",
+          "1. Termination and reset | Terminate when root-height error relative to reference exceeds 0.25 m or the tilt error, defined using gravity-direction z components, exceeds 0.8; end-effector deviation does not terminate. Reset sampling over 1-second motion bins mixes 50% uniform, 40% biased toward current low returns, and 10% historical difficulty weights. (Appendices A and D.1, pp. 13, 15)",
+          "2. World model | A dynamics MLP [2048, 2048, 2048] maps state, action, and randomized context to the next state. Reward, noise-free observation, and termination outputs are learned or analytically computed. Autoregressive k=8 windows use logged initial states and actions, with state/reward/observation errors and termination BCE; each update uses 10 batches of 2048 windows. (Eq. 1, Tables A.4–A.5, pp. 5, 15–16)",
+          "3. Tracking policy | A motion encoder maps 10 future reference frames to a 32-dimensional tanh-bounded z. The shared decoder combines z with the last 10 proprioceptive frames to output 29 normalized joint setpoints. Encoder and decoder both use hidden widths [2048, 1024, 512, 256] and are jointly trained by the tracking-return objective. (Appendices A–C, Eq. A.1, Table A.4, pp. 13–15)",
+          "3. Policy objective | Seed H=32 imagined steps from replay and optimize \\(\\hat J=\\mathbb E[\\sum_{t=0}^{H-1}\\gamma^t\\hat c_t\\hat r_{t+1}+\\gamma^H\\hat c_H V_\\psi(\\hat s_H,g_H,\\xi)]\\). Survival weights obey \\(\\hat c_{t+1}=\\hat c_t(1-\\hat d_{t+1})\\), and the critic estimates return beyond the window. (Eq. 2, p. 5)",
+          "3. Gradients and deployment | BPTT differentiates return through model state/action Jacobians into the encoder and decoder. Model weights are fixed only during each actor update; derivatives with respect to model inputs remain available. The actor does not use a PPO probability-ratio clipping objective. Deployment runs the policy without the 8-step model-fitting or 32-step imagined optimization procedure. The control period is 0.02 seconds. (§3.3, Figure 5, Appendix A, pp. 5, 8, 13)",
+          "4. Critic and GAE | Each interface has a [256, 128] critic. With \\(V_t=V_\\psi(\\hat s_t,g_t,\\xi)\\), initialize \\(\\hat R_H=V_H\\) and recurse backward as \\(\\hat R_t=\\hat r_{t+1}+\\gamma(1-\\hat d_{t+1})[(1-\\lambda)V_{t+1}+\\lambda\\hat R_{t+1}]\\). Fit value MSE with these targets held fixed. GAE supplies critic targets, not actor score-function weights; gamma=0.99, lambda=0.95, with 5 critic epochs of 4 minibatches each. (Eq. 3, Tables A.4–A.5, pp. 5, 15–16)",
+          "5. Horizon ablation | k=8 is the model-fitting window and H=32 the policy imagination horizon, not update intervals or deployment horizons; no fixed ratio is required. Tested H values are 8, 16, 32, 64, and 128. H=16 with a critic matches critic-free H=32, default H=32 reaches return 0.82 fastest, and H=128 is slower with lower final return. (Figure 4, §4.3, pp. 7–8)",
+          "6. Velocity interface | A velocity encoder consumes commands and observation-history features to produce the same z. Velocity reward updates this encoder only; tracking reward still trains the shared decoder. Reference-command rollouts additionally align its latent to a stopped-gradient motion latent using MSE weighted 0.1. Frozen decoder weights do not block input gradients into the velocity encoder. (Appendices B and G.1, pp. 14, 18–19)",
+          "7. Result scope | The 3-hour cost includes collection, model fitting, and policy learning, and exceeds the normalized return of the released SONIC checkpoint; GPU types and training-data volumes differ. The 129,514 benchmark clips are training coverage for both methods, so the 25/179/0 failure counts measure coverage. Zero failures use two GPUs for 9.8 hours; physical G1 demonstrations include jumping, rolling, and flips. (§4.1, §4.4, Appendix F, pp. 6, 8–9, 18)",
+          "8. Author-stated next steps | Test velocity-task updates to the shared decoder and whether concurrency then helps; refine the model with hardware data and use differentiability for system identification; extend beyond flat ground to terrain and object interaction. The velocity study is preliminary and does not establish that joint decoder updates are superior. (§6, p. 9)"
+        ]
+      }
+    },
+    {
       "id": "str-spatiotemporal-retargeting",
       "aliases": [
         "STR / MCA",
@@ -5422,6 +5857,246 @@
           "STRL tracking: the PPO actor consumes proprioception, reference commands, and previous action, mapped to PD joint-position targets; the critic additionally gets privileged body/object states. Stage priorities satisfy \\(\\pi_j\\propto |I_j|w_j(f_j+\\beta)\\), mixed with global uniform starts. Added reward \\(r_n^{\\mathrm{contact}}=\\gamma_n\\exp(-e_{c,n}^2/\\sigma^2)\\) tracks anchors attached to the actual object pose. Eq. 12 and Appendix B-E contain no explicit contact-force factor in this position reward. (pp. 6–7, Eqs. 10–13; p. 12, Eq. 18)",
           "Results/scope: full STR versus OmniRetarget has PECR 80.19/33.65%, ECC 72.54/24.63%, and mean SQP iterations 353.10/1471.10. STR still has penetration duration 4.84% and maximum depth 0.82 cm. Table III success rates are 32.97%, 81.25%, and 86.56% for OmniRetarget+RL, STR+RL, and STR+STRL. G1 is simulated and R1 tested on hardware. Appendix A-B notes differing archived reference/reward versions and training budgets, so these evaluations do not isolate the contact reward. (pp. 7–8 and 11)",
           "Ablation attribution: w/o spatial jointly makes interaction weights uniform and removes both position and direction objectives; PECR/ECC drop from 80.19/72.54% to 34.25/24.10%. w/o temporal changes budgets, stage-weight timing, and contact activation together. There is no geometric-initial-anchor versus MCA-refined-anchor comparison, nor an isolated part-weight ablation at fixed contact targets, so contact gains cannot be assigned independently to MCA or spatiotemporal weights. (p. 8, Table II; p. 12, Appendix C-B)"
+        ]
+      }
+    },
+    {
+      "id": "shooting-for-contact-dsms",
+      "aliases": [
+        "DSMS",
+        "Shooting for Contact"
+      ],
+      "categories": [
+        "bfm-data",
+        "bfm-dynamics",
+        "locomotion",
+        "imitation-teleop",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2608.03116v2",
+      "project": "https://shooting-for-contact.github.io/",
+      "arxiv": "https://arxiv.org/abs/2608.03116v2",
+      "year": "2026",
+      "venue": "arXiv:2608.03116v2",
+      "zh": {
+        "title": "Shooting for Contact: Contact-Implicit Multiple Shooting for Dynamic Motion Retargeting",
+        "authors": "Sergio A. Esteban, Jason H. K. Siu, Derrick Mach, Junheng Li, Vince Kurtz, Joel W. Burdick, Aaron D. Ames",
+        "institutions": "California Institute of Technology; DePaul University",
+        "status": "正文方法与关键实验已阅读（本地 v2；未复现代码）",
+        "takeaway": "先用 MuJoCo 接触动力学与多重打靶优化修正机器人参考动作，再固定参考训练 PPO 跟踪策略；DSMS 更新的是轨迹与控制变量。",
+        "tags": [
+          "DSMS",
+          "Motion Retargeting",
+          "Trajectory Optimization",
+          "Multiple Shooting",
+          "Contact-Implicit",
+          "MuJoCo",
+          "IPOPT",
+          "PPO",
+          "Unitree G1"
+        ],
+        "mainContent": "运动学重定向的动作可能违反全身动力学、接触与执行器限制，增加模仿学习难度。DSMS 将 MuJoCo 状态转移嵌入多重打靶非线性规划，联合优化状态节点和控制，使动作尽量接近原参考，并满足动力学连续性及任务约束。修正后的轨迹用于独立的 PPO 训练；作者报告更快的后空翻学习，并在真实 G1 上展示行走、慢跑、爬行和 180° 跳跃转身的零样本迁移。",
+        "innovations": [
+          "仿真驱动的参考优化框架：以可微仿真转移连接打靶节点，接触、摩擦与碰撞由仿真器内部处理，外层保留等式和不等式任务约束。（第 2–3 页，§I-B、III-A，式 4–5）",
+          "指令条件化的周期步态生成：用周期闭合与平均平面运动约束，从短参考动作构建行走、慢跑和爬行步态库，并训练单个速度指令策略。（第 4–5 页，§III-D、IV-B，图 3）",
+          "下游学习验证：比较 SRB、KD 与 DSMS 参考的学习效果，并与其他重定向方法比较，结合丰富接触动作和 G1 硬件部署检验整个流程。（第 6–7 页，§V-D，图 7–8、表 III–IV）"
+        ],
+        "implementation": [
+          "1. 输入与输出｜输入是固定的机器人参考状态序列，可能来自重定向动捕、动画或降阶模型。DSMS 输出修正后的全身状态轨迹及对应控制；修正前后都可表示为时间序列，变化的是姿态、速度等数值及其动力学一致性。（第 2–3 页，§III、III-A）",
+          "2. 联合求解｜将各节点状态 X 与控制点 U 作为决策变量；控制曲线由基函数插值。约束 \\(x_{k+1}=F(x_k,u_k)\\) 连接独立仿真区间；F 在区间内执行 S 个仿真子步，并使用 U 决定的完整控制曲线。（第 3 页，式 4–5，图 2）",
+          "3. 代价与控制｜代价包含全身状态与关键身体位姿/速度跟踪、实际力矩代价、相邻控制指令差以及加权终点跟踪。控制可为力矩或 PD 目标位置；位置接口下实际力矩为 \\(\\tau=K_p(u-q^{\\mathrm{jnt}})-K_dv^{\\mathrm{jnt}}\\)。跟踪是软目标，动力学连续性是约束。（第 3–4 页，式 6–12及脚注 1）",
+          "4. 数值优化｜MuJoCo 通过有限差分提供一阶导数，子步导数链式组合；通过 cyipopt 调用 IPOPT，使用 MA57 求解稀疏 KKT 系统，并以 L-BFGS 近似拉格朗日 Hessian。这一步更新状态与控制变量。（第 2–3、5 页，§II-B、III-A、V-A）",
+          "5. 长动作与步态｜高动态长动作采用滚动时域：从当前仿真状态优化短窗口，执行控制前一部分后重规划。步态采用完整周期优化，满足 \\(z_N=z_0\\oplus\\Delta z(c,P)\\)、\\(w_N=w_0\\)，并以软防滑项允许爬行所需的滑动。（第 4 页，§III-C–D，式 13–16）",
+          "6. SRB 的位置｜后空翻消融从 SRB 生成的动作出发，经逐帧 IK 得到全身运动学参考，再可选加入 KD 和 DSMS；SRB 是该实验的上游来源。另一组超级英雄后空翻直接使用已重定向至 G1 的 BONES-SEED 参考。（第 6–7 页，§V-D.1–2）",
+          "7. 独立训练 PPO｜固定优化后的参考，以逐帧身体位姿/速度奖励、参考状态初始化和自适应帧采样训练模仿策略。速度控制策略从步态库选最近指令，在相位处取目标；actor 使用本体观测、前一动作、速度指令和相位，critic 额外使用参考与特权状态。动作是相对 idle 姿态的关节位置偏移，经 PD 执行；仿真 200 Hz、策略 50 Hz。（第 5 页，§IV–V-A，式 17–19）",
+          "8. 结果｜图 8 中达到平均奖励约 20，DSMS 参考约需 2000 次迭代，最近竞争方法约需 5000 次，该次轨迹优化约耗时 12 分钟。表 IV 中 DSMS 与 DynaRetarget 均为 74/75 次成功；DSMS 关节误差 0.159±0.006 rad、归一化机身位姿误差 0.102±0.046，误差仅统计成功落地。硬件展示包括行走、慢跑、爬行与 180° 跳跃转身。（第 5–7 页，§V-B/D，图 8、表 IV）"
+        ]
+      },
+      "en": {
+        "title": "Shooting for Contact: Contact-Implicit Multiple Shooting for Dynamic Motion Retargeting",
+        "authors": "Sergio A. Esteban, Jason H. K. Siu, Derrick Mach, Junheng Li, Vince Kurtz, Joel W. Burdick, Aaron D. Ames",
+        "institutions": "California Institute of Technology; DePaul University",
+        "status": "Methods and key experiments reviewed (local v2; code not reproduced)",
+        "takeaway": "Use MuJoCo contact dynamics and multiple-shooting optimization to repair robot references, then freeze those references for PPO tracking; DSMS optimizes trajectory and control variables.",
+        "tags": [
+          "DSMS",
+          "Motion Retargeting",
+          "Trajectory Optimization",
+          "Multiple Shooting",
+          "Contact-Implicit",
+          "MuJoCo",
+          "IPOPT",
+          "PPO",
+          "Unitree G1"
+        ],
+        "mainContent": "Kinematically retargeted motions can violate whole-body dynamics, contact consistency, and actuation limits, making imitation difficult. DSMS embeds MuJoCo transitions in a multiple-shooting nonlinear program and jointly optimizes state nodes and controls to remain close to the source reference while satisfying dynamic continuity and task constraints. The resulting references support a separate PPO training stage; the authors report faster backflip learning and zero-shot G1 demonstrations of walking, jogging, crawling, and a 180-degree jump-turn.",
+        "innovations": [
+          "Simulation-based reference optimization: differentiable simulator transitions connect shooting nodes, internal contact/friction/collision solves handle physical interactions, and the outer NLP supports equality and inequality task constraints. (pp. 2–3, §I-B and III-A, Eqs. 4–5)",
+          "Command-conditioned periodic gait synthesis: cycle closure and prescribed average planar motion turn short references into walking, jogging, and crawling libraries for a single velocity-command policy. (pp. 4–5, §III-D and IV-B, Figure 3)",
+          "Downstream learning evidence: compare SRB, KD, and DSMS references and other retargeting methods, then demonstrate contact-rich motions and physical G1 deployment. (pp. 6–7, §V-D, Figures 7–8, Tables III–IV)"
+        ],
+        "implementation": [
+          "1. Inputs and outputs | A fixed robot state reference may come from retargeted motion capture, animation, or reduced-order planning. DSMS produces a corrected whole-body state trajectory and corresponding controls. Both references are time series; posture, velocity, and dynamic consistency change. (pp. 2–3, §III and III-A)",
+          "2. Joint solve | Shooting states X and control points U are decision variables; basis functions interpolate the control signal. Constraints \\(x_{k+1}=F(x_k,u_k)\\) connect independently simulated intervals. Each F uses S simulator substeps and the entire interval control signal determined by U. (p. 3, Eqs. 4–5, Figure 2)",
+          "3. Costs and actuation | Penalize state and key-body pose/twist errors, realized torque, neighboring command differences, and weighted terminal tracking. Controls can be torques or PD position targets; the position interface gives \\(\\tau=K_p(u-q^{\\mathrm{jnt}})-K_dv^{\\mathrm{jnt}}\\). Tracking is a soft objective; dynamic continuity is a constraint. (pp. 3–4, Eqs. 6–12 and footnote 1)",
+          "4. Numerical optimization | MuJoCo supplies finite-difference first derivatives, chained across substeps. cyipopt calls IPOPT with MA57 for sparse KKT systems and an L-BFGS approximation to the Lagrangian Hessian. This stage updates state and control variables. (pp. 2–3 and 5, §II-B, III-A, and V-A)",
+          "5. Long motions and gaits | Dynamic long motions use receding horizons: solve from the current simulated state, execute an initial control segment, and replan. Full-cycle gait optimization enforces \\(z_N=z_0\\oplus\\Delta z(c,P)\\) and \\(w_N=w_0\\), with a soft no-slip penalty that permits required crawling slides. (p. 4, §III-C–D, Eqs. 13–16)",
+          "6. SRB placement | The backflip ablation starts with SRB-generated motion, lifts it through frame-wise IK to a whole-body kinematic reference, and optionally adds KD and DSMS. SRB is an upstream source for this experiment. The superhero-backflip comparison instead starts directly from BONES-SEED motion already retargeted to G1. (pp. 6–7, §V-D.1–2)",
+          "7. Separate PPO training | Freeze the optimized reference and use frame-wise body pose/twist rewards, reference-state initialization, and adaptive frame sampling. Velocity control selects the nearest command-indexed gait and its phase target. The actor receives proprioception, previous action, command, and phase; the critic additionally sees reference and privileged state. Actions are joint-position offsets from the idle posture, executed through PD. Simulation runs at 200 Hz and policy control at 50 Hz. (p. 5, §IV–V-A, Eqs. 17–19)",
+          "8. Results | In Figure 8, DSMS references reach mean reward about 20 in roughly 2000 iterations versus 5000 for the nearest competitors; that trajectory optimization takes about 12 minutes. Table IV gives both DSMS and DynaRetarget 74/75 successful landings. DSMS joint error is 0.159±0.006 rad and normalized base-pose error 0.102±0.046, measured only on successful landings. Hardware demonstrations cover walking, jogging, crawling, and a 180-degree jump-turn. (pp. 5–7, §V-B/D, Figure 8, Table IV)"
+        ]
+      }
+    },
+    {
+      "id": "contact-uan",
+      "aliases": [
+        "Contact-UAN",
+        "Contact UAN"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "bfm-adaptation",
+        "locomotion",
+        "sim2real",
+        "vla-world-model"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.18991",
+      "project": "https://contact-uan.csail.mit.edu/",
+      "arxiv": "https://arxiv.org/abs/2610.18991",
+      "year": "2026",
+      "venue": "CoRL 2026 / arXiv:2610.18991",
+      "zh": {
+        "title": "Contact-UAN: Unsupervised Actuator Networks as a Residual World Model for Humanoid Control",
+        "authors": "Nolan Fey, Khai Nguyen, Yash Prabhu, Gabriel B. Margolis, Pulkit Agrawal",
+        "institutions": "Improbable AI Lab, Massachusetts Institute of Technology (MIT)",
+        "status": "核心方法及相关工作已读；关键实验与状态估计附录已核查",
+        "takeaway": "先用本体感知重建接触一致的仿真回放起点，再学习关节目标残差校准执行器；校准后的物理仿真器就是文中的残差世界模型。",
+        "tags": [
+          "Contact-Consistent Initialization",
+          "Residual World Model",
+          "Actuator Modeling",
+          "Proprioception",
+          "PPO",
+          "Unitree G1"
+        ],
+        "mainContent": "人形策略在真机上能复现动作，却可能无法复现仿真中学到的力与冲量交互。Contact-UAN 从本体感知估计接触状态、支撑脚的仿真侧位姿和基座速度，先构造接触一致的回放初始状态，再用 PPO 学习关节位置目标残差，使仿真轨迹接近真机记录。冻结 UAN 后，在校准后的仿真中分别训练任务策略；作者报告，使用 6.5 分钟真机行走数据训练的同一 UAN，可支持跑步、力控制与跳跃等任务，跑步力矩使用降低约 20%，力跟踪误差降低约 43%。",
+        "innovations": [
+          "接触一致的回放初始化：预测能在软接触仿真中产生相应支撑力与力矩的脚高度和倾角，包含微小穿地量，减少残差模型对初始化伪差的补偿。（第 2–4 页，图 2–3）",
+          "将既有 UAN 扩展到浮动基座 29-DoF 人形机器人：通过本体感知状态估计支持带接触轨迹回放，无需真机力矩标签、接触力传感器或动捕。（第 3–5、9 页）",
+          "跨任务复用执行器残差：同一行走数据训练的 UAN 用于多个下游策略；hard sim-to-sim 消融中，接触一致初始化使 20 秒存活率从 49.8% 提高到 96.7%。（第 7–8 页，图 8）"
+        ],
+        "implementation": [
+          "数据与监督｜先部署带域随机化的 WTW 风格行走策略，记录关节位置/速度、基座角速度、投影重力与关节目标。状态估计器在仿真中监督训练：接触分类用 BCE，其余回归用 MSE；脚高度与姿态回归只使用对应脚的支撑期样本。（第 5、14–15 页，表 1）",
+          "回放起点｜接触概率不低于 0.8 的脚提供位姿候选，通过正向运动学重建基座高度及 roll/pitch，并按接触置信度融合；补上估计的基座速度。没有可信接触的窗口不作为回放起点；后续接触由仿真动力学产生。（第 15–16 页，式 4–6）",
+          "残差模型｜执行 \\(q_t^{\\mathrm{cmd}}=q_t^{\\mathrm{base}}+\\mu_\\theta(o_t^\\mu)\\)。每个关节输入最近 3 步（60 ms）的目标位置误差与关节速度；相同执行器型号共享两层 (128, 128) ELU MLP。仿真器保留刚体动力学、接触求解及积分。（第 4–5 页，式 1–3）",
+          "残差训练｜4096 个并行回放环境，3 个记录步骤预填历史，再回放 24 步（480 ms）真机目标；PPO 奖励惩罚关节位置误差、速度误差及残差变化，位置残差限幅为 ±1.0 rad。真实运动轨迹提供训练信号，修正力矩或修正目标没有真值标签。（第 5、16 页）",
+          "策略训练与部署｜冻结 UAN，分别训练下游任务策略；移除机器人特定的域随机化，保留地形、地面摩擦与外推扰动。真机仅部署任务策略；初始化估计器只用于离线数据重标记。（第 4–5 页，图 4）",
+          "适用假设｜状态估计采用平地、水平位置与 yaw 不变的局部坐标系，依赖负载相关本体感知线索能够跨域迁移；当前局部执行器模型不包含执行器耦合与温度相关效应。（第 3–4、8 页）"
+        ]
+      },
+      "en": {
+        "title": "Contact-UAN: Unsupervised Actuator Networks as a Residual World Model for Humanoid Control",
+        "authors": "Nolan Fey, Khai Nguyen, Yash Prabhu, Gabriel B. Margolis, Pulkit Agrawal",
+        "institutions": "Improbable AI Lab, Massachusetts Institute of Technology (MIT)",
+        "status": "Core methods and related work read; key experiments and state-estimation appendix checked",
+        "takeaway": "Use proprioception to reconstruct contact-consistent replay resets, then learn joint-target residuals to calibrate actuation; the corrected physics simulator is the residual world model.",
+        "tags": [
+          "Contact-Consistent Initialization",
+          "Residual World Model",
+          "Actuator Modeling",
+          "Proprioception",
+          "PPO",
+          "Unitree G1"
+        ],
+        "mainContent": "Humanoid policies can reproduce motions on hardware while failing to reproduce the forces and impulses learned in simulation. Contact-UAN estimates contact status, simulator-side stance-foot pose, and base velocity from proprioception to initialize contact-consistent replay, then uses PPO to learn joint-position-target residuals that align simulated trajectories with hardware recordings. After freezing the UAN, separate task policies are trained in the corrected simulator; the authors report that one UAN learned from 6.5 minutes of hardware walking supports running, force control, and jumping, with approximately 20% lower running torque usage and 43% lower force-tracking error.",
+        "innovations": [
+          "Contact-consistent replay resets: predict simulator-side foot height and tilt, including small penetration, that reproduce support forces and moments under soft contact, reducing compensation for reset artifacts. (pp. 2–4, Figures 2–3)",
+          "Extend the existing UAN approach to a floating-base 29-DoF humanoid: proprioceptive state estimation enables replay of trajectories with contacts without hardware torque labels, contact-force sensors, or motion capture. (pp. 3–5 and 9)",
+          "Reuse an actuator residual across task policies: one walking-trained UAN supports multiple downstream tasks; in the hard sim-to-sim reset ablation, contact-consistent initialization improves 20-second survival from 49.8% to 96.7%. (pp. 7–8, Figure 8)"
+        ],
+        "implementation": [
+          "Data and supervision | Deploy a domain-randomized WTW-style walking policy and record joint positions/velocities, base angular velocity, projected gravity, and joint targets. Train state estimators with simulator supervision: BCE for contact classification and MSE for regressions; train each foot-height/orientation regressor only on that foot’s stance samples. (pp. 5 and 14–15, Table 1)",
+          "Replay reset | Feet with contact probability at least 0.8 provide pose candidates. Forward kinematics reconstructs base height and roll/pitch, fused by contact confidence and supplemented with estimated base velocity. Exclude reset windows without confident contact; subsequent contacts emerge from simulation dynamics. (pp. 15–16, Eqs. 4–6)",
+          "Residual model | Execute \\(q_t^{\\mathrm{cmd}}=q_t^{\\mathrm{base}}+\\mu_\\theta(o_t^\\mu)\\). Each joint receives 3 steps (60 ms) of target-position error and joint velocity. Identical actuator types share a two-layer (128, 128) ELU MLP. The simulator retains rigid-body dynamics, contact solving, and integration. (pp. 4–5, Eqs. 1–3)",
+          "Residual training | Use 4096 parallel replay environments, prime histories with 3 recorded steps, then replay 24 steps (480 ms) of hardware targets. PPO penalizes joint-position error, velocity error, and residual changes; clip position residuals to ±1.0 rad. Recorded motion supplies the training signal; corrective torque or target labels are unavailable. (pp. 5 and 16)",
+          "Policy training and deployment | Freeze the UAN and train separate downstream task policies. Remove robot-specific domain randomization while retaining terrain, ground-friction, and external-push variations. Deploy only the task policy; reset estimators are used solely for offline relabeling. (pp. 4–5, Figure 4)",
+          "Assumptions | State estimation uses flat terrain and a root-xy/yaw-invariant local frame, assuming load-dependent proprioceptive cues transfer across domains. The current local actuator models omit coupled and temperature-dependent actuator effects. (pp. 3–4 and 8)"
+        ]
+      }
+    },
+    {
+      "id": "blind-dexterity-pure-proprioception",
+      "aliases": [
+        "Blind Dexterity",
+        "BlindDexterity"
+      ],
+      "categories": [
+        "locomotion",
+        "manipulation",
+        "loco-manipulation",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2608.29487",
+      "project": "https://aditya.bhatts.org/BlindDexterity/",
+      "arxiv": "https://arxiv.org/abs/2608.29487",
+      "year": "2026",
+      "venue": "arXiv:2608.29487",
+      "zh": {
+        "title": "Blind Dexterity: Whole-Body Humanoid Manipulation via Pure Proprioception",
+        "authors": "Aditya Bhatt, Oleg Kaidanov, Puze Liu, Jan Peters",
+        "institutions": "TU Darmstadt; hessian.AI; German Research Center for AI (DFKI); Tongji University, Shanghai Research Institute for Autonomous Intelligent Systems; Robotics Institute Germany",
+        "status": "全文快速阅读；核心方法与关键实验已核查",
+        "takeaway": "直接用任务奖励训练盲策略，让它先接触搜索再完成操作；关节目标与实际运动的偏差提供隐式触觉，无需示范动作数据集。",
+        "tags": [
+          "Proprioception",
+          "Interactive Perception",
+          "Compliant Control",
+          "PPO",
+          "Whole-Body Manipulation",
+          "Unitree G1"
+        ],
+        "mainContent": "本文研究人形机器人能否仅靠本体感知完成物体位置未知的全身操作。作者在随机物体配置的仿真中，从零用 PPO 和任务奖励训练策略，以关节状态、IMU 和历史动作直接输出关节位置目标，学出扫动、轻触和拖动等搜索行为；柔顺 PD 下的跟踪残差为交互提供感知线索。另用独立监督训练的状态估计器检验短历史中的物体信息，教师—学生蒸馏只作为对照。足球踩停、滑板登板和提箱子得到仿真定量评估，并在 Unitree G1 上展示真机迁移。",
+        "innovations": [
+          "验证编码器反馈与柔顺执行器可支持多种盲全身操作：随机位置找球、登上滑板及寻找箱子把手；另展示去掉 IMU 的抗推行走，操作任务仍保留 IMU。（第 1–2、4–7 页）",
+          "将 PD 跟踪残差视为粗粒度全身触觉通道，策略主动接触以获取任务相关信息；图 4–6 中接触后独立估计器的定位或姿态误差明显下降。（第 3、5–7 页）",
+          "对照表明，从零训练的盲 RL 策略比 DAgger 蒸馏学生更能学会接触前搜索；显式反馈状态估计没有稳定平均收益，箱子任务的可变刚度则减少倾倒。（表 II–IV）"
+        ],
+        "implementation": [
+          "数据与奖励｜没有预采集的示范动作数据集。每个任务单独训练策略，在仿真中随机物体位置、朝向及任务相关属性，在线采集交互轨迹；奖励引导脚或手靠近目标、建立接触、登板或抬升，并约束平衡与动作。仿真器用物体真值计算奖励，actor 不读取真值。（第 3–7 页）",
+          "观测与网络｜操作策略读取关节位置/速度、IMU 投影重力/角速度和上一时刻动作，使用 5 帧约 0.1 秒历史；行走策略使用 1 帧。actor/critic 为 [1024, 512, 256] ELU MLP，非对称 critic 额外读取物体状态等仿真特权信息。（第 3 页）",
+          "动作与接触信息｜50 Hz 输出动作，映射为 \\(q_t^{des}=q^{default}+0.25a_t\\)，由低层 PD 跟踪。网络可从 \\(e_t=q_{t-1}^{des}-q_t\\) 与关节速度变化利用接触引起的负载线索；没有显式求解接触力或接触位置的模块。（第 3 页）",
+          "策略训练与部署｜Isaac Sim + RSL-RL PPO，4096 个并行环境；物理步长 0.005 秒、动作降频 4。行走/足球训练 5000 次 PPO 迭代，箱子 6000 次，滑板 8000 次；随机化质量、摩擦和电机强度，真机沿用相同动作映射与名义 PD 增益。（第 3 页）",
+          "估计器与蒸馏｜独立 [256, 256, 256, 128] ELU MLP 用仿真真值和 L2 损失预测任务状态；与策略同时训练但不共享优化器，估计损失不反传策略。主对照 Blind−SE 不反馈估计，Blind+SE 反馈上一时刻预测；Distilled 则通过 DAgger 模仿可读取物体真值的教师。（第 3–5 页）",
+          "实验与理论边界｜Blind−SE 的足球/滑板成功率为 92.9±1.2% / 88.2±1.4%，对应蒸馏学生为 31.2±33.3% / 8.2±6.3%；箱子 Blind−VS−SE 为 83.5±5.3%，Blind+VS−SE 为 88.3±1.7%。表格是仿真结果，真机仅定性演示；理论依据是 PD 残差机制与 POMDP 表述，未给可观测性或收敛性定理，估计器针对训练物体家族。（表 II–IV，第 7–8 页）"
+        ]
+      },
+      "en": {
+        "title": "Blind Dexterity: Whole-Body Humanoid Manipulation via Pure Proprioception",
+        "authors": "Aditya Bhatt, Oleg Kaidanov, Puze Liu, Jan Peters",
+        "institutions": "TU Darmstadt; hessian.AI; German Research Center for AI (DFKI); Tongji University, Shanghai Research Institute for Autonomous Intelligent Systems; Robotics Institute Germany",
+        "status": "Full paper skimmed; core methods and key experiments checked",
+        "takeaway": "Task rewards directly train blind policies to seek contact before manipulating; joint-command tracking deviations supply implicit touch without a demonstration-action dataset.",
+        "tags": [
+          "Proprioception",
+          "Interactive Perception",
+          "Compliant Control",
+          "PPO",
+          "Whole-Body Manipulation",
+          "Unitree G1"
+        ],
+        "mainContent": "This paper asks whether humanoids can manipulate objects at unknown poses using proprioception alone. Separate policies are trained from scratch with PPO and task rewards in randomized simulation, mapping joint states, IMU readings, and action histories to joint-position targets; they learn sweeping, tapping, and dragging behaviors that expose contact through compliant PD tracking deviations. A separately supervised state estimator probes object information in short histories, while teacher–student distillation is only a comparison. Football trapping, skateboard mounting, and suitcase lifting receive quantitative simulation evaluation and qualitative hardware transfer demonstrations on Unitree G1.",
+        "innovations": [
+          "Demonstrate blind whole-body manipulation with encoder feedback and compliant actuation: find a randomly placed ball, mount a skateboard, and locate a suitcase handle. A separate push-resilient walking experiment removes the IMU; manipulation retains it. (pp. 1–2 and 4–7)",
+          "Treat PD tracking deviations as a coarse whole-body tactile channel. Policies actively create informative contacts; Figures 4–6 show reduced object-localization or pose error in separate estimators after contact. (pp. 3 and 5–7)",
+          "Show that blind RL from scratch learns pre-contact search more effectively than DAgger-distilled students. Explicit state-estimate feedback has no consistent mean benefit, while variable stiffness reduces suitcase tipping. (Tables II–IV)"
+        ],
+        "implementation": [
+          "Data and rewards | No precollected demonstration-action dataset. Train a separate policy per task using online simulation rollouts with randomized object poses and task-relevant attributes. Shape rewards for approaching targets, establishing contact, mounting or lifting, balance, and smooth motion. Simulator object truth evaluates rewards but is hidden from the actor. (pp. 3–7)",
+          "Observations and networks | Manipulation uses 5 frames, approximately 0.1 seconds, of joint positions/velocities, IMU projected gravity/angular velocity, and previous actions; walking uses 1 frame. Actor and critic are [1024, 512, 256] ELU MLPs; the asymmetric critic additionally receives privileged simulator information such as object state. (p. 3)",
+          "Actions and contact information | At 50 Hz, map actions to \\(q_t^{des}=q^{default}+0.25a_t\\) and track them with low-level PD control. The network can exploit contact-induced loading through \\(e_t=q_{t-1}^{des}-q_t\\) and joint-velocity changes, without an explicit contact-force or contact-location solver. (p. 3)",
+          "Policy training and deployment | Isaac Sim and RSL-RL PPO with 4096 parallel environments, 0.005-second physics steps, and action decimation 4. Train walking/football for 5000 PPO iterations, suitcase for 6000, and skateboard for 8000. Randomize masses, friction, and motor strengths; preserve action mapping and nominal PD gains on hardware. (p. 3)",
+          "Estimator and distillation | A separate [256, 256, 256, 128] ELU MLP predicts task state from simulator labels with an L2 loss. It trains alongside the policy with its own optimizer; estimator-loss gradients do not reach the policy. Blind−SE omits estimate feedback, Blind+SE feeds back the previous prediction, and Distilled uses DAgger to imitate a teacher that observes object truth. (pp. 3–5)",
+          "Evidence and theory | Blind−SE football/skateboard success is 92.9±1.2% / 88.2±1.4%, versus 31.2±33.3% / 8.2±6.3% for distilled students. Suitcase success is 83.5±5.3% for Blind−VS−SE and 88.3±1.7% for Blind+VS−SE. Tables report simulation; hardware validation is qualitative. The basis is a PD-residual mechanism and POMDP formulation, without observability or convergence theorems; estimators assume their training object families. (Tables II–IV, pp. 7–8)"
         ]
       }
     },
@@ -5668,6 +6343,90 @@
           "4. Gradient basis | Theorem B.1 assumes fixed noise and differentiable components, derives state/action sensitivities and return gradients, and expands Jacobians through diffusion steps. Its proof uses the chain rule; it provides no monotonic real-return-improvement or convergence-rate guarantee. (Appendix B.2, pp. 21–25)",
           "5. Evidence and latency | MuJoCo Table 1 reports an average normalized score of 98.5 for DiffMPC versus 93.9 for ReBRAC. On Hopper full-replay, H=5, K=10, E=1 costs approximately 195–199 ms per step versus about 0.4 ms for the original policy; inference rollouts and backpropagation dominate. (Tables 1 and 5–6, pp. 8 and 11)",
           "6. SuperMimic comparison | Both backpropagate actor updates through a differentiable world model with short imagined rollouts and terminal-value bootstrapping. SuperMimic alternates simulator collection, WM fitting, and policy improvement during training, then directly executes the controller. ITPO improves the actor at each execution step through a fixed WM. Environment sampling itself is not the distinction; the difference is when data collection, model fitting, and policy updates occur. (ITPO §4; SuperMimic §3)"
+        ]
+      }
+    },
+    {
+      "id": "ame-1-attention-based-map-encoding",
+      "aliases": [
+        "AME-1",
+        "AME",
+        "Attention-Based Map Encoding"
+      ],
+      "categories": [
+        "parkour-terrain",
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2506.09588v1",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2506.09588",
+      "year": "2025",
+      "venue": "Science Robotics 10(105): eadv3604",
+      "zh": {
+        "title": "Attention-Based Map Encoding for Learning Generalized Legged Locomotion",
+        "authors": "Junzhe He, Chong Zhang, Fabian Jenelten, Ruben Grandia, Moritz Bächer, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Disney Research Zurich",
+        "status": "公开预印本正文与补充方法已精读（arXiv v1；正式版未逐项核对）",
+        "takeaway": "以机器人状态为 Query、逐点地形特征为 Key/Value 做交叉注意力，将当前运动所需的地图信息编码后交给关节控制策略。",
+        "tags": [
+          "Cross-Attention",
+          "Perceptive Locomotion",
+          "PPO",
+          "Height Map",
+          "Sparse Footholds",
+          "Humanoid",
+          "Quadruped",
+          "Sim-to-Real"
+        ],
+        "mainContent": "稀疏踏脚石、窄梁和间隙要求机器人根据身体状态精准选择支撑区域，并适应地形变化与感知误差。AME-1 先用保留空间分辨率的 CNN 提取逐点地形特征，再以本体观测的编码为 Query、地形特征为 Key/Value 做交叉注意力，将地图编码与本体观测拼接后输出关节位置目标。整张网络通过两阶段 PPO 训练，在 ANYmal-D 和 Fourier GR-1 上分别学习控制器，展示了多种稀疏地形的仿真泛化与实机通过能力。",
+        "innovations": [
+          "状态条件化地图编码：以机器人自身状态查询地图，使同一片地形在不同姿态和运动指令下得到不同的注意力权重；潜在落脚信息由运动任务中的 RL 训练形成。（Materials and Methods；Fig. 8）",
+          "逐点局部几何表示：CNN 保留地图网格的空间分辨率，局部特征与每个采样点的三维坐标拼接，再通过多头注意力汇总为紧凑表示。（Materials and Methods；Fig. 8B）",
+          "两阶段训练流程：先在准确观测和基础地形上学习地图利用与运动能力，再增加地形、噪声和扰动进行微调；同一架构用于四足与人形机器人，并分别训练参数。（Fig. 6B、Fig. 8C）"
+        ],
+        "implementation": [
+          "1. 运行流程｜输入机器人中心坐标系下的局部地图、自身状态与速度指令；高度图 → CNN → 拼接点坐标 → 交叉注意力 → 地图编码；编码与本体观测拼接 → MLP → 关节位置目标。自身状态包括身体线速度、角速度、重力方向、关节位置/速度和上一时刻动作。（Observation Space；Fig. 8）",
+          "2. 地图与网络尺寸｜ANYmal-D 使用 26×16 个地图点，GR-1 使用 17×11 个地图点。高度值经过两层 5×5 CNN，得到每点 61 维局部特征，拼上 x、y、z 后形成 64 维特征；MHA 使用 1 个 query、16 个 heads，每个 head 处理 4 维。（Multi-Head Attention-Based Map Encoding；Training）",
+          "3. 注意力公式｜令 F 为逐点地图特征、u 为本体观测编码，每个 head 计算 \\(Q=uW_Q,\\ K=FW_K,\\ V=FW_V\\)，并得到 \\(z=\\operatorname{softmax}(QK^\\top/\\sqrt{d_k})V\\)。多个 head 的结果合并为地图编码；输出保留隐含落脚信息，动作网络随后生成关节目标。（Fig. 8B）",
+          "4. 训练流程｜使用 PPO 和 4096 个并行环境。第一阶段 actor 与 critic 都使用准确观测；第二阶段从已有参数继续训练，actor 加入噪声和扰动，critic 保留干净信息。Actor 与 critic 共享地图编码器，后接不同的 MLP。（Training Environment；Table S1）",
+          "5. 任务与奖励｜任务是跟踪机体线速度和转向速度。奖励结合速度跟踪、失败/碰撞惩罚、动作平滑、关节与力矩限制、滑脚和姿态等项；ANYmal-D 共 14 项，GR-1 共 16 项。控制器分别输出 12 个和 23 个关节位置目标。（Table 1–2）",
+          "6. 整体实验｜Fig. 6A 在 ANYmal-D 仿真中比较 AME、DTC 和既有 RL 控制器，观察速度跟踪误差及成功、失败、卡住比例；成功指机器人在规定时间内走出地形边界。AME 在所测多地形通过率与多数速度跟踪条件上表现更好。（Simulation-based Evaluations）",
+          "7. 消融实验｜Fig. 6B 比较两阶段流程、从头训练全部地形和从头加入噪声；Fig. 6C 比较 Transformer encoder、CNN 下采样、ViT 与本文编码器。网络消融中，AME 在当时未参与训练的地形上保持更高通过率；Fig. 7 展示不同运动方向下的地图注意力分布。（Fig. 6–7；Fig. S1–S3）",
+          "8. 实机部署｜ANYmal-D 的策略在机载 CPU 上运行，高程建图在 Jetson 上运行；GR-1 的策略也在 CPU 上运行，其地图由动捕定位结合预先建立的地形网格采样得到。Fig. 3–5 展示踏脚石、梁、间隙通过及滑动恢复、步幅调整等行为。（Deployment；Fig. 3–5）"
+        ]
+      },
+      "en": {
+        "title": "Attention-Based Map Encoding for Learning Generalized Legged Locomotion",
+        "authors": "Junzhe He, Chong Zhang, Fabian Jenelten, Ruben Grandia, Moritz Bächer, Marco Hutter",
+        "institutions": "Robotic Systems Lab, ETH Zurich; Disney Research Zurich",
+        "status": "Public preprint and supplementary methods reviewed (arXiv v1; final journal version not checked item by item)",
+        "takeaway": "Use robot state as the query and point-wise terrain features as keys and values in cross-attention, then pass the resulting state-conditioned map encoding to a joint-control policy.",
+        "tags": [
+          "Cross-Attention",
+          "Perceptive Locomotion",
+          "PPO",
+          "Height Map",
+          "Sparse Footholds",
+          "Humanoid",
+          "Quadruped",
+          "Sim-to-Real"
+        ],
+        "mainContent": "Sparse stepping stones, narrow beams, and gaps require precise support selection conditioned on robot state while accommodating terrain changes and perception errors. AME-1 extracts point-wise local terrain features with a CNN that preserves spatial resolution, uses an embedding of proprioceptive observations as the query and terrain features as keys and values in cross-attention, and concatenates the resulting map encoding with proprioception to predict joint-position targets. The complete network is trained with two-stage PPO, with separate controllers for ANYmal-D and Fourier GR-1 demonstrating simulation generalization and hardware traversal across diverse sparse terrains.",
+        "innovations": [
+          "State-conditioned map encoding: robot state queries the map so the same terrain receives different attention weights under different poses and motion commands; foothold-related information emerges through RL on the locomotion task. (Materials and Methods; Fig. 8)",
+          "Point-wise local geometry: preserve the map grid resolution with a CNN, concatenate local features with each sample's 3D coordinates, and aggregate them into a compact representation with multi-head attention. (Materials and Methods; Fig. 8B)",
+          "Two-stage training: learn map usage and locomotion on base terrains with accurate observations, then fine-tune with additional terrains, noise, and disturbances. Apply the same architecture to quadrupedal and humanoid robots with separately trained parameters. (Fig. 6B and Fig. 8C)"
+        ],
+        "implementation": [
+          "1. Execution | Observe a robot-centric local map, proprioception, and velocity commands. Height map → CNN → concatenate point coordinates → cross-attention → map encoding; concatenate the encoding with proprioception → MLP → joint-position targets. Proprioception includes base linear/angular velocity, gravity direction, joint positions/velocities, and previous actions. (Observation Space; Fig. 8)",
+          "2. Map and network dimensions | ANYmal-D uses a 26×16 map grid and GR-1 a 17×11 grid. Two 5×5 CNN layers turn heights into 61 local features per point; concatenate x, y, and z to obtain 64 features. MHA uses one query and 16 heads, with four dimensions per head. (Multi-Head Attention-Based Map Encoding; Training)",
+          "3. Attention | Let F contain point-wise map features and u denote the proprioceptive embedding. Each head computes \\(Q=uW_Q,\\ K=FW_K,\\ V=FW_V\\) and \\(z=\\operatorname{softmax}(QK^\\top/\\sqrt{d_k})V\\). Combine the heads into the map encoding, which contains implicit foothold information; the action network subsequently predicts joint targets. (Fig. 8B)",
+          "4. Training | Use PPO with 4096 parallel environments. Actor and critic receive accurate observations in stage 1. Continue from these parameters in stage 2, adding observation noise and disturbances for the actor while retaining clean information for the critic. Actor and critic share the map encoder and use different downstream MLPs. (Training Environment; Table S1)",
+          "5. Task and rewards | Track commanded base linear and turning velocities. Rewards combine tracking, failure/collision penalties, action smoothness, joint and torque limits, foot slip, and posture, with 14 terms for ANYmal-D and 16 for GR-1. The controllers output 12 and 23 joint-position targets, respectively. (Tables 1–2)",
+          "6. Overall evaluation | Fig. 6A compares AME, DTC, and an existing RL controller in ANYmal-D simulation using velocity-tracking error and success/failure/stuck rates. Success means leaving the terrain boundary within the time limit. AME performs better on the tested multi-terrain success rates and most velocity-tracking conditions. (Simulation-based Evaluations)",
+          "7. Ablations | Fig. 6B compares the two-stage recipe with training from scratch on all terrains or with observation noise from the start. Fig. 6C compares the proposed encoder with a transformer encoder, CNN downsampling, and a ViT. In the architecture ablation, AME retains higher success rates on terrains unseen during that training; Fig. 7 visualizes map attention under different motion directions. (Figs. 6–7 and S1–S3)",
+          "8. Hardware | ANYmal-D runs policy inference on an onboard CPU and elevation mapping on a Jetson. GR-1 also runs inference on a CPU, but samples its map from a predefined terrain mesh using motion-capture localization. Figs. 3–5 demonstrate stones, beams, gaps, slip recovery, and stride adaptation. (Deployment; Figs. 3–5)"
         ]
       }
     },
