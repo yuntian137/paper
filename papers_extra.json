@@ -6679,6 +6679,81 @@
           "5. Reading notes | Delay is implicit in predictions, without an explicit delay estimate. History is retained, so performance cannot be attributed solely to the transform representation. Query cost assumes fixed prediction-point counts; full planning still scales with candidates and steps. Unknown variable delays remain future work. (§4–6)"
         ]
       }
+    },
+    {
+      "id": "vaml-value-aware-model-learning",
+      "aliases": [
+        "VAML",
+        "Value-Aware Model Learning",
+        "Farahmand 2017"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "vla-world-model"
+      ],
+      "pdf": "https://proceedings.mlr.press/v54/farahmand17a/farahmand17a.pdf",
+      "project": "https://proceedings.mlr.press/v54/farahmand17a.html",
+      "arxiv": "",
+      "year": "2017",
+      "venue": "AISTATS 2017 / PMLR 54",
+      "zh": {
+        "title": "Value-Aware Loss Function for Model-based Reinforcement Learning",
+        "authors": "Amir-Massoud Farahmand, Andre Barreto, Daniel Nikovski",
+        "institutions": "Mitsubishi Electric Research Laboratories (MERL); National Laboratory for Scientific Computing (LNCC)",
+        "status": "正文方法与主要理论已读；扩展版关键证明已核查",
+        "takeaway": "用价值函数类衡量转移误差，训练模型优先匹配下一状态的价值期望；线性价值表示下等价于匹配价值特征的条件均值。",
+        "tags": [
+          "VAML",
+          "Model-Based RL",
+          "World Model",
+          "Value-Aware Loss",
+          "Feature Expectation Matching",
+          "Model Misspecification"
+        ],
+        "mainContent": "VAML 研究模型能力有限时，怎样学习更适合后续规划的转移模型。方法从 Bellman 更新误差出发，用给定价值函数类上的最坏期望误差定义模型损失；在线性价值表示下，目标化为下一状态价值特征的条件均值匹配。作者给出经验最小化解的有限样本模型损失界，并用小型有限状态实验比较 VAML 与最大似然估计在模型失配时的表现。",
+        "innovations": [
+          "任务相关的模型损失｜用模型对价值期望的影响衡量转移误差，使模型近似的取舍与后续 Bellman 更新关联；价值函数类决定需要保留的分布信息。（§2）",
+          "可计算的特征匹配｜对参数范数有界的线性价值函数类，最坏价值期望误差等于特征期望差的欧氏范数，并推导条件指数族模型的训练梯度。（§2.1–2.2，定理 1）",
+          "失配下的统计比较｜在独立同分布数据、特征有界及模型类容量条件下，将经验全局最小化解与类内最优 VAML 模型比较，近似误差前的系数为 1。（§3，定理 2）"
+        ],
+        "implementation": [
+          "1. 数据与流程｜使用状态、动作、下一状态转移数据学习模型，再交给规划算法改进策略；损失推导假设奖励已知。论文重点是转移模型的学习目标，实验使用近似价值迭代作为 Planner。（§2；正文 §4，扩展版 §5.2）",
+          "2. 总体目标｜令 \\(z=(s,a)\\)，优化 \\(\\mathbb E_{z\\sim\\nu}[\\sup_{V\\in\\mathcal F}|(P_z^\\star-P_z)V|^2]\\)。上确界在状态动作期望内部，允许各处选择不同的最坏价值函数；\\(\\nu\\) 决定模型拟合强调的访问区域。（§2；扩展版附录 A）",
+          "3. 样本目标｜取 \\(V_\\theta(s)=\\phi(s)^\\top\\theta\\)、\\(\\|\\theta\\|_2\\le b\\)，损失化为 \\(b^2\\mathbb E_\\nu\\|(P_z^\\star-P_z)\\phi\\|_2^2\\)。经验训练使用 \\(\\frac{b^2}{n}\\sum_i\\|P_{z_i}\\phi-\\phi(s_i')\\|_2^2\\)，其总体期望比目标多一个与候选模型无关的条件噪声项。（§2.1；扩展版定理 2 证明）",
+          "4. 参数更新｜条件指数族模型可用梯度下降拟合。梯度由价值特征预测残差与价值特征、模型特征的交叉协方差构成；价值特征和模型特征可以不同。训练更新转移模型参数，具体 critic 的训练由下游算法决定。（§2.2，定理 1）",
+          "5. 理论范围｜定理 2 的主估计项为平方模型损失上的 \\(\\widetilde O(n^{-1/2})\\)，并依赖模型容量与特征维数。结论要求经验全局最小值达到；梯度下降的全局优化及最终策略回报界需另行分析。（§3）",
+          "6. 实验定位｜随机游走实验使用 25 个状态、左右两个动作和 \\(\\gamma=0.9\\)，限制转移模型与价值函数的分区表示，比较价值近似和真实环境中的策略表现。它为模型失配下的取舍提供机制验证。（正文 §4；扩展版 §5.2）"
+        ]
+      },
+      "en": {
+        "title": "Value-Aware Loss Function for Model-based Reinforcement Learning",
+        "authors": "Amir-Massoud Farahmand, Andre Barreto, Daniel Nikovski",
+        "institutions": "Mitsubishi Electric Research Laboratories (MERL); National Laboratory for Scientific Computing (LNCC)",
+        "status": "Methods and main theory read; key extended-version proofs checked",
+        "takeaway": "Measure transition errors through a value-function class and train the model to preserve next-state value expectations; linear value representations reduce this to conditional value-feature mean matching.",
+        "tags": [
+          "VAML",
+          "Model-Based RL",
+          "World Model",
+          "Value-Aware Loss",
+          "Feature Expectation Matching",
+          "Model Misspecification"
+        ],
+        "mainContent": "VAML studies how to learn transition models that better serve planning when model capacity is limited. Starting from Bellman-update discrepancies, it defines model loss through worst-case expectation errors over a specified value-function class; linear value representations reduce the objective to matching conditional means of next-state value features. The authors give a finite-sample model-loss bound for empirical minimizers and compare VAML with maximum likelihood in small finite-state problems with model misspecification.",
+        "innovations": [
+          "Task-related model loss | Measure transition errors by their effects on value expectations, connecting model-approximation tradeoffs to subsequent Bellman updates. The value-function class determines which distributional information must be preserved. (§2)",
+          "Computable feature matching | For linear value functions with norm-bounded parameters, worst-case value-expectation error equals a scaled Euclidean feature-mean discrepancy. Derive training gradients for conditional exponential-family models. (§2.1–2.2, Theorem 1)",
+          "Statistical comparison under misspecification | Under i.i.d. sampling, bounded features, and model-capacity assumptions, compare an empirical global minimizer with the best VAML model in the class, with coefficient one on approximation error. (§3, Theorem 2)"
+        ],
+        "implementation": [
+          "1. Data and pipeline | Fit a model from state–action–next-state transitions, then pass it to a planner to improve the policy. The loss derivation assumes known rewards. The paper focuses on transition-model objectives; experiments use approximate value iteration as the planner. (§2; main-paper §4, extended-version §5.2)",
+          "2. Population objective | With \\(z=(s,a)\\), optimize \\(\\mathbb E_{z\\sim\\nu}[\\sup_{V\\in\\mathcal F}|(P_z^\\star-P_z)V|^2]\\). The supremum is inside the state–action expectation, permitting a different worst-case value function at each pair. The distribution \\(\\nu\\) controls where model fitting emphasizes accuracy. (§2; extended-version Appendix A)",
+          "3. Sample objective | For \\(V_\\theta(s)=\\phi(s)^\\top\\theta\\) and \\(\\|\\theta\\|_2\\le b\\), loss becomes \\(b^2\\mathbb E_\\nu\\|(P_z^\\star-P_z)\\phi\\|_2^2\\). Train with \\(\\frac{b^2}{n}\\sum_i\\|P_{z_i}\\phi-\\phi(s_i')\\|_2^2\\). Its population expectation adds a conditional-noise term independent of the candidate model. (§2.1; extended-version Theorem 2 proof)",
+          "4. Parameter updates | Fit a conditional exponential-family model by gradient descent. The gradient combines value-feature prediction residuals with cross-covariances between value and model features, which may differ. Training updates transition-model parameters; the downstream algorithm determines how to fit a particular critic. (§2.2, Theorem 1)",
+          "5. Theoretical scope | The leading estimation term in Theorem 2 is \\(\\widetilde O(n^{-1/2})\\) for squared model loss and depends on model capacity and feature dimension. The result assumes attainment of an empirical global minimum; gradient-descent global optimization and final policy-return bounds require separate analysis. (§3)",
+          "6. Experimental setting | The random-walk experiment has 25 states, two actions, and \\(\\gamma=0.9\\). Restrict transition and value representations through partitions, then compare value approximation and policy performance in the true environment. This probes approximation tradeoffs under model misspecification. (Main-paper §4; extended-version §5.2)"
+        ]
+      }
     }
   ]
 }
