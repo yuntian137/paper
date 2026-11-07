@@ -6608,6 +6608,77 @@
           "9. Theory and implementation limits | Integration establishes continuity of commanded targets; strict contraction, physical stability, and nonvanishing gradients are not guaranteed. Condition refreshes can still change derivatives at boundaries. Appendix B.7 reports drift and return collapse in one unbounded RL run, motivating action-change and action-range bounds. Euler has a discrete residual-recursion interpretation; experiments do not isolate a separate benefit of the continuous-time interpretation over the same discrete recursion. (§4, §9, Appendix B.7, p. 33)"
         ]
       }
+    },
+    {
+      "id": "neural-laplace-control",
+      "aliases": [
+        "NLC",
+        "Neural Laplace Control"
+      ],
+      "categories": [
+        "bfm-dynamics"
+      ],
+      "pdf": "https://proceedings.mlr.press/v206/holt23a/holt23a.pdf",
+      "project": "https://github.com/samholt/NeuralLaplaceControl",
+      "arxiv": "https://arxiv.org/abs/2302.12604",
+      "year": "2023",
+      "venue": "AISTATS 2023 (PMLR 206)",
+      "zh": {
+        "title": "Neural Laplace Control for Continuous-time Delayed Systems",
+        "authors": "Samuel Holt, Alihan Hüyük, Zhaozhi Qian, Hao Sun, Mihaela van der Schaar",
+        "institutions": "University of Cambridge; The Alan Turing Institute",
+        "status": "方法与关键实验已阅读（附录 B–C 已核查；未复现代码）",
+        "takeaway": "编码当前状态与带时间戳的动作历史，学习状态演化的拉普拉斯表示，再用逆变换预测和 MPC 规划处理未知固定动作延迟。",
+        "tags": [
+          "Neural Laplace",
+          "Offline RL",
+          "Model-Based Control",
+          "Delay Differential Equations",
+          "Irregular Sampling",
+          "MPC",
+          "MPPI"
+        ],
+        "mainContent": "本文研究离线数据采样不规则、动作存在未知固定延迟时的连续时间控制。NLC 将当前状态和动作历史编码为初始条件，在拉普拉斯域学习状态轨迹的表示，再通过数值逆变换预测未来状态，并交给 MPPI 滚动优化动作序列。作者在加入延迟的 Pendulum、Cartpole 和 Acrobot 仿真中报告接近专家的控制表现。",
+        "innovations": [
+          "把 Neural Laplace 扩展到受控系统：以状态和动作历史为条件学习解的变换域表示，将不规则采样与未知固定延迟放进同一动力学模型。（§3–4）",
+          "将连续时间预测接入 MPPI：通过改变预测时间间隔调整规划跨度；固定查询点数时，预测更远时间点不需要增加数值积分步数。（§4.2、§5.2）"
+        ],
+        "implementation": [
+          "1. 延迟与历史｜动力学为 \\(\\dot x(t)=f(x(t),a(t-\\tau))\\)。动作历史包含数值和相对时间，由 GRU 编码并与当前状态拼接；历史窗口须覆盖延迟。（§3、§4.1）",
+          "2. 状态预测｜网络输出条件化的拉普拉斯表示 \\(\\widehat X(s)\\)，经黎曼球面映射处理复数表示，再用可微的数值逆拉普拉斯变换恢复状态；训练最小化观测时间点上的状态预测 MSE。（§4.1；附录 B）",
+          "3. 控制流程｜冻结已训练模型，用当前状态、动作历史和时间间隔递推候选轨迹；MPPI 评价并更新动作序列，只执行首个动作，获得新观测后重规划。（§4.2；附录 C）",
+          "4. 数据与实验｜主实验每种环境与延迟设置收集 100 万个带动作噪声的专家样本，采样间隔服从均值 0.05 秒的指数分布；评估使用 20 个随机种子，专家控制器使用真实动力学与 MPC。（§5）",
+          "5. 阅读要点｜延迟通过预测关系隐式学习，不直接输出延迟估计；模型保留历史，不能仅把效果归因于变换域表示。计算优势针对固定预测点数，完整规划仍随候选轨迹数与步数增长；未知时变延迟属于后续工作。（§4–6）"
+        ]
+      },
+      "en": {
+        "title": "Neural Laplace Control for Continuous-time Delayed Systems",
+        "authors": "Samuel Holt, Alihan Hüyük, Zhaozhi Qian, Hao Sun, Mihaela van der Schaar",
+        "institutions": "University of Cambridge; The Alan Turing Institute",
+        "status": "Methods and key experiments reviewed (Appendices B–C checked; code not reproduced)",
+        "takeaway": "Encode the current state and timestamped action history, learn a Laplace representation of state evolution, and combine inverse-transform predictions with MPC to handle unknown fixed action delays.",
+        "tags": [
+          "Neural Laplace",
+          "Offline RL",
+          "Model-Based Control",
+          "Delay Differential Equations",
+          "Irregular Sampling",
+          "MPC",
+          "MPPI"
+        ],
+        "mainContent": "The paper studies continuous-time control from irregularly sampled offline data with an unknown fixed action delay. NLC encodes the current state and action history, learns a Laplace-domain trajectory representation, reconstructs future states numerically, and plans actions with MPPI. The authors report near-expert control in delayed Pendulum, Cartpole, and Acrobot simulations.",
+        "innovations": [
+          "Extend Neural Laplace to controlled systems: condition a transformed solution representation on the state and action history to model irregular sampling and unknown fixed delays together. (§3–4)",
+          "Connect continuous-time predictions to MPPI: vary prediction intervals to change the planning horizon; with a fixed query count, predicting later states requires no additional numerical integration steps. (§4.2 and §5.2)"
+        ],
+        "implementation": [
+          "1. Delay and history | Dynamics follow \\(\\dot x(t)=f(x(t),a(t-\\tau))\\). A GRU encodes action values and relative timestamps; concatenate its output with the current state. The history window must cover the delay. (§3 and §4.1)",
+          "2. State prediction | Predict a conditional Laplace representation \\(\\widehat X(s)\\), use a Riemann-sphere map for complex representations, and reconstruct states with differentiable numerical inverse Laplace transforms. Minimize state-prediction MSE at observation times. (§4.1; Appendix B)",
+          "3. Control loop | Freeze the model and recursively predict candidate trajectories from state, action history, and time interval. MPPI evaluates and updates action sequences; execute the first action and replan after the next observation. (§4.2; Appendix C)",
+          "4. Data and evaluation | Main experiments collect one million noisy-expert samples per environment/delay setting, with exponentially distributed sampling intervals averaging 0.05 seconds. Evaluate over 20 seeds; the expert uses true dynamics and MPC. (§5)",
+          "5. Reading notes | Delay is implicit in predictions, without an explicit delay estimate. History is retained, so performance cannot be attributed solely to the transform representation. Query cost assumes fixed prediction-point counts; full planning still scales with candidates and steps. Unknown variable delays remain future work. (§4–6)"
+        ]
+      }
     }
   ]
 }
