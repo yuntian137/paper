@@ -5747,6 +5747,97 @@
           "9. Research logic and scope | Decompose the agility/generalization gap into contact-relevant selection on combined terrains, confidence in occluded geometry, and deployable student transfer; test designs through architecture comparisons, ablations, and failure cases. The method uses 2.5-D elevation maps; skill transitions remain a major source of unseen-terrain failure. Attention visualization supports interpretation, while generalization improvements are empirical on the evaluated terrains. (pp. 16–17, VIII)"
         ]
       }
+    },
+    {
+      "id": "ode-policy-action-dynamics",
+      "aliases": [
+        "ODE Policy",
+        "ODE-MLP",
+        "ODE-DiT"
+      ],
+      "categories": [
+        "bfm-generative",
+        "imitation-teleop",
+        "manipulation",
+        "vla-world-model",
+        "locomotion",
+        "loco-manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2611.01729v1",
+      "project": "https://ntumars.github.io/ODE/",
+      "arxiv": "https://arxiv.org/abs/2611.01729v1",
+      "year": "2026",
+      "venue": "arXiv:2611.01729v1",
+      "zh": {
+        "title": "ODE Policy: Robot Learning via Action Dynamics, Not Actions",
+        "authors": "Jindou Jia, Jingliang Li, Kuangji Zuo, Tuo An, Yuxuan Hu, Mengfei Zhao, Bofan Lyu, Jiaqi Bai, Daoyuan Zhu, Hengyu Dai, Junpeng Zhang, Jianfei Yang",
+        "institutions": "MARS Lab, Nanyang Technological University",
+        "status": "方法已精读，关键实验与附录已核查（本地 v1；未复现代码）",
+        "takeaway": "学习动作目标的变化率，从上一目标递推积分；用短段轨迹拟合和起点扰动恢复训练，在执行时连续衔接动作块。",
+        "tags": [
+          "Neural ODE",
+          "Action Dynamics",
+          "Action Chunking",
+          "Imitation Learning",
+          "Model-Based RL",
+          "Flow Matching",
+          "VLA",
+          "LIBERO",
+          "Humanoid"
+        ],
+        "mainContent": "直接预测的动作块可能在边界跳变，动作连续性通常需要从数据或奖励中学习。ODE Policy 用条件神经向量场输出动作目标的变化率，通过积分生成短段动作，并用路径误差反传训练；起点扰动学习局部恢复，多样性头额外提供行为偏移。作者在 LIBERO、VLA/WAM 动作头和 SuperMimic actor 上报告学习与执行效率改善，并在 14 项真机任务中取得最高成功率。",
+        "innovations": [
+          "动作动力学参数化：网络读取当前动作目标、本体状态和观测条件，输出动作变化率；沿物理时间积分，并将上一动作目标延续到下一块，建立显式的动作递推关系。（§4.1、§4.3，式 4–5，第 6–7 页）",
+          "短段路径监督与扰动恢复：从示范动作起点展开积分，匹配整段动作；对部分起点加扰动，并令目标偏差几何衰减，学习从偏离示范的位置继续生成动作。（§4.2，式 6–8，第 6–7 页）",
+          "可选多样性头：从基础场的停止梯度特征预测高斯混合偏移和逐步尺度，以整块协调的变化率偏移保留不同合理行为；其损失只训练头自身。（§4.4，图 3、式 9–10，第 7–8 页）"
+        ],
+        "implementation": [
+          "1. 输入与动作含义｜图像历史和语言指令编码为 \\(z_t\\)，本体状态 \\(s_t\\) 直接进入 \\(f_\\theta(a,s_t,z_t)\\)。积分变量 a 是发给底层控制器的目标指令，区别于实测机器人状态；基础 IL 不需要世界模型。（§4.1，第 6 页）",
+          "2. 训练计算图｜每段从示范的上一动作出发，在块内固定 \\(s_t,z_t\\)，用自身预测逐步递推，按整段均方误差穿过积分器反传。优化变量是共享网络参数，段起点不作为自由变量，也没有 multiple shooting 的段间匹配约束；不使用动作速度标签。（式 5–8，算法 1，第 6–7 页；multiple shooting 为阅读比较）",
+          "3. 起点扰动｜起点加 \\(\\delta\\)，第 k 步目标改为 \\(a_{t+k}+\\rho^{k+1}\\delta\\)。LIBERO 对一半训练片段使用约 1 cm、0.03 rad 的扰动，\\(\\rho=0.7\\)。这是学习局部恢复的监督设计。（式 7；附录 A，第 28 页）",
+          "4. 多样性分支｜基础路径与示范之差构造停止梯度的残差目标，通过最小二乘推断偏移，再用式 10 的似然损失训练头。生成时使用 \\(\\dot a=f_\\theta(a,s,z)+\\lambda_k\\odot\\epsilon\\)，同一块固定一个偏移方向；该损失不回传微调基础场。起点扰动用于恢复偏差，多样性偏移用于保留行为模式。（§4.4，第 7–8 页）",
+          "5. 默认部署｜LIBERO 使用 4 层 FiLM-MLP、H=8、20 Hz 和 RK4，每块读取一次观测，从上一块最后的动作目标继续；各动作积分完成后即可发送。多样性头含 12 个分量，LIBERO 使用选中分量的均值；二值夹爪另由分类头预测。（§4.3、§5；附录 A，第 7、9、28 页）",
+          "6. FM 对照与主要结果｜FM 沿生成时间修改整块动作候选，本文沿执行时间推进单个动作目标。LIBERO 主比较统一编码器设计、数据与训练设置，编码器外约 24M 参数；ODE-MLP 与 FM-DiT 的成功率在 epoch 1 为 79.2% / 13.5%，epoch 100 为 93.8% / 85.4%。采用 Euler 时，生成动作块比 FM-DiT 快约 10.8 倍。（§3.1、§5–6，图 4、7，表 S7）",
+          "7. 架构与计算预算｜表 S7 中 ODE-DiT / FM-DiT 在 epoch 100 为 91.2% / 85.4%，生成一块耗时 51.9 / 61.4 ms，训练吞吐量 3.5 / 31.6 次更新每秒。ODE-DiT 仅一个训练种子，FM-DiT 为三个；少 epoch 不直接等于少训练时间。默认 ODE-MLP 的结构与 FM-DiT 不同。（附录 B.8，表 S7，第 34 页）",
+          "8. 消融与 RL｜去掉收缩扰动，首 epoch 成功率由 79.8% 降至 58.4%；改从实测状态重启每块则降至 47.8%，后者还增加边界变化与 jerk。表 S8 对同一模型关闭多样性偏移，首 epoch 为 85.3%，使用分量均值为 79.8%，每任务 10 次评估。在 RL 中采用 H=1 的 Euler 动作递推，接入 SuperMimic 的 32 步世界模型想象回报，不使用 IL 的路径与多样性损失。（§4.5、§8，图 17，表 S8）",
+          "9. 理论与实现边界｜积分建立目标指令的连续性；收缩性、真实机器人稳定性和不消失梯度没有严格保证。块间刷新条件时导数仍可跳变。RL 附录记录一次无边界积分导致漂移与回报崩溃，随后加入动作变化与范围限制。Euler 形式可视为离散残差递推，这是结构解释；当前实验未隔离连续时间解释相对相同离散递推的独立收益。（§4、§9，附录 B.7，第 33 页）"
+        ]
+      },
+      "en": {
+        "title": "ODE Policy: Robot Learning via Action Dynamics, Not Actions",
+        "authors": "Jindou Jia, Jingliang Li, Kuangji Zuo, Tuo An, Yuxuan Hu, Mengfei Zhao, Bofan Lyu, Jiaqi Bai, Daoyuan Zhu, Hengyu Dai, Junpeng Zhang, Jianfei Yang",
+        "institutions": "MARS Lab, Nanyang Technological University",
+        "status": "Methods reviewed; key experiments and appendices checked (local v1; code not reproduced)",
+        "takeaway": "Learn the rate of change of commanded action targets and integrate from the previous target; train with short trajectory matching and perturbed starts, then continue across action chunks at execution.",
+        "tags": [
+          "Neural ODE",
+          "Action Dynamics",
+          "Action Chunking",
+          "Imitation Learning",
+          "Model-Based RL",
+          "Flow Matching",
+          "VLA",
+          "LIBERO",
+          "Humanoid"
+        ],
+        "mainContent": "Directly predicted action chunks can jump at boundaries, leaving continuity to be learned from data or rewards. ODE Policy predicts action-target derivatives with a conditional neural vector field, integrates short paths, and backpropagates trajectory error; perturbed starts teach local recovery, while a diversity head adds behavior offsets. The authors report learning and execution gains on LIBERO, VLA/WAM action heads, and a SuperMimic actor, with the highest success rate on all 14 tested hardware tasks.",
+        "innovations": [
+          "Action-dynamics parameterization: condition a vector field on the current commanded target, proprioception, and observations; integrate over physical time and continue from the previous target across chunks. (§4.1 and §4.3, Eqs. 4–5, pp. 6–7)",
+          "Short-path supervision and perturbation recovery: integrate from demonstrated targets, match the whole path, and perturb some starts while geometrically shrinking target offsets to learn continuation near demonstrations. (§4.2, Eqs. 6–8, pp. 6–7)",
+          "Optional diversity head: read detached field features to predict mixture-distributed offsets and per-step scales, preserving different behaviors with a coordinated velocity offset per chunk; its loss trains only the head. (§4.4, Fig. 3, Eqs. 9–10, pp. 7–8)"
+        ],
+        "implementation": [
+          "1. Inputs and action meaning | Encode image history and instructions into \\(z_t\\); feed proprioception \\(s_t\\) directly to \\(f_\\theta(a,s_t,z_t)\\). The integrated variable a is the target sent to the low-level controller, distinct from measured robot state. Basic IL requires no world model. (§4.1, p. 6)",
+          "2. Training graph | Start each segment from the preceding demonstrated action, hold \\(s_t,z_t\\) fixed within the chunk, recursively use predicted actions, and backpropagate path MSE through the solver. Optimize shared network parameters, without free shooting-node variables or multiple-shooting continuity constraints; no velocity labels are used. (Eqs. 5–8, Algorithm 1, pp. 6–7; multiple shooting is a reading comparison)",
+          "3. Perturbed starts | Add \\(\\delta\\) to the start and supervise step k with \\(a_{t+k}+\\rho^{k+1}\\delta\\). On LIBERO, perturb half the segments by about 1 cm and 0.03 rad, with \\(\\rho=0.7\\). This is a supervision design for local recovery. (Eq. 7; Appendix A, p. 28)",
+          "4. Diversity branch | Form detached residual targets from the demonstration minus the plain path, infer offsets by least squares, and fit the head with the likelihood loss of Eq. 10. Generate with \\(\\dot a=f_\\theta(a,s,z)+\\lambda_k\\odot\\epsilon\\), retaining one offset direction per chunk. This loss does not fine-tune the base field. Start perturbations teach recovery; diversity offsets retain behavior modes. (§4.4, pp. 7–8)",
+          "5. Default execution | LIBERO uses a four-layer FiLM-MLP, H=8, 20 Hz, and RK4. Read observations once per chunk, continue from the previous final target, and send each action after integration. The diversity head has 12 components; LIBERO uses selected component means. A separate classification head predicts the binary gripper command. (§4.3, §5, Appendix A, pp. 7, 9, 28)",
+          "6. FM comparison and main results | FM evolves whole action-chunk candidates over generation time; ODE Policy advances individual targets over execution time. Main LIBERO comparisons match encoder design, data, and training settings, with about 24M parameters outside the encoder. ODE-MLP / FM-DiT success is 79.2% / 13.5% at epoch 1 and 93.8% / 85.4% at epoch 100. Euler action generation is approximately 10.8 times faster than FM-DiT. (§3.1, §5–6, Figs. 4, 7, Table S7)",
+          "7. Architecture and compute | Table S7 reports ODE-DiT / FM-DiT at 91.2% / 85.4% success after 100 epochs, 51.9 / 61.4 ms per chunk, and 3.5 / 31.6 training iterations per second. ODE-DiT has one training seed versus three for FM-DiT. Fewer epochs do not directly imply less training time, and default ODE-MLP differs architecturally from FM-DiT. (Appendix B.8, Table S7, p. 34)",
+          "8. Ablations and RL | Removing contractive perturbation lowers epoch-1 success from 79.8% to 58.4%; restarting each chunk from measured state lowers it to 47.8% and increases boundary changes and jerk. In Table S8, disabling diversity offsets for the same models gives 85.3% at epoch 1 versus 79.8% with component means, using 10 episodes per task. RL uses H=1 Euler action recursion inside SuperMimic with 32-step world-model imagined returns, without IL path or diversity losses. (§4.5, §8, Fig. 17, Table S8)",
+          "9. Theory and implementation limits | Integration establishes continuity of commanded targets; strict contraction, physical stability, and nonvanishing gradients are not guaranteed. Condition refreshes can still change derivatives at boundaries. Appendix B.7 reports drift and return collapse in one unbounded RL run, motivating action-change and action-range bounds. Euler has a discrete residual-recursion interpretation; experiments do not isolate a separate benefit of the continuous-time interpretation over the same discrete recursion. (§4, §9, Appendix B.7, p. 33)"
+        ]
+      }
     }
   ]
 }
