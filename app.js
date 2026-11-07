@@ -160,6 +160,7 @@ const categories = [
   { id: "bfm-data", parent: "bfm", label: { zh: "数据 / 运动重定向", en: "Data / Motion Retargeting" }, description: { zh: "人体动作重建、数据集、运动学与动力学重定向，连接人体行为数据和机器人参考轨迹。", en: "Human motion reconstruction, datasets, and kinematic or dynamic retargeting connect behavior data to robot references." } },
   { id: "bfm-adaptation", parent: "bfm", label: { zh: "适应 / 迁移与鲁棒性", en: "Adaptation / Transfer & Robustness" }, description: { zh: "动力学适应、特权信息、教师—学生学习和 Sim2Real，为通用控制器的部署与鲁棒性提供方法基础。", en: "Dynamics adaptation, privileged information, teacher–student learning, and sim-to-real methods support deployment and robustness." } },
   { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
+  { id: "parkour-terrain", label: { zh: "跑酷 / 多地形运动", en: "Parkour / Multi-terrain" }, description: { zh: "复杂地形上的感知运动、精准落脚、障碍跨越与地形适应，覆盖踏脚石、窄梁、间隙和跑酷等任务。", en: "Perceptive locomotion, precise foothold selection, obstacle traversal, and terrain adaptation across stepping stones, narrow beams, gaps, and parkour courses." } },
   { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
   { id: "loco-manipulation", label: { zh: "Loco-Manipulation", en: "Loco-Manipulation" } },
   { id: "sim2real", label: { zh: "Sim2Real / 动力学辨识", en: "Sim2Real / System ID" } },
@@ -3110,6 +3111,7 @@ const papers = [
     "categories": [
       "bfm-tracking",
       "bfm-generative",
+      "parkour-terrain",
       "locomotion",
       "loco-manipulation",
       "imitation-teleop"
@@ -3172,6 +3174,7 @@ const papers = [
     "id": "srbtrack-terrain-adaptive-tracking-of-a-single-rigid-bod",
     "categories": [
       "bfm-dynamics",
+      "parkour-terrain",
       "locomotion",
       "imitation-teleop"
     ],

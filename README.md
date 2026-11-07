@@ -61,6 +61,7 @@ bfm                 -> BFM / 通用运动控制（父分类）
 
 ```txt
 locomotion          -> 运动控制 / Locomotion
+parkour-terrain     -> 跑酷 / 多地形运动
 manipulation        -> Manipulation
 loco-manipulation   -> Loco-Manipulation
 sim2real            -> Sim2Real / 动力学辨识
@@ -69,6 +70,8 @@ imitation-teleop    -> 模仿学习 / 遥操作
 vla-world-model     -> VLA / 世界模型
 benchmark-dataset   -> Benchmark / Dataset
 ```
+
+`parkour-terrain` 用于以复杂地形运动为主要任务的工作，包括地形感知、精准落脚、踏脚石与窄梁通过、障碍跨越、跑酷和多地形适应。AME-1、Extreme Parkour、PIE、DeepLoco 等归入这一类，同时保留 `locomotion`、`sim2real` 或相关机制分类。仅在演示中偶尔涉及地形的通用方法按主要贡献分类。
 
 一篇论文可以属于多个页面分类，例如：
 

@@ -94,6 +94,11 @@
       "en": "Motion Control / Locomotion"
     },
     {
+      "id": "parkour-terrain",
+      "zh": "跑酷 / 多地形运动",
+      "en": "Parkour / Multi-terrain"
+    },
+    {
       "id": "manipulation",
       "zh": "Manipulation",
       "en": "Manipulation"

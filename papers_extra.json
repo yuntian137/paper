@@ -1088,6 +1088,7 @@
       "id": "hil-dynamic-athletic-control",
       "categories": [
         "bfm-tracking",
+        "parkour-terrain",
         "locomotion",
         "imitation-teleop"
       ],
@@ -2031,6 +2032,7 @@
       "id": "deeploco",
       "categories": [
         "bfm-latent",
+        "parkour-terrain",
         "locomotion"
       ],
       "pdf": "https://www.cs.ubc.ca/~van/papers/2017-TOG-deepLoco/2017-TOG-deepLoco.pdf",
@@ -2260,6 +2262,7 @@
       "id": "learning-quadrupedal-locomotion-over-challenging-terrain",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real",
         "imitation-teleop"
@@ -2348,6 +2351,7 @@
       "id": "dreamwaq",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real"
       ],
@@ -2605,6 +2609,7 @@
       "id": "cmoe-humanoid-terrain-adaptation",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real"
       ],
@@ -2911,6 +2916,7 @@
       "categories": [
         "bfm-tracking",
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "imitation-teleop",
         "sim2real"
@@ -3001,6 +3007,7 @@
       "id": "wococo-sequential-contacts",
       "categories": [
         "bfm-goal",
+        "parkour-terrain",
         "locomotion",
         "loco-manipulation",
         "sim2real"
@@ -3090,6 +3097,7 @@
       "categories": [
         "bfm-tracking",
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "imitation-teleop",
         "sim2real"
@@ -3674,6 +3682,7 @@
       "id": "extreme-parkour",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real",
         "imitation-teleop"
@@ -3995,6 +4004,7 @@
       "id": "pie-parkour-implicit-explicit",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real"
       ],
@@ -4071,6 +4081,7 @@
       "id": "architecture-is-all-you-need-lca",
       "categories": [
         "bfm-adaptation",
+        "parkour-terrain",
         "locomotion",
         "sim2real"
       ],
