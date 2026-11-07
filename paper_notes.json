@@ -44,12 +44,78 @@
       "note": "Personal assessment: feels like staking out a research niche; retain the idea at low priority. Post-training preference tuning provides a usable interface, but HLP is mainly compared with equal fixed weights and reduces MAE by only 0.47° (about 4.7%); Table 2 reports no across-training-seed uncertainty or confidence intervals. Without well-tuned global or per-motion fixed-weight baselines, the contribution of dynamic adaptation is not isolated. Mutual non-dominance among sampled policies does not establish proximity to the true optimal front. Hardware results mainly use manual tuning and should be distinguished from simulated HLP evaluations. Novelty has not been systematically audited and code has not been reproduced."
     }
   },
+  "lpn-action-jacobian-penalty": {
+    "zh": {
+      "note": "个人理解：可以把它看作对 PD 式“慢目标、快反馈”的扩展——让策略给出一个利用全身状态的线性反馈律，在两次参数更新之间仍根据最新 state 修正关节目标。需要区分网络/参数更新频率、目标角更新频率与底层 PD 频率；Spot 示例是离线参数序列按 15 Hz 更新、目标角按 30 Hz 闭环重算。反馈矩阵不是底层 PD 增益；低频能力依任务而定。另一条主线是 Jacobian 正则化，而 LPN 使它直接等于反馈矩阵的范数惩罚。"
+    },
+    "en": {
+      "note": "Personal interpretation: extend the PD-style slow-target/fast-feedback hierarchy by having the policy provide a whole-body linear feedback law that corrects joint targets using fresh state between parameter updates. Distinguish network/parameter, joint-target, and low-level PD rates: the Spot example uses offline parameter sequences updated at 15 Hz and closed-loop joint targets at 30 Hz. Feedback matrices are not low-level PD gains, and low-rate capability is task-dependent. The other main contribution is Jacobian regularization, which LPN reduces directly to a feedback-matrix norm penalty."
+    }
+  },
+  "todorov-jordan-2002-optimal-feedback-control": {
+    "zh": {
+      "note": "个人理解：这篇论文说明了冗余自由度的用处。更具体地说，在本文的任务代价和随机控制模型中，保留冗余能让各自由度互相补偿，避免为重现细节而付出额外努力和噪声；最小干预原则进一步解释了哪些偏差应纠正、哪些可容许。"
+    },
+    "en": {
+      "note": "Personal interpretation: the paper explains the usefulness of redundant degrees of freedom. Under its task costs and stochastic control models, redundancy enables compensation without spending extra effort and noise on reproducing movement details; minimal intervention further explains which deviations should be corrected and which can be tolerated."
+    }
+  },
+  "ttco-humanoid-behavior-foundation-models": {
+    "zh": {
+      "note": "个人理解：若“微调参考数据”指小幅修改参考运动的一份输入副本，这个说法是对的；原目标固定，encoder 与底层 BFM 参数不变。TTCO 本体可理解为冻结 BFM 外的采样式 MPC，CEM 的分布更新不是训练可泛化的 goal 修正策略。论文的辨识度主要在跨 BFM 的系统验证、计算预算分配模型，以及离线重标注与示范复用。阅读疑问：优化 command 在仿真滚动状态下评价，却与原示范图像和状态配对；残余轨迹误差可能造成条件错配。随机化和跟踪损失能缓解，但本文没有单独量化这一因素；下游成功率只能说明这些近似标签整体上仍有用。"
+    },
+    "en": {
+      "note": "Personal interpretation: modifying an input copy of the reference motion is a fair description of data-level adjustment; the original target and encoder/BFM weights remain fixed. TTCO itself is sampling-based MPC around a frozen BFM, and CEM distribution updates do not train a generalizable goal-correction policy. Its distinguishing contributions are cross-BFM evidence, compute allocation, and offline relabeling for demonstration reuse. Reading concern: commands evaluated at rolled-out simulated states are paired with original demonstration images and states, so residual trajectory error can create conditioning mismatch. Randomization and tracking costs can mitigate it, but the paper does not isolate its effect; downstream success shows that the approximate labels remain useful overall."
+    }
+  },
+  "pwm-policy-learning-multi-task-world-models": {
+    "zh": {
+      "takeaway": "先用多任务离线数据训练共享世界模型，再固定模型，在想象轨迹上反向传播回报，为每个任务快速训练独立策略；部署时直接出动作。",
+      "note": "本次随读理解：两阶段训练，先用多任务离线数据学 WM，再固定 WM、为每个任务分别训练策略；多任务不是换随机 seed。固定权重不等于切断计算图，策略仍可利用模型对输入动作的导数。需要保留的风险：策略更新会改变状态–动作访问分布，可能利用模型误差；式（6）没有显式的数据分布距离约束或模型不确定性惩罚，短时域、正则化及数据起点只能缓解部分问题，单任务实验另有在线微调。平滑性改善优化并不意味着准确性可忽略，图 2 与图 8 说明预测误差更低未必得到更好的策略，而不是证明任意不准的模型也能用。与 SuperMimic 的对照：二者都通过冻结模型上的短时想象轨迹和末端价值训练策略；PWM 的主方案是离线预训练后提取各任务专家，SuperMimic 则循环采样、拟合模型和改进一个目标条件的人形跟踪策略。这是本次阅读比较，不代表已确认直接继承关系。"
+    },
+    "en": {
+      "takeaway": "Pretrain a shared world model on multi-task offline data, freeze it, and backpropagate imagined returns to quickly train a separate policy per task; deploy the policy directly.",
+      "note": "Reading interpretation: two stages—fit the WM on multi-task offline data, then freeze it and train a separate policy per task; multiple tasks are not different random seeds. Fixed weights do not detach the computation graph, so action derivatives can still train the policy. Retain the distribution-shift concern: policy updates change state–action visitation and may exploit model errors. Eq. (6) contains no explicit data-distribution distance constraint or model-uncertainty penalty; short horizons, regularization, and dataset starting states mitigate only parts of the problem, while single-task experiments additionally fine-tune online. Smoothness can improve optimization without making accuracy irrelevant: Figs. 2 and 8 show that lower prediction error need not yield better policies, not that arbitrary model errors are harmless. Comparison with SuperMimic: both train policies through short imagined rollouts of a frozen model with terminal-value bootstrapping. PWM mainly extracts task experts after offline pretraining; SuperMimic alternates data collection, model fitting, and improvement of a goal-conditioned humanoid tracker. This is a reading comparison, not an established claim of direct methodological inheritance."
+    }
+  },
+  "supermimic-differentiable-world-model": {
+    "zh": {
+      "note": "个人理解：策略优化主干可看作 SHAC 式短视野可微 actor–critic，本文辨识度主要在在线学习的共享动力学、规模效率分析和真机部署。8 步是模型拟合窗口，32 步是策略想象视野，两者都属于训练。critic 补足窗口外回报，GAE 构造固定的价值拟合目标，actor 直接对模型回报求导。我们补充讨论的贝尔曼收缩针对固定策略下的理想算子：它缩小整体最大误差，不保证每个状态单调变准，也不能直接保证神经网络、世界模型和变化策略组成的系统收敛。速度任务当前只更新 encoder；先训练并冻结底层 decoder 再训练接口是合理候选，但论文没有完成与联合更新的对照。当前 decoder 仍由跟踪任务更新，因此作者所说并行与顺序训练相同，不宜理解成训练过程严格数值等价。"
+    },
+    "en": {
+      "note": "Personal interpretation: the policy optimizer is a SHAC-style short-horizon differentiable actor–critic; the distinguishing evidence concerns online shared dynamics, scaling efficiency, and hardware transfer. Eight steps define model fitting and 32 define policy imagination, both during training. The critic supplies the tail return, GAE constructs fixed value targets, and the actor differentiates model return directly. Our supplementary Bellman discussion concerns an ideal operator under a fixed policy: contraction reduces the maximum error across states, not every state monotonically, and does not directly prove convergence with neural approximation, a learned model, and a changing policy. Velocity reward currently updates only its encoder. Training an interface after freezing the low-level decoder is a reasonable alternative, but joint decoder updates have not been compared. Since tracking still updates the decoder concurrently, the authors’ equivalence statement should not be read as strict numerical identity of the two training schedules."
+    }
+  },
   "str-spatiotemporal-retargeting": {
     "zh": {
       "note": "本次复习重点是 MCA：人类手腕提供几何初值，物体运动与近似质量/惯量提供力学需求，固定锚点求力、固定力调锚点，最后由机器人运动学把手的接触支撑点贴到固定物体局部目标。MCA 中移动点改变的是力臂；它没有在仿真器里试抓，也没有更新机器人关节。另一个要分清的层次是：均匀邻居权重决定拉普拉斯坐标如何计算，STR 的时空权重决定哪些坐标残差更重要，MCA 决定接触目标放在哪里。阅读评价：STR 是前端参考优化，STRL 仍是 PPO mimic 框架上的采样与奖励增强；这只是方法定位，不代表已经严格证明贡献大小。尤其不能把接触收益直接认定为 MCA 力学精修的独立贡献：w/o spatial 同时删除了部位加权及接触位置、方向目标。应在相同权重、方向目标、接触激活及求解预算下对比初始几何锚点与精修锚点，再在相同锚点下单独去掉部位权重。"
     },
     "en": {
       "note": "MCA is the focus of this reading: human wrists initialize geometry; source object motion and approximate mass/inertia specify mechanical demand; fixed anchors give forces, then fixed forces guide anchor movement; robot kinematics finally aligns geometric hand support points with fixed object-local targets. Moving anchors changes moment arms. MCA does not run simulator grasp trials or update robot joints. Keep three layers separate: uniform neighbor weights define Laplacian coordinates, STR residual weights prioritize those coordinates, and MCA selects contact targets. Reading assessment: STR optimizes references upstream, while STRL augments PPO mimic sampling and rewards; this positioning does not prove relative contribution sizes. In particular, contact gains cannot be attributed independently to mechanical refinement: w/o spatial also removes part weighting and both contact objectives. Compare initial versus refined anchors at fixed weights, direction targets, activation, and solver budget, then separately remove part weighting at fixed anchors."
+    }
+  },
+  "shooting-for-contact-dsms": {
+    "zh": {
+      "note": "本次随读定位：这是参考轨迹的物理修正加 PPO mimic 流程。DSMS 使用已有 MuJoCo 动力学，优化 X、U；随后固定参考训练策略，两阶段没有描述端到端梯度或联合更新。MS 的关键是增加独立状态节点与连续性约束，可利用参考初始化状态；SS 则通过递推消去中间状态。接触隐式来自仿真器内部求解接触，SS 也可使用这样的转移模型。审稿疑问：现有 SRB/KD/DSMS 与重定向比较支持整体流程，却未在相同模型、代价、控制参数化与预算下直接隔离 SS→MS 的收益；滚动时域缩短窗口的效果也应分开验证。个人评价偏方法组合与系统验证，算法新颖性仍需更直接的对照；这不是完整文献优先性结论。SRB 只是一个上游来源，单刚体轨迹不能唯一确定全身姿态；正文只说明逐帧 IK，未展开其目标、冗余解选择或完整约束。"
+    },
+    "en": {
+      "note": "Reading interpretation: physics-based reference repair followed by PPO mimic training. DSMS optimizes X and U through existing MuJoCo dynamics, then freezes references for policy training; the described stages do not jointly update through end-to-end gradients. MS adds independent state nodes and continuity constraints and permits reference-state initialization; SS eliminates intermediate states through rollout. Contact-implicit handling comes from the simulator and can also be used in SS. Review concern: SRB/KD/DSMS and retargeting comparisons support the overall pipeline but do not isolate SS versus MS at matched dynamics, costs, control parameterization, and compute budget; shorter receding horizons should be separated as another factor. My assessment emphasizes method integration and system validation, with algorithmic novelty needing more direct evidence; this is not a complete literature-priority audit. SRB is only one upstream source, and a single-body trajectory cannot uniquely specify whole-body posture. The text mentions frame-wise IK without detailing objectives, redundancy resolution, or the full constraint set."
+    }
+  },
+  "contact-uan": {
+    "zh": {
+      "note": "本次随读理解：先用接触概率选择可信支撑脚，再由脚高度、倾角及正向运动学重建仿真回放的初始基座状态；之后回放真实命令，用 UAN 位置目标残差对齐运动。接触标签用于构造回放起点，不是逐帧强制接触序列。“world model”是物理仿真器与 UAN 的组合。与 2025 年 UAN、ASAP 同属输入残差校准路线，本文明确强调的新增部分是仅靠本体感知实现接触一致初始化；不能仅凭“世界模型”名称判断新颖性。轨迹匹配学到的是有效修正，不保证唯一分离执行器误差与其他建模误差。"
+    },
+    "en": {
+      "note": "Reading interpretation: contact probabilities select trustworthy stance feet; predicted foot height/tilt and forward kinematics reconstruct the initial base state for simulation replay. Recorded commands are then replayed with UAN joint-target residuals to align motion. Contact labels construct resets rather than impose a contact sequence at every step. The world model is the physics simulator combined with the UAN. This shares the input-residual calibration route of 2025 UAN and ASAP; the stated addition is contact-consistent initialization from proprioception alone, so the world-model label does not establish novelty. Trajectory matching learns an effective correction and does not guarantee unique separation of actuator error from other modeling errors."
+    }
+  },
+  "blind-dexterity-pure-proprioception": {
+    "zh": {
+      "note": "本次随读理解：给任务奖励，让策略在仿真中试错，自己学出先搜索接触再操作；没有示范动作数据集，也没有逐步教搜索顺序，但奖励包含靠近目标、接触和平衡等引导。PD 跟踪偏差不是额外传感器，上一时刻动作与当前关节状态已经允许网络利用负载变化。要区分三条训练线：主策略用 PPO；独立状态估计器用仿真物体真值监督；教师—学生 DAgger 是表现较弱的对照。非对称 critic 的特权输入不等于向 actor 提供物体真值。"
+    },
+    "en": {
+      "note": "Reading interpretation: task rewards and simulation trial and error let the policy learn to seek contact before manipulating. There is no demonstration-action dataset or labeled search sequence, but rewards include target-approach, contact, and balance shaping. PD tracking deviations require no additional sensor: previous actions and current joint states expose load-dependent changes. Separate three training paths: PPO for the main policy; simulator-state supervision for an independent estimator; and teacher–student DAgger as a weaker comparison. Privileged inputs to the asymmetric critic do not expose object truth to the actor."
     }
   },
   "ddppo-gradient-information-policy-optimization": {
