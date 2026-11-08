@@ -6845,6 +6845,99 @@
           "10. Evidence and theoretical source | Across six matched-backbone tasks, state/image/point-cloud network forward FLOPs are 50.67%/87.63%/61.03% of the baselines. These exclude spline decoding and execution costs; task scores vary in both directions. The distance-field construction builds on Li and Calinon, From Movement Primitives to Distance Fields to Dynamical Systems (2025, arXiv:2504.09705, reference 24). (Table III; §II-B and §IV)"
         ]
       }
+    },
+    {
+      "id": "tawm-time-aware-world-model",
+      "aliases": [
+        "TAWM",
+        "Time-Aware World Model"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "vla-world-model",
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2506.08441v1",
+      "project": "https://github.com/anh-nn01/Time-Aware-World-Model",
+      "arxiv": "https://arxiv.org/abs/2506.08441",
+      "year": "2025",
+      "venue": "ICML 2025",
+      "zh": {
+        "title": "Time-Aware World Model for Adaptive Prediction and Control",
+        "authors": "Anh N. Nhu, Sanghyun Son, Ming Lin",
+        "institutions": "University of Maryland, College Park",
+        "status": "正文、理论证明与关键实验已精读；多尺度引用相关章节已核查（v1；未复现代码）",
+        "takeaway": "把动作持续时间输入世界模型，并混合不同时间步的数据训练，再用同一 MPPI 规划器在指定控制间隔下预测、评分和选动作。",
+        "tags": [
+          "TAWM",
+          "TD-MPC2",
+          "World Model",
+          "MPC",
+          "MPPI",
+          "Multi-timescale Dynamics",
+          "Time-step Conditioning",
+          "PDE Control"
+        ],
+        "mainContent": "固定时间步世界模型只学习一种动作持续时间的状态转移，控制频率改变时容易失配。TAWM 在 TD-MPC2 上为动力学、奖励、价值和策略先验加入时间步输入，并在每个 episode 开始时采样控制间隔，联合学习不同时间尺度。推理仍使用 MPPI 滚动规划：预测多条候选动作序列的后果、优化序列并只执行第一个动作，再从新观测重新规划。9 项 Meta-World 操作任务和 3 项 PDE 控制实验显示，该整套方案在相同转移数与训练步数下具有更稳健的跨频率表现，在默认频率也可获得收益。",
+        "innovations": [
+          "时间条件化｜将固定转移 \\(D(z,a)\\) 扩展为 \\(D(z,a,\\Delta t)\\)，奖励、Q 值和策略先验也接收 \\(\\Delta t\\)；编码器仍只表征当前观测。（§4.1）",
+          "多时间尺度训练｜每个 episode 采样一个 \\(\\Delta t\\)，收集带时间间隔标签的真实环境转移；以快慢动态共存和高频采样对慢变化的冗余解释混合采样的学习动机。（§3.2、§4.2）",
+          "跨尺度误差分析｜在真实平均动力学接近、模型容量足够及网络学到跨尺度缩放关系的假设下，推导大小时间步模型误差的联系；样本效率收益进一步由控制实验支持。（§4.3、附录H）"
+        ],
+        "implementation": [
+          "1. 输入输出｜\\(z_t=h(o_t)\\)；动力学更新为 \\(\\hat z_{t+\\Delta t}=z_t+d_\\theta(z_t,a_t,\\Delta t)\\tau(\\Delta t)\\)，同时学习 \\(R(z_t,a_t,\\Delta t)\\)、\\(Q(z_t,a_t,\\Delta t)\\) 和策略先验 \\(p(z_t,\\Delta t)\\)。WM 预测候选动作的后果，MPPI 决定实际执行动作。（§4.1）",
+          "2. 时间缩放｜\\(\\tau(\\delta)=\\max(0,\\log_{10}\\delta+5)\\)，其中时间按秒代入，用来缓和不同时间步的数值尺度。\\(d_\\theta\\) 表示按 \\(\\tau\\) 缩放的增量；物理平均变化率为 \\(d_\\theta\\tau(\\delta)/\\delta\\)。比较 Euler 与 RK4 式更新；附录A的中间步使用 \\(\\tau(\\delta/2)\\) 和依赖步长的网络，不能直接套用标准RK4的四阶误差结论。（§4.1.2、附录A）",
+          "3. 数据采集｜每个 episode 开始采样一个 \\(\\Delta t\\)，该 episode 内保持固定；按此间隔观测并执行动作，存储 \\((o_t,a_t,o_{t+\\Delta t},r_t,\\Delta t)\\)。Meta-World 训练范围为 1–50 ms，PDE 为 10–1000 ms；默认对数均匀采样，并比较普通均匀采样。损失沿用潜状态一致性、奖励预测和TD价值学习。（算法1、§4.2、§5）",
+          "4. MPC 与 MPPI｜MPC 是预测未来、优化序列、执行首个动作并重新规划的框架；MPPI 是其中的采样优化方法，利用候选序列收益加权迭代改进动作分布。TD-MPC2 与 TAWM 都使用 MPPI；控制提升取决于模型预测与收益评分等组件，actor 在这里提供 policy prior。（§4.1.1）",
+          "5. 固定步长评估｜每次评估选定一个 \\(\\Delta t\\)，每个规划步预测这么长的时间，首个动作也执行这么久；之后获取真实新观测并重新规划。规划 \\(H\\) 步覆盖物理时长 \\(H\\Delta t\\)。不同横坐标代表不同固定间隔的独立评估；本文未系统测试 episode 内随机时间抖动或自动选步长。（§5、图3–7）",
+          "6. 实验任务与预算｜9项操作任务：Assembly、Basketball、Box Close、Faucet Open、Hammer、Handle Pull、Lever Pull、Pick Out of Hole、Sweep Into，以成功率评价；Burgers、Allen–Cahn、Wave 以回合总奖励评价。Meta-World 训练1.5M步，Burgers 750k步，其余PDE 1M步；主要曲线为3个种子，每种子10个评估episode及95%置信区间。同样转移数不等于同样物理交互时长或计算量。（§5.1、附录G）",
+          "7. 实验对应的问题｜图3/11比较跨控制频率表现；图4比较多个固定训练步长基线；图5/12/13/17比较学习曲线；图6比较接入控制框架的MTS3；图7/8比较采样分布。Euler在多数操作任务已足够，RK4在复杂PDE中更有优势；均匀与对数均匀采样各有取舍。MTS3使用4M离线转移，TAWM使用1.5M在线训练步，训练协议并不完全相同。（§5、附录D–G）",
+          "8. 理论的实际前提｜令 \\(\\delta=\\Delta t\\)，真实转移满足 \\(z_{t+\\delta}-z_t=\\bar f(\\delta)\\delta\\)。假设对关注的 \\(\\delta<\\bar\\delta\\)，有 \\(\\|\\bar f(\\delta)-\\bar f(\\bar\\delta)\\|<\\epsilon\\)，即该范围内的真实平均动力学接近；这一条件比笼统的采样率足够高更具体。（§4.3）",
+          "9. 引理4.1｜由 \\(\\bar f(\\delta)\\delta=d^*(\\delta)\\tau(\\delta)\\)，定义 \\(I(\\delta)=\\frac{\\delta}{\\tau(\\delta)}\\frac{\\tau(\\bar\\delta)}{\\bar\\delta}\\)，得到 \\(\\|d^*(\\delta)-I(\\delta)d^*(\\bar\\delta)\\|<\\epsilon\\delta/\\tau(\\delta)<\\epsilon\\)。最后一步使用正文分析范围0.001–1秒内 \\(\\delta/\\tau(\\delta)<1\\)。（附录H.1，式5–6）",
+          "10. 引理4.2｜再假设当前网络也满足 \\(\\|d(\\delta)-I(\\delta)d(\\bar\\delta)\\|<\\epsilon\\)。令 \\(E(\\delta)=\\|d(\\delta)-d^*(\\delta)\\|\\)，加减大小步长的中间项并用三角不等式，得到 \\(E(\\delta)\\le2\\epsilon+I(\\delta)E(\\bar\\delta)\\)。这联系了误差上界；跨尺度关系能被学到是额外假设，没有直接推导样本数或控制回报保证。（附录H.2，式7–8）",
+          "11. 固定频率收益如何理解｜作者认为短步提供快变化细节，长步提供慢变化监督，不同尺度通过共享模型互相帮助，因此同一固定频率也可能受益。默认频率实验检查性能是否保留，跨固定频率曲线检查适应能力；它们是整套方法的性能证据。固定/混合训练、时间条件化和动力学结构尚未完整交叉消融，多尺度共享是作者提出且与结果一致的机制解释，未被单独因果验证。（§3.2、§4.3、§5.1）",
+          "12. 多尺度引用实例｜引用为鄂维南《Principles of Multiscale Modeling》（2011）。公开书稿§2.3.1，正文41–42页：\\(\\dot x=x-y/\\varepsilon,\\ \\dot y=y+x/\\varepsilon\\)，转极坐标得到 \\(\\dot r=r,\\ \\dot\\varphi=1/\\varepsilon\\)，对应慢幅度与快旋转。§2.3.3，正文50–51页：四构象链中组内转换系数为 \\(10^5\\)，跨组为1；\\(z_1=x_1+x_2,z_2=x_3+x_4\\) 是慢变量。这些是引用书中的例子，并非TAWM实验识别出的子系统。",
+          "13. 引用与概念边界｜书稿§9.1.1式9.1.2写成 \\(\\dot x=f_0(x)+\\varepsilon^{-1}f_1(x)\\)；§9.1.4正文404页讨论 \\(\\dot x=f_1(x)+f_2(x)\\) 的多时间步积分。书中支持快慢尺度共存；每个成分具有最高频率及其采样解释属于TAWM的进一步论述。快速松弛也属于快时间尺度，不必对应周期振荡。作者书页：https://web.math.princeton.edu/~weinan/book.shtml ；公开书稿：https://web.math.princeton.edu/~weinan/pdf_files/weinan_book.pdf 。"
+        ]
+      },
+      "en": {
+        "title": "Time-Aware World Model for Adaptive Prediction and Control",
+        "authors": "Anh N. Nhu, Sanghyun Son, Ming Lin",
+        "institutions": "University of Maryland, College Park",
+        "status": "Main text, proofs, and key experiments reviewed; relevant multiscale reference sections checked (v1; code not reproduced)",
+        "takeaway": "Condition the world model on action duration, train with mixed time steps, and use the same MPPI planner to predict, score, and choose actions at a specified control interval.",
+        "tags": [
+          "TAWM",
+          "TD-MPC2",
+          "World Model",
+          "MPC",
+          "MPPI",
+          "Multi-timescale Dynamics",
+          "Time-step Conditioning",
+          "PDE Control"
+        ],
+        "mainContent": "A fixed-step world model learns transitions for one action duration and can become mismatched when the control frequency changes. TAWM extends TD-MPC2 with time-step inputs to dynamics, reward, value, and policy-prior models, sampling a control interval at each episode start to learn across temporal scales. Inference retains MPPI receding-horizon planning: predict candidate action-sequence consequences, optimize the sequence, execute only its first action, and replan from a new observation. Nine Meta-World manipulation tasks and three PDE-control tasks show more robust cross-frequency control under the same transition counts and training steps, with gains also possible at the default frequency.",
+        "innovations": [
+          "Time conditioning | Extend fixed transitions \\(D(z,a)\\) to \\(D(z,a,\\Delta t)\\); reward, Q values, and the policy prior also receive \\(\\Delta t\\), while the encoder represents the current observation. (§4.1)",
+          "Multiple temporal resolutions | Sample one \\(\\Delta t\\) per episode and collect actual environment transitions labeled with their intervals. Coexisting fast/slow dynamics and redundant high-rate observations of slow changes motivate mixed sampling. (§3.2 and §4.2)",
+          "Cross-scale error analysis | Assuming similar true average dynamics, sufficient model capacity, and a learned cross-scale scaling relation, relate model errors at larger and smaller time steps. Control experiments further support the sample-efficiency claim. (§4.3 and Appendix H)"
+        ],
+        "implementation": [
+          "1. Inputs and outputs | Encode \\(z_t=h(o_t)\\); update dynamics as \\(\\hat z_{t+\\Delta t}=z_t+d_\\theta(z_t,a_t,\\Delta t)\\tau(\\Delta t)\\), and learn \\(R(z_t,a_t,\\Delta t)\\), \\(Q(z_t,a_t,\\Delta t)\\), and prior \\(p(z_t,\\Delta t)\\). The WM predicts candidate-action consequences; MPPI selects the executed action. (§4.1)",
+          "2. Time scaling | \\(\\tau(\\delta)=\\max(0,\\log_{10}\\delta+5)\\), with time measured in seconds, moderates numerical scale variation. The network \\(d_\\theta\\) represents a tau-scaled increment; the physical average rate is \\(d_\\theta\\tau(\\delta)/\\delta\\). Euler and RK4-style updates are compared. Appendix A uses \\(\\tau(\\delta/2)\\) and step-dependent network evaluations, so standard RK4 fourth-order accuracy does not follow directly. (§4.1.2 and Appendix A)",
+          "3. Collection and training | Sample one \\(\\Delta t\\) at episode start and hold it fixed within that episode. Observe and act at that interval, storing \\((o_t,a_t,o_{t+\\Delta t},r_t,\\Delta t)\\). Training ranges are 1–50 ms for Meta-World and 10–1000 ms for PDE control. Log-uniform sampling is the default, with uniform sampling compared. Training retains latent consistency, reward prediction, and TD value learning. (Algorithm 1, §4.2, and §5)",
+          "4. MPC versus MPPI | MPC is the framework of predicting, optimizing a sequence, executing its first action, and replanning. MPPI is a sampling optimizer that iteratively improves the action distribution using candidate-return weights. Both TD-MPC2 and TAWM use MPPI; control performance involves model predictions and return scoring, with the actor supplying a policy prior. (§4.1.1)",
+          "5. Fixed-step evaluation | Choose one \\(\\Delta t\\) for each evaluation. Each predicted planning step spans that interval, and the first action is executed for the same duration before observing and replanning. A horizon of \\(H\\) steps covers \\(H\\Delta t\\) physical time. Different plot coordinates are separate fixed-interval evaluations; within-episode random timing jitter and automatic interval selection are not systematically tested. (§5 and Figs. 3–7)",
+          "6. Tasks and budgets | Nine manipulation tasks: Assembly, Basketball, Box Close, Faucet Open, Hammer, Handle Pull, Lever Pull, Pick Out of Hole, and Sweep Into, evaluated by success rate. Burgers, Allen–Cahn, and Wave use episode return. Train 1.5M steps for Meta-World, 750k for Burgers, and 1M for the other PDEs. Main curves use three seeds, ten evaluation episodes per seed, and 95% confidence intervals. Equal transition counts do not imply equal physical interaction time or compute. (§5.1 and Appendix G)",
+          "7. Experimental questions | Figs. 3/11 compare control frequencies; Fig. 4 compares multiple fixed-training-step baselines; Figs. 5/12/13/17 show learning curves; Fig. 6 compares control-adapted MTS3; Figs. 7/8 compare sampling distributions. Euler suffices for most manipulation tasks, whereas RK4 benefits complex PDEs; uniform and log-uniform sampling have different trade-offs. MTS3 uses 4M offline transitions versus 1.5M online TAWM steps, so training protocols differ. (§5 and Appendices D–G)",
+          "8. Actual theoretical premise | Let \\(\\delta=\\Delta t\\), with true transition \\(z_{t+\\delta}-z_t=\\bar f(\\delta)\\delta\\). For the relevant \\(\\delta<\\bar\\delta\\), assume \\(\\|\\bar f(\\delta)-\\bar f(\\bar\\delta)\\|<\\epsilon\\): true average dynamics are similar across that interval. This is more specific than simply requiring a sufficiently high sampling rate. (§4.3)",
+          "9. Lemma 4.1 | From \\(\\bar f(\\delta)\\delta=d^*(\\delta)\\tau(\\delta)\\), define \\(I(\\delta)=\\frac{\\delta}{\\tau(\\delta)}\\frac{\\tau(\\bar\\delta)}{\\bar\\delta}\\). Then \\(\\|d^*(\\delta)-I(\\delta)d^*(\\bar\\delta)\\|<\\epsilon\\delta/\\tau(\\delta)<\\epsilon\\). The last inequality uses \\(\\delta/\\tau(\\delta)<1\\) in the analyzed numerical range of 0.001–1 seconds. (Appendix H.1, Eqs. 5–6)",
+          "10. Lemma 4.2 | Further assume the trained network satisfies \\(\\|d(\\delta)-I(\\delta)d(\\bar\\delta)\\|<\\epsilon\\). Define \\(E(\\delta)=\\|d(\\delta)-d^*(\\delta)\\|\\); add/subtract cross-scale intermediate terms and apply the triangle inequality to obtain \\(E(\\delta)\\le2\\epsilon+I(\\delta)E(\\bar\\delta)\\). This relates error bounds; learning the scaling relation is an extra assumption, and no sample-count or control-return guarantee is directly derived. (Appendix H.2, Eqs. 7–8)",
+          "11. Interpreting same-frequency gains | The authors argue that short intervals expose fast details and longer intervals supervise slow changes, allowing shared models to transfer across scales and benefit one fixed evaluation frequency. Default-frequency tests check retained performance; frequency sweeps check adaptability. These establish whole-method performance. Fixed/mixed training, time conditioning, and dynamics structure are not fully crossed in ablations; multiscale sharing is an author-proposed mechanism consistent with the results, not an isolated causal finding. (§3.2, §4.3, and §5.1)",
+          "12. Concrete reference examples | The cited work is Weinan E, Principles of Multiscale Modeling (2011). In the public draft, §2.3.1, printed pp. 41–42: \\(\\dot x=x-y/\\varepsilon,\\ \\dot y=y+x/\\varepsilon\\) becomes \\(\\dot r=r,\\ \\dot\\varphi=1/\\varepsilon\\), separating slow amplitude and fast rotation. In §2.3.3, printed pp. 50–51, a four-conformation chain has within-group rate coefficients of \\(10^5\\) and cross-group coefficients of 1; \\(z_1=x_1+x_2,z_2=x_3+x_4\\) are slow variables. These are book examples, not subsystems identified in TAWM experiments.",
+          "13. Reference and conceptual scope | Draft §9.1.1, Eq. 9.1.2 uses \\(\\dot x=f_0(x)+\\varepsilon^{-1}f_1(x)\\); §9.1.4, printed p. 404 discusses multiple-time-step integration for \\(\\dot x=f_1(x)+f_2(x)\\). The book supports coexisting fast/slow scales; per-component highest-frequency and sampling interpretations are an additional TAWM argument. Fast relaxation is a fast time scale without requiring periodic oscillation. Author page: https://web.math.princeton.edu/~weinan/book.shtml ; public draft: https://web.math.princeton.edu/~weinan/pdf_files/weinan_book.pdf ."
+        ]
+      }
     }
   ]
 }
