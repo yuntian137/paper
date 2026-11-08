@@ -6754,6 +6754,95 @@
           "6. Experimental setting | The random-walk experiment has 25 states, two actions, and \\(\\gamma=0.9\\). Restrict transition and value representations through partitions, then compare value approximation and policy performance in the true environment. This probes approximation tradeoffs under model misspecification. (Main-paper §4; extended-version §5.2)"
         ]
       }
+    },
+    {
+      "id": "spline-policy",
+      "aliases": [
+        "Spline Policy",
+        "SP",
+        "SplinePolicy"
+      ],
+      "categories": [
+        "bfm-generative",
+        "imitation-teleop",
+        "manipulation",
+        "vla-world-model"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.07386v2",
+      "project": "https://github.com/mengze3/spline_policy",
+      "arxiv": "https://arxiv.org/abs/2606.07386",
+      "year": "2026",
+      "venue": "arXiv:2606.07386v2",
+      "zh": {
+        "title": "Spline Policy: A Structured Representation for Robot Policies",
+        "authors": "Mengze Tian, Yiming Li, Sichao Liu, Auke Ijspeert, Sylvain Calinon",
+        "institutions": "École Polytechnique Fédérale de Lausanne (EPFL); Idiap Research Institute",
+        "status": "方法与理论附录已精读；关键实验已核查（v2；未复现代码）",
+        "takeaway": "策略根据观测预测样条控制点，解码为连续动作轨迹；也可由最近点投影构造向量场，边拉回曲线、边沿曲线前进。",
+        "tags": [
+          "Spline Policy",
+          "Movement Primitives",
+          "Quadratic Bézier",
+          "Diffusion Policy",
+          "Flow Matching",
+          "Vector Field",
+          "Lyapunov",
+          "Visual Replanning",
+          "VLA"
+        ],
+        "mainContent": "固定分辨率的动作块较难直接表达连续性、几何约束和执行时的局部反馈。Spline Policy 保留感知与策略主干，改为预测紧凑样条参数，再解码连续轨迹，或通过距离场生成状态相关的纠偏流场。作者在匹配主干的操作实验中观察到接近基线的任务表现与较低的网络前向 FLOPs，并用真机案例展示视觉重规划、扰动恢复和避障集成。",
+        "innovations": [
+          "结构化输出接口｜将现代模仿学习策略的 action chunk 换成样条参数，使同一预测可按不同时间分辨率解码，并暴露边界、连续性和控制点约束；支持 diffusion、flow matching、ACT 和 VLA 主干。（§III、§V）",
+          "几何到反馈的转换｜对预测的二次样条求最近点投影，用法向吸引与切向推进构造局部流场；网络学习曲线几何，解析构造提供执行时的反馈结构。（§IV-A；附录 VII-A）",
+          "理论与控制连接｜用到曲线距离的平方分析局部纠偏，利用线性样条解码传播参数不确定性，并通过 Jacobian 和零空间投影接入传统机器人控制。（§III-B、§IV；附录 VII-B）"
+        ],
+        "implementation": [
+          "1. 输入与轨迹维度｜观测可包含本体状态、图像、点云或语言；输出 \\(w_\\theta(o)=\\epsilon_\\theta(o)\\)，解码 \\(f_\\theta(t)=\\phi(t)w_\\theta(o)\\)。轨迹坐标取决于动作定义，可以是关节位置或操作空间变量；一般不等于包含位置、速度的完整动力学状态。基准将 \\(16\\times d_a\\) 个离散动作数值改为 \\(8\\times d_a\\) 个样条参数，压缩沿时间方向的表示，不改变单步动作维度。（式 2–3；§V-B，第 9 页）",
+          "2. 样条与训练｜二次段为 \\(f_i(\\tau)=(1-\\tau)^2w_i^1+2(1-\\tau)\\tau w_i^2+\\tau^2w_i^3\\)，\\(\\tau\\in[0,1]\\)。示范提供运动监督，部署时由当前观测预测参考曲线。监督式策略可最小化 \\(L_s=N^{-1}\\sum_j\\|\\phi(t_j)w_\\theta(o)-f_{\\rm demo}(t_j)\\|^2\\)，经解码器反传；diffusion 等主干保留相应学习目标。（式 4、12–13；§III-C）",
+          "3. 连续性与约束｜\\(C^0\\) 要求 \\(w_i^3=w_{i+1}^1\\)；\\(C^1\\) 要求 \\((w_i^3-w_i^2)/\\Delta t_i=(w_{i+1}^2-w_{i+1}^1)/\\Delta t_{i+1}\\)。曲线处于控制点凸包内，因此把控制点约束在凸安全区域是整段曲线满足该区域约束的充分条件。局部相位导数换成实际时间速度时须除以段时长。Fig. 11 展示 Traj. 模式重规划时的速度衔接。（式 5–9；§V-B）",
+          "4. 最近点与流场｜求 \\(t^*(x)\\in\\arg\\min_t\\|f_\\theta(t)-x\\|^2\\)，令 \\(p=f_\\theta(t^*)\\)、\\(d=\\|x-p\\|\\)、\\(n=(x-p)/d\\)。二次段的驻点条件 \\((f_i-x)^\\top f_i^\\prime=0\\) 是三次方程；比较区间内根、端点及各段得到最近点。执行 \\(\\dot x=F(x)=\\alpha n+\\beta v_{\\rm tan}\\)，\\(\\alpha\\le0,\\beta\\ge0\\)，其中 \\(v_{\\rm tan}=f_\\theta^\\prime(t^*)\\)。吸引分量沿负距离梯度；叠加切向推进后通常边回归、边前进，直线方向属于定义距离的坐标空间。（式 14–17、27–34）",
+          "5. 局部纠偏证明｜取 \\(V=\\tfrac12d^2\\)，则 \\(\\dot V=\\alpha d+\\beta d\\,n^\\top v_{\\rm tan}\\)。固定曲线、投影唯一可微且活动投影不跨段切换时，内部最近点满足 \\(n^\\top v_{\\rm tan}=0\\)，故 \\(\\dot V\\le0\\)；起点用单侧条件，终点令推进权重为零。保证针对到生成曲线的距离不增，终点收敛与任务成功需要额外条件。（附录 VII-B，式 35–40，第 14 页）",
+          "6. 在线参考与纠偏｜更新观测后可重新预测曲线；两次预测之间，当前状态仍可用于计算现有曲线诱导的速度场。真机推拉恢复案例明确结合视觉重规划与流场反馈（Fig. 12–13）。正文未完整给出两者的频率、异步调度和流场切换协议；轨迹的 C1 衔接也不自动保证整个流场切换连续。固定曲线的距离不增证明不能直接扩展为持续重规划系统的稳定性结论。（§V-C；附录 VII-B）",
+          "7. 不确定性｜若以 \\(w\\sim\\mathcal N(\\mu_w,\\Sigma_w)\\) 近似参数分布，则 \\(f(t)\\sim\\mathcal N(\\phi(t)\\mu_w,\\phi(t)\\Sigma_w\\phi(t)^\\top)\\)。线性解码使参数到轨迹的均值与协方差传播可解析计算；观测到参数的神经映射和样条到流场的映射通常非线性，流场分布用 Monte Carlo 估计。强多模态行为可改用混合或采样表示。（式 10–11、18–20）",
+          "8. 控制集成｜操作空间 \\(x=\\psi(q)\\) 的流场转为 \\(\\dot q_\\theta=J_\\psi^\\dagger F(\\psi(q))\\)。令 \\(g=\\nabla_q\\Gamma_{\\rm SDF}\\)，最终 \\(\\dot q=\\rho g^\\top+(I-g^\\dagger g)\\dot q_\\theta\\)：避障优先，保留在一阶距离变化上不干扰避障的策略运动。（式 21–24）",
+          "9. 实验与理论来源｜六项匹配主干基准中，状态、图像、点云输入的网络前向 FLOPs 分别为基线的 50.67%、87.63%、61.03%；不包含样条解码及执行开销，任务得分随任务有升有降。距离场构造沿用 Li 与 Calinon 的 From Movement Primitives to Distance Fields to Dynamical Systems（2025，arXiv:2504.09705，参考文献 24）。（表 III；§II-B、§IV）"
+        ]
+      },
+      "en": {
+        "title": "Spline Policy: A Structured Representation for Robot Policies",
+        "authors": "Mengze Tian, Yiming Li, Sichao Liu, Auke Ijspeert, Sylvain Calinon",
+        "institutions": "École Polytechnique Fédérale de Lausanne (EPFL); Idiap Research Institute",
+        "status": "Methods and theory appendix reviewed; key experiments checked (v2; code not reproduced)",
+        "takeaway": "Predict spline control points from observations and decode continuous action trajectories, or use closest-point geometry to construct a vector field that attracts toward the curve while progressing along it.",
+        "tags": [
+          "Spline Policy",
+          "Movement Primitives",
+          "Quadratic Bézier",
+          "Diffusion Policy",
+          "Flow Matching",
+          "Vector Field",
+          "Lyapunov",
+          "Visual Replanning",
+          "VLA"
+        ],
+        "mainContent": "Fixed-resolution action chunks offer limited direct access to continuity, geometric constraints, and local execution feedback. Spline Policy preserves the perception and policy backbone, predicts compact spline parameters, and decodes either continuous trajectories or state-dependent corrective flows through a distance field. Matched-backbone manipulation experiments show comparable task performance with lower network forward FLOPs, while real-robot cases demonstrate visual replanning, disturbance recovery, and collision-avoidance integration.",
+        "innovations": [
+          "Structured output interface | Replace action chunks with spline parameters, enabling temporal resampling and explicit boundary, continuity, and control-point constraints across diffusion, flow-matching, ACT, and VLA backbones. (§III and §V)",
+          "Geometry to feedback | Project onto a predicted quadratic spline and combine normal attraction with tangential progression. The network learns curve geometry; the analytical construction supplies local execution feedback. (§IV-A; Appendix VII-A)",
+          "Theory and control connections | Analyze correction through squared distance to the curve, propagate parameter uncertainty through linear spline decoding, and integrate conventional robot control through Jacobians and null-space projection. (§III-B, §IV; Appendix VII-B)"
+        ],
+        "implementation": [
+          "1. Inputs and trajectory dimensions | Observations can contain proprioception, images, point clouds, or language. Predict \\(w_\\theta(o)=\\epsilon_\\theta(o)\\) and decode \\(f_\\theta(t)=\\phi(t)w_\\theta(o)\\). Coordinates depend on the action definition, such as joint positions or operational-space variables, and generally differ from the full position–velocity dynamical state. Benchmarks replace \\(16\\times d_a\\) discrete action values with \\(8\\times d_a\\) spline parameters, compressing temporal representation without changing per-step action dimension. (Eqs. 2–3; §V-B, p. 9)",
+          "2. Spline and training | A quadratic segment is \\(f_i(\\tau)=(1-\\tau)^2w_i^1+2(1-\\tau)\\tau w_i^2+\\tau^2w_i^3\\), \\(\\tau\\in[0,1]\\). Demonstrations supervise motion; deployment observations determine the predicted reference curve. Supervised policies can minimize \\(L_s=N^{-1}\\sum_j\\|\\phi(t_j)w_\\theta(o)-f_{\\rm demo}(t_j)\\|^2\\), backpropagating through decoding; diffusion and other backbones retain their corresponding learning objectives. (Eqs. 4, 12–13; §III-C)",
+          "3. Continuity and constraints | \\(C^0\\) requires \\(w_i^3=w_{i+1}^1\\); \\(C^1\\) requires \\((w_i^3-w_i^2)/\\Delta t_i=(w_{i+1}^2-w_{i+1}^1)/\\Delta t_{i+1}\\). The curve lies in the control-point convex hull, so confining control points to a convex safe set is sufficient to confine the segment. Divide local-phase derivatives by segment duration for physical-time velocity. Fig. 11 demonstrates velocity continuity under Traj. replanning. (Eqs. 5–9; §V-B)",
+          "4. Projection and flow | Find \\(t^*(x)\\in\\arg\\min_t\\|f_\\theta(t)-x\\|^2\\); define \\(p=f_\\theta(t^*)\\), \\(d=\\|x-p\\|\\), and \\(n=(x-p)/d\\). The quadratic-segment stationary condition \\((f_i-x)^\\top f_i^\\prime=0\\) is cubic; compare in-range roots, endpoints, and segments. Execute \\(\\dot x=F(x)=\\alpha n+\\beta v_{\\rm tan}\\), \\(\\alpha\\le0,\\beta\\ge0\\), with \\(v_{\\rm tan}=f_\\theta^\\prime(t^*)\\). Attraction follows the negative distance gradient; tangential progression yields simultaneous recovery and advancement. The straight attraction direction belongs to the coordinate space defining distance. (Eqs. 14–17, 27–34)",
+          "5. Local correction proof | Set \\(V=\\tfrac12d^2\\); then \\(\\dot V=\\alpha d+\\beta d\\,n^\\top v_{\\rm tan}\\). For a fixed curve with unique differentiable projection and no active-segment switching, interior projections satisfy \\(n^\\top v_{\\rm tan}=0\\), giving \\(\\dot V\\le0\\). Use the one-sided condition at the start and zero progression weight at the terminal boundary. This establishes distance-to-generated-curve non-increase; endpoint convergence and task success need additional conditions. (Appendix VII-B, Eqs. 35–40, p. 14)",
+          "6. Online references and correction | New observations can generate new curves; between predictions, the current state still determines velocity through the existing curve-induced field. Real-robot push/pull recovery explicitly combines visual replanning and field feedback (Figs. 12–13). The text does not fully specify update rates, asynchronous scheduling, or field-switching protocols. C1 trajectory joins do not automatically make the full switched field continuous, and the fixed-curve proof does not establish stability under continual replanning. (§V-C; Appendix VII-B)",
+          "7. Uncertainty | Approximate parameters by \\(w\\sim\\mathcal N(\\mu_w,\\Sigma_w)\\); then \\(f(t)\\sim\\mathcal N(\\phi(t)\\mu_w,\\phi(t)\\Sigma_w\\phi(t)^\\top)\\). Linear decoding permits analytical parameter-to-trajectory mean and covariance propagation. Observation-to-parameter neural mappings and spline-to-field mappings are generally nonlinear; estimate field distributions with Monte Carlo. Mixtures or sampling can represent strongly multimodal behavior. (Eqs. 10–11, 18–20)",
+          "8. Control integration | Map operational-space \\(x=\\psi(q)\\) flow to \\(\\dot q_\\theta=J_\\psi^\\dagger F(\\psi(q))\\). With \\(g=\\nabla_q\\Gamma_{\\rm SDF}\\), execute \\(\\dot q=\\rho g^\\top+(I-g^\\dagger g)\\dot q_\\theta\\): avoidance takes priority, retaining policy motion that does not interfere with first-order avoidance-distance change. (Eqs. 21–24)",
+          "9. Evidence and theoretical source | Across six matched-backbone tasks, state/image/point-cloud network forward FLOPs are 50.67%/87.63%/61.03% of the baselines. These exclude spline decoding and execution costs; task scores vary in both directions. The distance-field construction builds on Li and Calinon, From Movement Primitives to Distance Fields to Dynamical Systems (2025, arXiv:2504.09705, reference 24). (Table III; §II-B and §IV)"
+        ]
+      }
     }
   ]
 }
