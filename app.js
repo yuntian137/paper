@@ -144,7 +144,7 @@ const siteMeta = {
   },
 };
 
-const readingPromptsPath = "reading_prompts_v4.json?v=20261101-expression";
+const readingPromptsPath = "reading_prompts_v4.json?v=20261108-framework-guide";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
