@@ -6938,6 +6938,85 @@
           "13. Reference and conceptual scope | Draft §9.1.1, Eq. 9.1.2 uses \\(\\dot x=f_0(x)+\\varepsilon^{-1}f_1(x)\\); §9.1.4, printed p. 404 discusses multiple-time-step integration for \\(\\dot x=f_1(x)+f_2(x)\\). The book supports coexisting fast/slow scales; per-component highest-frequency and sampling interpretations are an additional TAWM argument. Fast relaxation is a fast time scale without requiring periodic oscillation. Author page: https://web.math.princeton.edu/~weinan/book.shtml ; public draft: https://web.math.princeton.edu/~weinan/pdf_files/weinan_book.pdf ."
         ]
       }
+    },
+    {
+      "id": "robotmdm-robot-motion-diffusion-model",
+      "aliases": [
+        "RobotMDM",
+        "Robot MDM",
+        "Robot Motion Diffusion Model"
+      ],
+      "categories": [
+        "bfm-generative",
+        "bfm-tracking",
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://cgl.ethz.ch/Downloads/Publications/Papers/2024/Ser24c/Ser24c.pdf",
+      "project": "https://cgl.ethz.ch/publications/papers/paperSer24c.php",
+      "arxiv": "",
+      "year": "2024",
+      "venue": "SIGGRAPH Asia 2024",
+      "zh": {
+        "title": "Robot Motion Diffusion Model: Motion Generation for Robotic Characters",
+        "authors": "Agon Serifi, Ruben Grandia, Espen Knoop, Markus Gross, Moritz Bächer",
+        "institutions": "ETH Zürich; Disney Research",
+        "status": "方法与关键实验已精读；局限和后续方向已核查（未复现代码）",
+        "takeaway": "先用冻结跟踪器的仿真执行回报训练动作评分 critic，再冻结 critic，通过其输入梯度微调 MDM，让文本生成的参考动作更适合机器人执行。",
+        "tags": [
+          "RobotMDM",
+          "Motion Diffusion Model",
+          "Marginalized Critic",
+          "Physics-aware Generation",
+          "Motion Tracking",
+          "Humanoid"
+        ],
+        "mainContent": "文本条件动作模型能生成丰富的运动学轨迹，但人类动作重定向后的失衡、碰撞和幅度限制会使机器人难以执行。RobotMDM 固定 RL 跟踪器，在仿真中训练只接收参考动作窗口的回报 critic，再固定 critic，将预测回报加入 MDM 的微调目标。部署时由微调后的扩散模型生成参考轨迹，原跟踪器结合机器人状态输出控制目标。实验在保持相近文本匹配与多样性的同时改善了仿真跟踪误差，并展示了双足机器人执行。",
+        "innovations": [
+          "动作条件回报代理｜将固定跟踪控制器的执行表现压缩为只依赖参考动作窗口的可微评分，连接运动学生成与物理执行。（§3.1，式 1–5）",
+          "生成器的执行对齐｜保留 MDM 的动作重建目标，额外最大化冻结 critic 的窗口评分；物理执行反馈通过代理的输入梯度更新生成器。（§3.2，式 7）",
+          "生成与跟踪分工｜在训练阶段将既定机器人及其控制器的能力引入文本动作生成，部署继续使用生成器加跟踪器，保持 MDM 生成阶段的计算流程。（图 2；§4.1）"
+        ],
+        "implementation": [
+          "1. 数据与机器人｜HumanML3D 中带文本的 AMASS 子集经 IK 重定向、移除不足 2 秒的片段并镜像后，共 27112 段动作、70958 条文本，约 55 小时；沿用 HumanML3D 训练／测试划分。机器人有 20 DoF，高 0.84 m、重 16.2 kg。（§4，第 5 页）",
+          "2. 输入输出｜一段动作表示为 n×(7+2j) 矩阵，每帧包含根部高度、平面线速度、竖直轴角速度、根部姿态、关节位置与速度，并归一化到局部朝向坐标。MDM 输入带噪动作、扩散步和文本条件，预测整段干净参考动作；扩散步与物理执行时间分别计数。（§3、§3.2）",
+          "3. critic 学习｜固定 VMP 跟踪器，在仿真中收集参考窗口与执行奖励，估计 \\(v_\\theta(m)\\approx\\mathbb E[\\sum_{k\\ge0}\\gamma^k r_k\\mid m_0=m,\\pi]\\)。用截断 TD(\\(\\lambda\\)) 构造价值目标、平方误差更新 critic；网络为 3 层、每层 256 单元的 MLP，\\(\\gamma=0.9\\)、\\(\\lambda=0.95\\)。critic 省略机器人状态，对采样分布下的执行表现作平均估计。（§3.1；表 1）",
+          "4. MDM 与微调损失｜基础预测为 \\(\\widehat M=p_\\phi(M_d,d,c)\\)，重建项为 \\(L_{\\mathrm{MDM}}=\\|M_0-\\widehat M\\|_F^2\\)。微调使用 \\(L=L_{\\mathrm{MDM}}-\\beta\\sum_t v_\\theta(\\widehat m_t)\\)，\\(\\beta=0.001\\)；固定 critic 与控制器，只更新生成器。评分对输入动作的梯度经过预测动作回传到 MDM，无需对仿真求导。（式 6–7）",
+          "5. 训练与部署｜MDM 先训练 300 万步，EMA 率为 0.9999，再微调 40 万步，作者报告额外约 12 小时；生成使用 50 个扩散步。部署无需 critic，跟踪策略结合状态与参考运动输出执行器位置目标，由关节 PD 控制器执行。（§3.2、§4；表 1）",
+          "6. 结果与证据｜Realism 由同一 critic 计算，MDM→RobotMDM 为 8.730→9.562；R-Precision 为 0.680→0.684，FID 为 0.415→0.472。2048 个、每个 30 秒的仿真回合中，根部姿态误差由 4.13° 降至 2.34°，下肢关节误差由 16.11° 降至 11.44°。前者衡量代理评分，后者提供独立于该评分的执行指标。（表 2–3）",
+          "7. 局限与后续｜软评分不提供硬可行性保证，要求超出机器人能力时可能与文本语义冲突。作者提出迭代改善生成器和控制器，并用物理感知生成器构建大规模合成动作数据；正文已有按生成动作重新训练控制器的实验，完整多轮迭代和合成数据规模收益仍属展望。（§4.3；第 8 页 Limitations）"
+        ]
+      },
+      "en": {
+        "title": "Robot Motion Diffusion Model: Motion Generation for Robotic Characters",
+        "authors": "Agon Serifi, Ruben Grandia, Espen Knoop, Markus Gross, Moritz Bächer",
+        "institutions": "ETH Zürich; Disney Research",
+        "status": "Methods and key experiments reviewed; limitations and future directions checked (code not reproduced)",
+        "takeaway": "Fit a motion critic to simulated returns from a frozen tracker, then freeze the critic and fine-tune MDM through its input gradients to generate references the robot can execute more easily.",
+        "tags": [
+          "RobotMDM",
+          "Motion Diffusion Model",
+          "Marginalized Critic",
+          "Physics-aware Generation",
+          "Motion Tracking",
+          "Humanoid"
+        ],
+        "mainContent": "Text-conditioned motion models produce diverse kinematic trajectories, but imbalance, collisions, and motion limits after human-to-robot retargeting can make execution difficult. RobotMDM freezes an RL tracker, learns a motion-window return critic from simulation, and freezes that critic to fine-tune MDM with a predicted-return objective. At deployment, the diffusion model generates reference trajectories and the original tracker combines them with robot state to produce control targets. Experiments improve simulated tracking errors while retaining similar text alignment and diversity, and demonstrate execution on a bipedal robot.",
+        "innovations": [
+          "Motion-conditioned return surrogate | Represent a fixed tracking controller’s execution performance with a differentiable score depending only on reference motion windows, linking kinematic generation to physical execution. (§3.1, Eqs. 1–5)",
+          "Execution alignment of the generator | Retain MDM’s reconstruction objective and additionally maximize frozen-critic window scores; execution feedback updates the generator through the surrogate’s input gradients. (§3.2, Eq. 7)",
+          "Separate generation and tracking | Incorporate the capabilities of the robot and tracker during generator training, then deploy the generator with the tracker while retaining MDM’s motion-generation computation. (Fig. 2; §4.1)"
+        ],
+        "implementation": [
+          "1. Data and robot | IK-retarget the text-annotated AMASS subset of HumanML3D, discard clips shorter than 2 s, and mirror motions, yielding 27,112 motions, 70,958 descriptions, and about 55 h. Retain the HumanML3D train/test split. The robot has 20 DoFs, stands 0.84 m tall, and weighs 16.2 kg. (§4, p. 5)",
+          "2. Inputs and outputs | Encode each clip as an n×(7+2j) matrix containing root height, planar linear velocity, vertical-axis angular velocity, root orientation, and joint positions and velocities in a local heading frame. MDM takes noisy motion, a diffusion step, and text conditioning to predict a full clean reference sequence. Diffusion steps and physical execution time are distinct. (§3 and §3.2)",
+          "3. Critic fitting | Freeze the VMP tracker, collect reference windows and execution rewards in simulation, and estimate \\(v_\\theta(m)\\approx\\mathbb E[\\sum_{k\\ge0}\\gamma^k r_k\\mid m_0=m,\\pi]\\). Regress truncated TD(\\(\\lambda\\)) value targets with a three-hidden-layer, 256-unit MLP using \\(\\gamma=0.9\\) and \\(\\lambda=0.95\\). Omitting robot state makes this an average performance estimate under the sampled distribution. (§3.1; Table 1)",
+          "4. MDM and alignment objective | Predict \\(\\widehat M=p_\\phi(M_d,d,c)\\) with reconstruction loss \\(L_{\\mathrm{MDM}}=\\|M_0-\\widehat M\\|_F^2\\). Fine-tune with \\(L=L_{\\mathrm{MDM}}-\\beta\\sum_t v_\\theta(\\widehat m_t)\\), using \\(\\beta=0.001\\). Freeze critic and controller weights; update only the generator. Score derivatives with respect to motion pass through the predicted sequence into MDM without differentiating simulation. (Eqs. 6–7)",
+          "5. Training and deployment | Pretrain MDM for 3 million steps with EMA rate 0.9999, then fine-tune for 400k steps, reported as about 12 additional hours. Generation uses 50 diffusion steps. Deployment does not use the critic: the tracker takes robot state and motion references and outputs actuator-position targets for joint PD controllers. (§3.2 and §4; Table 1)",
+          "6. Results and evidence | Realism uses the same critic and rises from 8.730 to 9.562 for MDM→RobotMDM; R-Precision changes from 0.680 to 0.684 and FID from 0.415 to 0.472. Across 2,048 simulation episodes of 30 s each, root-orientation error falls from 4.13° to 2.34° and lower-body joint error from 16.11° to 11.44°. Realism measures surrogate scores, whereas tracking errors provide execution measures independent of that score. (Tables 2–3)",
+          "7. Limits and directions | Soft scores give no hard feasibility guarantee, and prompts beyond robot capabilities can conflict with execution. The authors propose iteratively improving generator and tracker and building large synthetic motion datasets with physics-aware generators. Retraining trackers on generated motions is tested; full multi-round iteration and synthetic-data scaling remain future directions. (§4.3; Limitations, p. 8)"
+        ]
+      }
     }
   ]
 }
