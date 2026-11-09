@@ -137,6 +137,11 @@
       "id": "numerical-solvers",
       "zh": "数值求解 / 科学机器学习",
       "en": "Numerical Solvers / Scientific ML"
+    },
+    {
+      "id": "llm-inference",
+      "zh": "大模型 / 推理加速",
+      "en": "LLMs / Inference Acceleration"
     }
   ],
   "papers": [

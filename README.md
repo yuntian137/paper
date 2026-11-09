@@ -70,7 +70,10 @@ imitation-teleop    -> 模仿学习 / 遥操作
 vla-world-model     -> VLA / 世界模型
 benchmark-dataset   -> Benchmark / Dataset
 numerical-solvers   -> 数值求解 / 科学机器学习
+llm-inference       -> 大模型 / 推理加速
 ```
+
+`llm-inference` 用于大语言模型与推理模型的推理效率研究，包括稀疏注意力、KV cache 和解码优化。LessIsMore 归入此类。
 
 `numerical-solvers` 用于 PDE 离散系统、迭代求解、预条件与神经算子等数值方法；按论文的主要贡献分类，不因其可用于机器人仿真而自动归入 BFM 或运动控制。
 

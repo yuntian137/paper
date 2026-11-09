@@ -7097,6 +7097,75 @@
           "7. Replacement decision | Main tables compare Jacobi, Gauss–Seidel, SOR, and neural architectures but omit a direct AMG comparison, although AMG generates training data. Compare total time at equal accuracy, accounting for training, setup, and each application. Integration into a complete JFNK solver is not evaluated. (Tables 1–2 and §5.1.2)"
         ]
       }
+    },
+    {
+      "id": "lessismore-cross-head-sparse-attention",
+      "aliases": [
+        "LessIsMore",
+        "Less Is More",
+        "CUSA",
+        "Less Is More: Training-Free Sparse Attention with Global Locality for Efficient Reasoning"
+      ],
+      "categories": [
+        "llm-inference"
+      ],
+      "pdf": "https://arxiv.org/pdf/2508.07101v2",
+      "project": "https://github.com/DerrickYLJ/LessIsMore",
+      "arxiv": "https://arxiv.org/abs/2508.07101",
+      "year": "2026",
+      "venue": "ICML 2026 / arXiv:2508.07101",
+      "zh": {
+        "title": "Less Is More: Fast and Accurate Reasoning with Cross-Head Unified Sparse Attention",
+        "authors": "Lijie Yang, Zhihao Zhang, Arti Jain, Shijie Cao, Baihong Yuan, Yiwei Chen, Zhihao Jia, Ravi Netravali",
+        "institutions": "Princeton University; Carnegie Mellon University; Microsoft Research",
+        "status": "部分已读：摘要、引言与方法（v2；未复现代码）",
+        "takeaway": "汇总各注意力头的重要历史 token，统一选择并保留近期窗口，让后续层复用索引，降低长推理解码的注意力开销。",
+        "tags": [
+          "LessIsMore",
+          "Sparse Attention",
+          "LLM Inference",
+          "Reasoning",
+          "KV Cache",
+          "Training-Free"
+        ],
+        "mainContent": "长推理生成会不断扩大 KV cache，增加每一步解码的注意力计算与访存开销，已有稀疏方法也可能因遗漏重要 token 而降低准确率。LessIsMore 采用免训练的跨头统一稀疏注意力：汇总各头的重要历史位置，预留固定比例的近期 token，并在后续层复用选出的索引。作者在多种推理模型与基准上报告保持或提高准确率，结合内核优化，端到端解码最高加速 1.6 倍，稀疏注意力计算最高加速 1.72 倍。",
+        "innovations": [
+          "跨头统一选择（CUSA）｜将各注意力头提出的候选历史 token 汇总为共享位置集合，替代各头独立选择。（§3.1–3.2）",
+          "近期窗口与跨层复用｜按 token 预算的固定比例保留近期上下文，并让后续稀疏注意力层复用选择层给出的索引，兼顾上下文保留与选择开销。（§3.3、算法 1）"
+        ],
+        "implementation": [
+          "输入输出｜每个解码步输入当前隐藏状态、KV cache、token 预算与近期窗口比例，输出下一个 token 的 logits。（算法 1）",
+          "训练与部署｜无需重新训练，沿用模型权重；在 TidalDecode 框架上修改推理期 token 选择与稀疏注意力计算，完整 KV cache 仍保留。（§1、§3）",
+          "层间流程｜少量层执行全注意力；选择层计算完整注意力并汇总各头候选，加入近期位置；后续稀疏层只读取共享索引对应的 KV，直到下一选择层。（算法 1、图 3）",
+          "阅读与结果范围｜性能数字采用 v2 摘要报告的最高加速比；本卡片已核对方法，尚未逐项核对实验预算、随机波动或运行代码。"
+        ]
+      },
+      "en": {
+        "title": "Less Is More: Fast and Accurate Reasoning with Cross-Head Unified Sparse Attention",
+        "authors": "Lijie Yang, Zhihao Zhang, Arti Jain, Shijie Cao, Baihong Yuan, Yiwei Chen, Zhihao Jia, Ravi Netravali",
+        "institutions": "Princeton University; Carnegie Mellon University; Microsoft Research",
+        "status": "Partly reviewed: abstract, introduction, and method (v2; code not reproduced)",
+        "takeaway": "Aggregate important historical tokens across attention heads, retain a recency window, and reuse shared indices across subsequent layers to reduce attention overhead during long reasoning.",
+        "tags": [
+          "LessIsMore",
+          "Sparse Attention",
+          "LLM Inference",
+          "Reasoning",
+          "KV Cache",
+          "Training-Free"
+        ],
+        "mainContent": "Long reasoning expands the KV cache and increases attention computation and memory traffic at each decoding step; existing sparse methods can also lose accuracy by omitting important tokens. LessIsMore introduces training-free cross-head unified sparse attention: aggregate important historical positions across heads, reserve a fixed fraction of the budget for recent tokens, and reuse selected indices across subsequent layers. Across multiple reasoning models and benchmarks, the authors report matching or improving accuracy; with kernel optimizations, end-to-end decoding is up to 1.6× faster and sparse attention computation up to 1.72× faster.",
+        "innovations": [
+          "Cross-head unified selection (CUSA) | Aggregate candidate historical tokens proposed by individual attention heads into a shared position set, replacing independent per-head selection. (§3.1–3.2)",
+          "Recency window and cross-layer reuse | Reserve a fixed fraction of the token budget for recent context and reuse selection-layer indices in subsequent sparse attention layers to preserve context while amortizing selection overhead. (§3.3, Algorithm 1)"
+        ],
+        "implementation": [
+          "Inputs and outputs | Each decoding step takes the current hidden state, KV cache, token budget, and recency ratio, and outputs next-token logits. (Algorithm 1)",
+          "Training and deployment | No retraining is required and model weights are reused. The implementation modifies inference-time token selection and sparse attention on top of TidalDecode while retaining the full KV cache. (§1, §3)",
+          "Layer flow | A few layers use full attention. Selection layers compute full attention, aggregate per-head candidates, and add recent positions. Subsequent sparse layers read only KV entries at the shared indices until the next selection layer. (Algorithm 1, Fig. 3)",
+          "Reading and result scope | Speedup figures are maxima reported in the v2 abstract. The method has been checked for this card; experimental budgets, random variation, and executable code have not been checked in detail."
+        ]
+      }
     }
   ]
 }
