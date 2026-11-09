@@ -7166,6 +7166,93 @@
           "Reading and result scope | Speedup figures are maxima reported in the v2 abstract. The method has been checked for this card; experimental budgets, random variation, and executable code have not been checked in detail."
         ]
       }
+    },
+    {
+      "id": "lessmimic-distance-field-interaction",
+      "aliases": [
+        "LessMimic",
+        "Less Mimic",
+        "LessMimic: Versatile Humanoid–Object Interaction with Unified Distance Field Representations"
+      ],
+      "categories": [
+        "bfm-tracking",
+        "bfm-latent",
+        "loco-manipulation",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2602.21723v1",
+      "project": "https://lessmimic.github.io/",
+      "arxiv": "https://arxiv.org/abs/2602.21723v1",
+      "year": "2026",
+      "venue": "arXiv:2602.21723v1",
+      "zh": {
+        "title": "LessMimic: Long-Horizon Humanoid Interaction with Unified Distance Field Representations",
+        "authors": "Yutang Lin, Jieming Cui, Yixuan Li, Baoxiong Jia, Yixin Zhu, Siyuan Huang",
+        "institutions": "北京大学；北京通用人工智能研究院（BIGAI）；北京理工大学",
+        "status": "已精读：交互表征、训练流程与主要实验已核对（v1；未复现代码）",
+        "takeaway": "以距离场特征描述身体与物体的交互，用教师蒸馏初始化，再以几何交互判别奖励微调，让单一策略在部署时脱离逐帧全身参考动作。",
+        "tags": [
+          "LessMimic",
+          "Distance Field",
+          "AIP",
+          "AMP",
+          "VAE",
+          "DAgger",
+          "Humanoid",
+          "Whole-Body Interaction"
+        ],
+        "mainContent": "人形机器人在物体尺寸、形状变化和连续任务中，需要调整接触姿态并处理前序执行偏差。LessMimic 将任务相关连杆的表面距离、梯度和法向／切向速度历史编码为潜变量，先模仿物理可行教师，再结合几何随机化、AIP 交互奖励与 AMP 动作奖励做强化学习，并可蒸馏为深度视觉策略。表 III 中，MoCap 版完成 5 个任务实例序列的成功率为 61.7%，40 个为 2.1%；视觉版的长时域表现明显较弱。",
+        "innovations": [
+          "统一交互输入｜用身体相对物体表面的距离、方向和运动分量描述多种接触任务，使同一策略使用共享的几何接口。（§III-A，图 3）",
+          "对抗交互先验 AIP｜在交互潜变量空间区分参考与策略样本，将判别结果转为奖励；与约束全身运动自然性的 AMP 配合，允许具体姿态随物体条件调整。（§III-C，式 4–7）",
+          "多技能控制与视觉迁移｜将教师蒸馏、随机化环境中的 RL 后训练和深度视觉蒸馏串联，评估单策略连续执行拾取、搬运、推物和坐起。（§III-B–D、§IV）"
+        ],
+        "implementation": [
+          "1. 数据与教师｜人体交互动作重定向后，由 ResMimic 教师通过运动跟踪与残差补偿生成物理可行状态—动作轨迹；预训练数据还提供 AIP 的参考交互缓冲区。（§III-B，附录 A）",
+          "2. 几何特征｜在一组任务相关连杆位置查询无符号表面距离与梯度，并将连杆线速度投影到局部法向和切向。按所列特征，每个连杆为 1＋3＋3＋3 维；v1 未明确速度的坐标系或是否扣除物体运动，不能认定为相对表面速度。（§III-A，式 1–2）",
+          "3. 编码与策略｜附录使用 ReLU MLP 构成 VAE 编码器／解码器，逐帧编码后拼接历史潜变量；Transformer 策略同时接收本体感知、根部轨迹命令与交互潜变量，输出全身关节动作。连杆列表、潜变量维度、VAE 完整目标及后续冻结策略未充分交代。（附录 A-A）",
+          "4. 行为克隆｜学生自行 rollout，在遇到的状态上查询能看到全身参考动作的教师，用动作 MSE 更新学生；学生观测中不包含全身参考动作。（§III-B，式 3）",
+          "5. RL 后训练｜随机化物体几何、质量、摩擦和初始条件等，继续更新策略并训练 AIP 判别器。奖励包括根部跟踪、AIP、AMP；附录还列出物体轨迹跟踪和动作／关节等正则项，不能概括为完全没有任务奖励。（§III-C，附录表 A2、B-A）",
+          "6. 视觉蒸馏｜冻结完整 DF 策略作为教师，视觉学生接收深度图像历史、本体感知和根部命令，在学生状态分布上最小化动作 MSE。图中有 Feature Aligning 示意，正文未给出独立潜变量对齐损失，也未要求先重建完整 DF。（§III-D，式 8）",
+          "7. 尺寸与真机｜表 II 比较 HDMI、ResMimic、VisualMimic、PhysHSI，结果随任务变化：1.6 倍 PickUp 的 MoCap 版为 94.0%，同尺寸 SitStand 为 61.7%，ResMimic 的后者为 93.7%。真机两个拾取条件下 MoCap 版为 10/10、8/10，视觉版为 8/10、7/10。（表 II、IV）",
+          "8. 连续任务与消融｜表 III 中 MoCap 版在 5／10／15／25／40 个任务实例上的成功率为 61.7／38.1／23.5／9.0／2.1%，视觉版为 15.9／2.5／0／0／0%。5 任务下去掉 AIP、物理可行数据或 RL 后分别为 5.2%、22.1%、3.2%；结果为 3 个种子的均值，长时域只与本文消融版本比较。正文写 62.1%，此处按表 III 的 61.7% 记录。（表 II–III）",
+          "9. 阅读版本｜本卡片对应 2026-02-25 的 arXiv v1。2026-11-09 核对的项目页使用 Versatile Humanoid–Object Interaction 标题，并加入交互类型标记；标题、观测接口及结论应按版本分别核实。"
+        ]
+      },
+      "en": {
+        "title": "LessMimic: Long-Horizon Humanoid Interaction with Unified Distance Field Representations",
+        "authors": "Yutang Lin, Jieming Cui, Yixuan Li, Baoxiong Jia, Yixin Zhu, Siyuan Huang",
+        "institutions": "Peking University; Beijing Institute for General Artificial Intelligence (BIGAI); Beijing Institute of Technology",
+        "status": "Reviewed: interaction representation, training pipeline, and main experiments checked (v1; code not reproduced)",
+        "takeaway": "Represent body–object interaction with distance-field features, initialize through teacher distillation, and fine-tune with geometric interaction rewards so a single policy can execute without frame-by-frame full-body motion references.",
+        "tags": [
+          "LessMimic",
+          "Distance Field",
+          "AIP",
+          "AMP",
+          "VAE",
+          "DAgger",
+          "Humanoid",
+          "Whole-Body Interaction"
+        ],
+        "mainContent": "Humanoid interaction under changing object geometry and consecutive tasks requires adapting contact poses and handling accumulated execution errors. LessMimic encodes histories of surface distances, gradients, and normal/tangential link velocities; it first imitates a physically feasible teacher, then applies geometry randomization and RL with AIP interaction and AMP motion rewards, followed by optional depth-policy distillation. Table III reports 61.7% success for five-task-instance sequences and 2.1% for 40 with MoCap; vision-based long-horizon performance is substantially lower.",
+        "innovations": [
+          "Unified interaction inputs | Describe multiple contact tasks using body-to-surface distances, directions, and motion components, providing a shared geometric interface for one policy. (§III-A, Fig. 3)",
+          "Adversarial Interaction Priors | Discriminate reference and policy interaction latents and convert scores into rewards, complementing AMP motion naturalness while allowing poses to adapt to object conditions. (§III-C, Eqs. 4–7)",
+          "Multi-skill control and visual transfer | Combine teacher distillation, RL post-training in randomized environments, and depth-policy distillation; evaluate consecutive pickup, carrying, pushing, and sit/stand interactions. (§III-B–D and §IV)"
+        ],
+        "implementation": [
+          "1. Data and teacher | Retarget human interactions and use a ResMimic teacher with motion tracking and residual compensation to generate physically feasible state–action trajectories. Pre-training data also supplies the AIP reference interaction buffer. (§III-B and Appendix A)",
+          "2. Geometric features | Query unsigned surface distance and gradient at selected task-relevant links, then project link linear velocity into local normal and tangential components. The listed features give 1+3+3+3 dimensions per link. v1 does not specify the velocity frame or object-motion subtraction, so surface-relative velocity cannot be assumed. (§III-A, Eqs. 1–2)",
+          "3. Encoder and policy | The appendix uses ReLU MLP VAE encoder/decoder networks, encoding each timestep and concatenating historical latents. A Transformer policy also takes proprioception and root-trajectory commands and outputs whole-body joint actions. Link selection, latent dimension, complete VAE objective, and later freezing are insufficiently specified. (Appendix A-A)",
+          "4. Behavior cloning | Roll out the student and query a teacher with privileged full-body reference motions at encountered states. Update the student with action MSE; its observations exclude full-body references. (§III-B, Eq. 3)",
+          "5. RL post-training | Randomize object geometry, mass, friction, initial conditions, and other factors; update the policy and train the AIP discriminator. Rewards include root tracking, AIP, and AMP; the appendix also lists object tracking and action/joint regularization, so training is not free of task rewards. (§III-C, Table A2, Appendix B-A)",
+          "6. Visual distillation | Freeze the full DF policy as teacher. The visual student takes depth history, proprioception, and root commands and minimizes action MSE on student-visited states. Feature Aligning appears in the diagram, but no separate latent-alignment loss or explicit full-DF reconstruction requirement is specified in the text. (§III-D, Eq. 8)",
+          "7. Scale and hardware | Table II compares HDMI, ResMimic, VisualMimic, and PhysHSI with task-dependent outcomes: MoCap pickup at 1.6× reaches 94.0%, while sit/stand at that scale reaches 61.7%, versus 93.7% for ResMimic. Across two real pickup conditions, MoCap achieves 10/10 and 8/10, and vision 8/10 and 7/10. (Tables II and IV)",
+          "8. Consecutive tasks and ablations | MoCap success for 5/10/15/25/40 task instances is 61.7/38.1/23.5/9.0/2.1%; vision achieves 15.9/2.5/0/0/0%. Removing AIP, physicalized data, or RL yields 5.2%, 22.1%, and 3.2% at five tasks. Means are over three seeds, and long-horizon comparisons include only internal ablations. The prose reports 62.1%; this card follows Table III at 61.7%. (Tables II–III)",
+          "9. Reading version | This card covers the arXiv v1 dated 2026-02-25. The project page checked on 2026-11-09 uses the Versatile Humanoid–Object Interaction title and adds an interaction-type flag; verify titles, observation interfaces, and claims separately by version."
+        ]
+      }
     }
   ]
 }
