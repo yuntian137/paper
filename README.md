@@ -69,7 +69,10 @@ real-robot-rl       -> 真机 RL
 imitation-teleop    -> 模仿学习 / 遥操作
 vla-world-model     -> VLA / 世界模型
 benchmark-dataset   -> Benchmark / Dataset
+numerical-solvers   -> 数值求解 / 科学机器学习
 ```
+
+`numerical-solvers` 用于 PDE 离散系统、迭代求解、预条件与神经算子等数值方法；按论文的主要贡献分类，不因其可用于机器人仿真而自动归入 BFM 或运动控制。
 
 `parkour-terrain` 用于以复杂地形运动为主要任务的工作，包括地形感知、精准落脚、踏脚石与窄梁通过、障碍跨越、跑酷和多地形适应。AME-1、Extreme Parkour、PIE、DeepLoco 等归入这一类，同时保留 `locomotion`、`sim2real` 或相关机制分类。仅在演示中偶尔涉及地形的通用方法按主要贡献分类。
 

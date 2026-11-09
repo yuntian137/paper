@@ -132,6 +132,11 @@
       "id": "benchmark-dataset",
       "zh": "Benchmark / Dataset",
       "en": "Benchmark / Dataset"
+    },
+    {
+      "id": "numerical-solvers",
+      "zh": "数值求解 / 科学机器学习",
+      "en": "Numerical Solvers / Scientific ML"
     }
   ],
   "papers": [

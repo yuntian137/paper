@@ -7017,6 +7017,86 @@
           "7. Limits and directions | Soft scores give no hard feasibility guarantee, and prompts beyond robot capabilities can conflict with execution. The authors propose iteratively improving generator and tracker and building large synthetic motion datasets with physics-aware generators. Retraining trackers on generated motions is tested; full multi-round iteration and synthetic-data scaling remain future directions. (§4.3; Limitations, p. 8)"
         ]
       }
+    },
+    {
+      "id": "npo-neural-preconditioning-operator",
+      "aliases": [
+        "NPO",
+        "NAMG",
+        "Neural Preconditioning Operator"
+      ],
+      "categories": [
+        "numerical-solvers"
+      ],
+      "pdf": "https://arxiv.org/pdf/2502.01337v2",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2502.01337",
+      "year": "2025",
+      "venue": "arXiv:2502.01337",
+      "zh": {
+        "title": "Neural Preconditioning Operator for Efficient PDE Solves",
+        "authors": "Zhihao Li, Di Xiao, Zhilu Lai, Wei Wang",
+        "institutions": "The Hong Kong University of Science and Technology (Guangzhou)",
+        "status": "部分已读：预条件概念、NAMG 方法与关键实验已整理（v2；未复现代码）",
+        "takeaway": "学习近似逆作用的预条件算子 M，改变 GMRES 的搜索空间；NAMG 用细层聚合、粗层注意力与前后松弛降低迭代次数。",
+        "tags": [
+          "NPO",
+          "NAMG",
+          "Neural Preconditioning",
+          "Krylov",
+          "GMRES",
+          "Algebraic Multigrid",
+          "Neural Operator",
+          "PDE"
+        ],
+        "mainContent": "PDE 离散后会产生大型稀疏线性系统，预条件器的质量和调用成本影响迭代求解效率。NPO 学习近似逆作用，并将 NAMG 的粗层注意力结构与 Krylov 求解器结合；网络提供预条件作用，求解器选择更新并判断收敛。Poisson、Diffusion 和 Linear Elasticity 实验报告更少迭代和更短运行时间，并测试了从分辨率 128 到 4096 的迁移。",
+        "innovations": [
+          "预条件学习框架｜围绕系统矩阵、原始右端项和迭代残差训练近似逆作用，再嵌入 Krylov 求解。condition loss 与 residual loss 具有相同代数结构，分别作用于采样残差和右端项。（§3.2–3.3，式 9–10）",
+          "NAMG 架构｜结合系统信息与可学习聚合，将细层特征压缩为粗层 token，通过自注意力交互后映射回细层，并配合前后松弛。（§3.4，图 2）",
+          "结构与跨分辨率评估｜用组件消融检查 NAMG、系统信息和松弛的贡献，并将分辨率 128 上训练的模型用于最高 4096 的网格。（§5.3–5.4）"
+        ],
+        "implementation": [
+          "1. 求解接口｜目标为 \\(Ax=b\\)，当前残差为 \\(r_k=b-Ax_k\\)，求解器调用 \\(z_k=M_\\theta(A)r_k\\)。本文以 \\(M\\) 表示近似逆作用；式 4 写成左预条件系统 \\(MAx=Mb\\)。（§2.2、§3.2）",
+          "2. NAMG 计算｜细层特征经学习权重聚合到粗层，在粗层计算 query/key/value 自注意力，再经延拓与残差连接返回细层；图 2 还包含 LayerNorm、前馈网络和前后松弛。默认特征宽度 32、粗 token 数 128、4 个注意力头，前后各一次处理。（§3.4，图 2，表 6）",
+          "3. 数据与训练｜有限差分或有限元离散 PDE，从 Gaussian Random Field 采样右端项；用 AMG 预条件的 CG/GMRES 生成 \\((A,b,x_k,r_k)\\)，容差为 \\(10^{-10}\\)，最多 100 次迭代。condition loss 为 \\(\\|(I-AM_\\theta(A))r\\|_2^2\\)，residual loss 为 \\(\\|AM_\\theta(A)b-b\\|_2^2\\)；另使用 data loss，其精确定义在正文中不够明确。（§3.3、§5.1）",
+          "4. 主结果｜二维 \\(32\\times32\\) Poisson、容差 \\(10^{-10}\\)：NPO 为 34 次／0.0751 s，Transolver 为 87 次／0.1380 s，M2NO 为 69 次／0.4780 s。Diffusion 为 38 次／0.1058 s，Linear Elasticity 为 31 次／0.0267 s。数字来自作者表格，未独立复现。（表 1–2）",
+          "5. 消融与归因｜完整配置 184 次；去掉 NAMG 为 314 次，去掉 A 输入为 227 次，同时去掉前后松弛为 309 次；分别去掉 condition 或 residual loss 均为 189 次。这支持组件贡献，尚未直接测量高低频误差分工或预条件谱，表中也未给出多种子波动。（表 3）",
+          "6. 理论与实现边界｜两网格分析依赖平滑与粗空间近似性质；正文未建立训练后的注意力网络满足这些条件及 SPD 的完整论证。式 11、15 中限制／延拓的矩阵维度，以及 A 的系统矩阵／邻接矩阵含义需要结合代码核实。（§3.4–4，附录 C）",
+          "7. 替换判断｜主表比较 Jacobi、Gauss–Seidel、SOR 和若干神经架构，未直接对比训练数据生成所使用的 AMG。选择预条件器应比较相同精度下的总耗时，并计入训练、构造和每次调用的成本；本文未验证接入完整 JFNK 的效果。（表 1–2、§5.1.2）"
+        ]
+      },
+      "en": {
+        "title": "Neural Preconditioning Operator for Efficient PDE Solves",
+        "authors": "Zhihao Li, Di Xiao, Zhilu Lai, Wei Wang",
+        "institutions": "The Hong Kong University of Science and Technology (Guangzhou)",
+        "status": "Partially read: preconditioning concepts, NAMG methods, and key experiments summarized (v2; code not reproduced)",
+        "takeaway": "Learn an approximate-inverse preconditioning action M to change the GMRES search space; NAMG combines fine-to-coarse aggregation, coarse attention, and pre/post relaxation to reduce iterations.",
+        "tags": [
+          "NPO",
+          "NAMG",
+          "Neural Preconditioning",
+          "Krylov",
+          "GMRES",
+          "Algebraic Multigrid",
+          "Neural Operator",
+          "PDE"
+        ],
+        "mainContent": "Discretized PDEs produce large sparse linear systems whose iterative solution depends on preconditioner quality and application cost. NPO learns an approximate-inverse action and combines the coarse-attention NAMG architecture with Krylov solvers: the network supplies preconditioning, while the solver selects updates and checks convergence. Experiments on Poisson, Diffusion, and Linear Elasticity report fewer iterations and shorter runtimes, and test transfer from resolution 128 to 4096.",
+        "innovations": [
+          "Preconditioner-learning framework | Train approximate-inverse actions using system matrices, original right-hand sides, and iterative residuals, then integrate with Krylov solvers. Condition and residual losses have the same algebraic form, evaluated on sampled residuals and right-hand sides respectively. (§3.2–3.3, Eqs. 9–10)",
+          "NAMG architecture | Combine system information and learned aggregation to form coarse tokens, apply self-attention, and map results back to fine features with pre/post relaxation. (§3.4, Fig. 2)",
+          "Structural and resolution evaluation | Ablate NAMG, system information, and relaxation, and apply a model trained at resolution 128 to grids as large as 4096. (§5.3–5.4)"
+        ],
+        "implementation": [
+          "1. Solver interface | Solve \\(Ax=b\\), form \\(r_k=b-Ax_k\\), and apply \\(z_k=M_\\theta(A)r_k\\). Here \\(M\\) denotes an approximate-inverse action; Eq. 4 uses the left-preconditioned system \\(MAx=Mb\\). (§2.2 and §3.2)",
+          "2. NAMG computation | Aggregate fine features with learned weights, apply query/key/value self-attention to coarse tokens, and prolong results with a residual connection. Fig. 2 includes LayerNorm, a feed-forward network, and pre/post relaxation. Defaults are feature width 32, 128 coarse tokens, four attention heads, and one pre/post pass each. (§3.4, Fig. 2, Table 6)",
+          "3. Data and training | Discretize PDEs with finite differences or finite elements and sample right-hand sides from Gaussian Random Fields. Run AMG-preconditioned CG/GMRES with tolerance \\(10^{-10}\\) and at most 100 iterations to record \\((A,b,x_k,r_k)\\). Condition loss uses \\(\\|(I-AM_\\theta(A))r\\|_2^2\\), and residual loss uses \\(\\|AM_\\theta(A)b-b\\|_2^2\\). A data loss is also used, but its exact definition is unclear in the text. (§3.3 and §5.1)",
+          "4. Main results | For 2D \\(32\\times32\\) Poisson at tolerance \\(10^{-10}\\), NPO takes 34 iterations / 0.0751 s, Transolver 87 / 0.1380 s, and M2NO 69 / 0.4780 s. NPO takes 38 / 0.1058 s for Diffusion and 31 / 0.0267 s for Linear Elasticity. These are author-reported results, not independently reproduced. (Tables 1–2)",
+          "5. Ablations and attribution | Full model: 184 iterations; without NAMG: 314; without A: 227; without both relaxation stages: 309; removing either condition or residual loss: 189. These support component contributions but do not directly measure frequency-specific error removal or preconditioned spectra; across-seed variation is not reported in the table. (Table 3)",
+          "6. Theory and implementation boundaries | Two-grid analysis assumes smoothing and coarse approximation properties; the text does not fully establish these properties or SPD for the trained attention network. Restriction/prolongation dimensions in Eqs. 11 and 15, and the system-matrix versus adjacency-matrix meaning of A, require code-level checking. (§3.4–4 and Appendix C)",
+          "7. Replacement decision | Main tables compare Jacobi, Gauss–Seidel, SOR, and neural architectures but omit a direct AMG comparison, although AMG generates training data. Compare total time at equal accuracy, accounting for training, setup, and each application. Integration into a complete JFNK solver is not evaluated. (Tables 1–2 and §5.1.2)"
+        ]
+      }
     }
   ]
 }

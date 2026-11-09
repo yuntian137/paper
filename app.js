@@ -168,6 +168,7 @@ const categories = [
   { id: "imitation-teleop", label: { zh: "模仿学习 / 遥操作", en: "Imitation / Teleop" } },
   { id: "vla-world-model", label: { zh: "VLA / 世界模型", en: "VLA / World Model" } },
   { id: "benchmark-dataset", label: { zh: "Benchmark / Dataset", en: "Benchmark / Dataset" } },
+  { id: "numerical-solvers", label: { zh: "数值求解 / 科学机器学习", en: "Numerical Solvers / Scientific ML" }, description: { zh: "PDE 离散系统、迭代求解、预条件与神经算子，关注数值精度、收敛效率及学习模块与传统算法的结合。", en: "Discretized PDE systems, iterative solvers, preconditioning, and neural operators, focusing on numerical accuracy, convergence, and learned components within classical algorithms." } },
 ];
 
 const papers = [
