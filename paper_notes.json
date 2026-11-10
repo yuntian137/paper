@@ -202,10 +202,10 @@
   },
   "dhal-discrete-time-hybrid-automata-learning": {
     "zh": {
-      "note": "本次厘清：one-hot 选择的是动力学模块，策略接收的是编码器生成的连续 latent；分类器只有结构与模式数量上限预设，模式含义由下一步预测目标学习，并用直通梯度跨过离散采样。部署重新推断模式和 latent，固定网络参数，以实时本体观测及动作历史闭环响应；这与在线训练不同，泛化仍受训练分布限制。还要保留任务阶段信号这一条件，不能把整个控制器概括为仅依赖本体观测。"
+      "note": "本次厘清：one-hot 选择的是动力学模块，策略接收的是编码器生成的连续 latent；分类器只有结构与模式数量上限预设，模式含义由下一步预测目标学习，并用直通梯度跨过离散采样。部署重新推断模式和 latent，固定网络参数，以实时本体观测及动作历史闭环响应；这与在线训练不同，泛化仍受训练分布限制。还要保留任务阶段信号这一条件，不能把整个控制器概括为仅依赖本体观测。\n\n结构理解：可以把 DHAL 看成“学出来的状态机 + 各模式的连续动力学模型 + 一个共享控制策略”。离散模式是状态机节点，关节位置、速度和机身姿态等连续状态在节点内持续变化。选择器每步读取历史重新分类，论文未显式给出节点间的允许转移表；从网络结构看，也类似带硬路由的多专家动力学模型。这是结构类比，模式含义与切换规则由预测任务学习，人工运动阶段信号仍另行引导蹬地与滑行。"
     },
     "en": {
-      "note": "Reading clarification: the one-hot variable selects a dynamics module; the policy receives its encoder’s continuous latent. Only selector architecture and the mode upper bound are preset; prediction targets learn mode assignments through straight-through gradients. Deployment recomputes modes and latents with fixed weights, responding to live proprioceptive and action history in closed loop. This differs from online training, and generalization remains limited by the training distribution. Supplied task-phase guidance also matters, so the full controller cannot be described as using proprioception alone."
+      "note": "Reading clarification: the one-hot variable selects a dynamics module; the policy receives its encoder’s continuous latent. Only selector architecture and the mode upper bound are preset; prediction targets learn mode assignments through straight-through gradients. Deployment recomputes modes and latents with fixed weights, responding to live proprioceptive and action history in closed loop. This differs from online training, and generalization remains limited by the training distribution. Supplied task-phase guidance also matters, so the full controller cannot be described as using proprioception alone.\n\nStructural interpretation: DHAL resembles learned state-machine mode selection plus mode-specific continuous dynamics models and one shared control policy. Discrete modes act as nodes, while joint positions, velocities, and body pose continue evolving within each mode. The selector reclassifies history every step without an explicit table of allowed node transitions; structurally it also resembles a hard-routed mixture of dynamics experts. This is an architectural analogy: prediction training learns mode meanings and switching rules, while supplied motion-phase signals separately guide pushing and gliding."
     }
   }
 }

@@ -7501,7 +7501,7 @@
         "authors": "Hang Liu, Sangli Teng, Ben Liu, Wei Zhang, Maani Ghaffari",
         "institutions": "University of Michigan; Southern University of Science and Technology",
         "status": "部分已读：方法、训练部署与主要实验",
-        "takeaway": "从观测与动作历史选择动力学模式，用对应编码器提取连续表示辅助 PPO；预测损失训练模式选择，部署按实时反馈更新模式与动作。",
+        "takeaway": "本质是学出来的状态机式模式选择，加上各模式的连续动力学表示与共享策略：历史窗口选模式，对应编码器提取 latent 辅助控制。",
         "tags": [
           "Hybrid Dynamics",
           "Mode Identification",
@@ -7531,7 +7531,7 @@
         "authors": "Hang Liu, Sangli Teng, Ben Liu, Wei Zhang, Maani Ghaffari",
         "institutions": "University of Michigan; Southern University of Science and Technology",
         "status": "Partially read: method, training/deployment, and main experiments",
-        "takeaway": "Select a dynamics mode from observation/action history and feed its continuous encoding to PPO; prediction loss trains the selector, while deployment updates modes and actions from live feedback.",
+        "takeaway": "Learn state-machine-like mode selection with mode-specific continuous dynamics representations and a shared policy: history selects a mode, and its encoder supplies a latent for control.",
         "tags": [
           "Hybrid Dynamics",
           "Mode Identification",
