@@ -7405,6 +7405,81 @@
           "7. Results and cost | Table 1 reports Push-T H=50 success over 500 trials: GRASP 43.4%, GD 37.6%, and CEM 30.2%. Median planning times among successful trials are 15.2, 76.3, and 96.2 seconds. Success is best-by within a maximum 30-minute budget; these second-scale times do not establish high-frequency real-time control. (§§4.2–4.3, Table 1, pp. 6–7)"
         ]
       }
+    },
+    {
+      "id": "nha-neural-hybrid-automata",
+      "aliases": [
+        "NHA",
+        "Neural Hybrid Automata"
+      ],
+      "categories": [
+        "bfm-dynamics"
+      ],
+      "pdf": "https://arxiv.org/pdf/2106.04165",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2106.04165",
+      "year": "2021",
+      "venue": "NeurIPS 2021",
+      "zh": {
+        "title": "Neural Hybrid Automata: Learning Dynamics with Multiple Modes and Stochastic Transitions",
+        "authors": "Michael Poli, Stefano Massaroli, Luca Scimeca, Seong Joon Oh, Sanghyuk Chun, Atsushi Yamashita, Hajime Asama, Jinkyoo Park, Animesh Garg",
+        "institutions": "NAVER AI Lab；东京大学；KAIST；多伦多大学；DiffEqML",
+        "status": "部分已读：问题定义、训练与生成机制、关键概率关系已核对（未完整审阅实验与附录）",
+        "takeaway": "先用分段轨迹重建学习离散模式与连续动力学，再学习事件等待时间和状态跳变；生成时抽取下一事件时间，积分到该时刻后重置状态并切换模式。",
+        "tags": [
+          "NHA",
+          "Stochastic Hybrid Systems",
+          "System Identification",
+          "Neural ODE",
+          "Normalizing Flow",
+          "Discrete Modes"
+        ],
+        "mainContent": "NHA 从轨迹学习多模式连续动力学、随机事件和瞬时状态跳变，属于随机混杂系统辨识。通用训练流程先分段，以轨迹重建联合训练离散模式编码器和模式条件化 Neural ODE，再用恢复的标签监督训练事件间隔分布与跳变映射。生成时对候选事件采样等待时间，选择最早发生者，积分到该时刻并更新状态和模式。论文展示了 Reno TCP 的模式与动力学学习、切换系统中的模式混合分析及分层机器人控制应用。",
+        "innovations": [
+          "模块化混杂系统学习｜用离散隐模式、模式条件化向量场、事件间隔密度和跳变映射，分别描述系统的连续演化与事件行为。（§2.3–3，图 1）",
+          "分段后的自监督模式学习｜重建单模式子轨迹，同时学习模式标签与向量场；categorical one-hot 限制连续软编码引起的模式混合。分段减少事件时间误差污染动力学梯度，并支持子轨迹并行积分。（§4，式 4.1，图 2–3；§5.2）",
+          "直接建模等待时间｜normalizing flow 学习条件事件间隔密度，生成时直接采样，避开通过强度积分求取事件时间的流程。（§2.2–3，式 3.1）"
+        ],
+        "implementation": [
+          "1. 研究对象｜连续状态 \\(x\\) 在模式 \\(z\\) 下满足 \\(\\dot x=F_\\omega(t,x,z)\\)。事件可为模式切换、状态跳变或二者同时发生；模式标签改变导数规律，跳变映射改变状态值。（§2.1、式 3.2）",
+          "2. 模式与动力学训练｜分段程序先产生子轨迹 \\(X_i\\)；编码器读取片段，采样 one-hot 模式 \\(z_i\\)，ODE 从观测初值重建 \\(\\hat X_i\\)。重建损失通过可微 ODE 更新动力学参数，并通过 straight-through 梯度估计更新离散编码器。（§4、式 4.1）",
+          "3. 事件监督｜用相邻片段的模式标签收集转移类型、事件间隔与事件前后状态对，训练 \\(p_{z\\to z'}(\\tau\\mid H)\\) 和 \\(\\psi_{z\\to z'}\\)。真实模式数无需预先给定，但初始化时仍需选择潜模式容量 \\(m\\)；分段质量与状态覆盖影响模式恢复。（§3–4、§5.4）",
+          "4. 推理时的随机事件｜模型参数固定，仍可为各候选转移采样 \\(\\tau_{z\\to z'}\\)；以 \\(\\tau^*=\\min_{z'}\\tau_{z\\to z'}\\) 和对应 argmin 确定下一事件时间与目标模式。采样前等待时间是随机变量，采样后本次求解器有具体终止时间；这不等于固定周期切换，也未使用真实未来事件时间。（§3、式 3.1）",
+          "5. 跳变与后续积分｜ODE 积分到事件前状态 \\(x^-\\)，再执行 \\(x^+=\\psi_{z\\to z'}(t,x^-)\\)，以 \\(x^+\\) 为新初值使用 \\(F_{z'}\\) 继续积分，并更新后续事件预测。跳变映射拟合状态重置，不推进物理时间；仅切换模式时可取恒等映射。（§2.1、§3，图 1）",
+          "6. 概率基础｜给定历史且沿尚无新事件的分支，生存函数 \\(S(s)=P(\\tau>s)=\\exp[-\\int_{t_k}^{t_k+s}\\lambda(u)du]\\) 描述等待超过 s 的概率。逆变换采样满足 \\(\\int_{t_k}^{t_{k+1}}\\lambda(u)du=-\\log U\\)，其中 U 为均匀随机数。强度可增可减，累计发生概率增加不等于瞬时强度增加。（§2.2；Rasmussen 讲义，命题 2.1、§4.1）",
+          "7. 机制与适用边界｜离散瓶颈减少软模式混合，分段减少不同模式间的梯度干扰；低重建误差仍需与真实模式恢复分开评价。事件生成预测随机时间，在线确认真实事件还需观测与检测；候选等待时间的竞争分布也需与实际转移统计核对。本文适合作为接触、切换和重置系统的学习建模参考。（§4–5；后两点为随读分析）"
+        ]
+      },
+      "en": {
+        "title": "Neural Hybrid Automata: Learning Dynamics with Multiple Modes and Stochastic Transitions",
+        "authors": "Michael Poli, Stefano Massaroli, Luca Scimeca, Seong Joon Oh, Sanghyuk Chun, Atsushi Yamashita, Hajime Asama, Jinkyoo Park, Animesh Garg",
+        "institutions": "NAVER AI Lab; University of Tokyo; KAIST; University of Toronto; DiffEqML",
+        "status": "Partially read: problem definitions, training/generation mechanisms, and key probability relations checked (experiments and appendices not fully reviewed)",
+        "takeaway": "Reconstruct segmented trajectories to learn discrete modes and continuous dynamics, then learn event waiting times and state resets; generation samples the next event, integrates to it, resets the state, and switches mode.",
+        "tags": [
+          "NHA",
+          "Stochastic Hybrid Systems",
+          "System Identification",
+          "Neural ODE",
+          "Normalizing Flow",
+          "Discrete Modes"
+        ],
+        "mainContent": "NHA identifies stochastic hybrid systems by learning multimode continuous dynamics, random events, and instantaneous state jumps from trajectories. Its general training procedure segments trajectories, jointly learns a discrete mode encoder and mode-conditioned Neural ODE through reconstruction, and then supervises event-time densities and jump maps using recovered labels. Generation samples candidate waiting times, selects the earliest event, integrates to it, and updates state and mode. The paper demonstrates Reno TCP mode/dynamics learning, mode-mixing analysis in switching systems, and hierarchical robot control.",
+        "innovations": [
+          "Modular hybrid-system learning | Discrete latent modes, mode-conditioned vector fields, event-time densities, and jump maps represent continuous evolution and event behavior. (§§2.3–3, Fig. 1)",
+          "Self-supervised modes after segmentation | Single-mode subtrajectory reconstruction jointly learns mode labels and vector fields; categorical one-hot codes limit mixing through continuous soft codes. Segmentation reduces contamination of dynamics gradients by event-time errors and enables parallel integration. (§4, Eq. 4.1, Figs. 2–3; §5.2)",
+          "Direct waiting-time modeling | Normalizing flows learn conditional interevent densities and directly sample times, avoiding event-time computation through integrated intensities. (§§2.2–3, Eq. 3.1)"
+        ],
+        "implementation": [
+          "1. System | Continuous state \\(x\\) follows \\(\\dot x=F_\\omega(t,x,z)\\) in mode \\(z\\). An event may switch modes, jump the state, or do both. Mode selection changes the derivative rule; a jump map changes state values. (§2.1, Eq. 3.2)",
+          "2. Mode/dynamics training | A segmentation routine produces subtrajectories \\(X_i\\). An encoder reads each segment, samples one-hot \\(z_i\\), and an ODE reconstructs \\(\\hat X_i\\) from its observed initial state. Reconstruction updates dynamics parameters through the differentiable solve and the discrete encoder through a straight-through gradient estimator. (§4, Eq. 4.1)",
+          "3. Event supervision | Labels of adjacent segments provide transition types, interevent times, and pre/post-event state pairs to train \\(p_{z\\to z'}(\\tau\\mid H)\\) and \\(\\psi_{z\\to z'}\\). The true mode count is unknown, but latent capacity \\(m\\) must still be chosen at initialization. Segmentation quality and state coverage affect recovery. (§§3–4, §5.4)",
+          "4. Random events at inference | Weights stay fixed while candidate times \\(\\tau_{z\\to z'}\\) are sampled. The minimum \\(\\tau^*=\\min_{z'}\\tau_{z\\to z'}\\) and its argmin set the next event time and mode. Waiting time is random before sampling and concrete for that realization afterward; switching is not fixed-period, and actual future event times are not supplied. (§3, Eq. 3.1)",
+          "5. Reset and integration | Integrate to pre-event state \\(x^-\\), apply \\(x^+=\\psi_{z\\to z'}(t,x^-)\\), then integrate \\(F_{z'}\\) from \\(x^+\\) and update event predictions. The learned reset changes state without advancing physical time; a mode-only switch may use an identity reset. (§2.1, §3, Fig. 1)",
+          "6. Probability | Given history along the no-new-event branch, \\(S(s)=P(\\tau>s)=\\exp[-\\int_{t_k}^{t_k+s}\\lambda(u)du]\\) is the survival function. Inverse sampling solves \\(\\int_{t_k}^{t_{k+1}}\\lambda(u)du=-\\log U\\) for uniform U. Intensity may rise or fall; increasing cumulative occurrence probability does not imply increasing instantaneous intensity. (§2.2; Rasmussen, Proposition 2.1 and §4.1)",
+          "7. Mechanisms and scope | Discrete codes limit soft mode mixing, and segmentation reduces cross-mode gradient interference; low reconstruction error and true mode recovery remain distinct. Generating random event times differs from confirming real events online, which requires observations/detection. Candidate-time competition should also be checked against observed transition statistics. Useful as a modeling reference for contact, switching, and reset systems. (§§4–5; the latter two points are reading analysis)"
+        ]
+      }
     }
   ]
 }
