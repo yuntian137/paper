@@ -7331,6 +7331,80 @@
           "7. Mechanism evidence | Fig. 4 compares gradient-norm variation; Fig. 5 examines latent MSE and horizon; Table 2 retains the chunk actor but replaces the chunk dynamics with a one-step model. Results support benefits in tested settings, while longer prediction remains error-limited and H=5 performs worse. Main SAC, PPO, DreamerV3, and TD-MPC2 curves are adopted from HumanoidBench; MAAC is implemented on the TD-MPC2 architecture. (§4.3, Appendix C.2, pp. 8–9, 14)"
         ]
       }
+    },
+    {
+      "id": "grasp-parallel-stochastic-gradient-planning",
+      "aliases": [
+        "GRASP",
+        "Gradient RelAxed Stochastic Planner"
+      ],
+      "categories": [
+        "vla-world-model",
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2602.00475",
+      "project": "https://www.michaelpsenka.io/grasp/",
+      "arxiv": "https://arxiv.org/abs/2602.00475",
+      "year": "2026",
+      "venue": "ICML 2026 / arXiv:2602.00475",
+      "zh": {
+        "title": "Parallel Stochastic Gradient-Based Planning for World Models",
+        "authors": "Michael Psenka, Michael Rabbat, Aditi Krishnapriyan, Yann LeCun, Amir Bar",
+        "institutions": "加利福尼亚大学伯克利分校；Meta FAIR；纽约大学",
+        "status": "部分已读：问题设定、方法与主要结果已核对（未完整核查理论或复现代码）",
+        "takeaway": "固定已有世界模型，联合优化动作序列与虚拟状态，通过并行一致性更新、状态加噪和周期性完整 rollout 修正来搜索到达目标的计划。",
+        "tags": [
+          "GRASP",
+          "Trajectory Optimization",
+          "World Model",
+          "Virtual States",
+          "Stop Gradient",
+          "Stochastic Planning"
+        ],
+        "mainContent": "GRASP 研究视觉世界模型上的长时域目标规划，处理串行 rollout 的计算依赖、状态输入梯度敏感性与局部极小值。方法将中间状态设为独立变量，用软动力学一致性连接时间步，在主要并行更新中截断模型的状态输入梯度、加入逐步目标损失和状态噪声，再周期性用完整 rollout 梯度修正动作。作者在 PointMaze、Wall-Single 和 Push-T 等任务上报告长时域规划收益；规划输出为针对当前起点与目标优化的动作序列。",
+        "innovations": [
+          "面向学习模型的梯度处理｜在已有 lifted-state／collocation 结构上，截断世界模型对状态输入的梯度，并用逐步目标损失给各步动作提供目标信号，降低利用模型脆弱状态方向的机会。（§3.1、§3.3，图 2–3，式 8–10）",
+          "状态空间探索与完整 rollout 修正｜直接扰动虚拟状态以探索不同中间路径，再通过周期性完整梯度步骤修正动作，将并行探索与串行细化结合。（§3.2–3.4，算法 1）"
+        ],
+        "implementation": [
+          "1. 输入输出｜输入初始观测、目标观测、已有世界模型和规划视域；编码后固定起点与目标，规划器返回动作序列。（§2，算法 1）",
+          "2. 模型与更新对象｜主实验沿用 DINO-WM 框架及其训练配置，先训练世界模型；GRASP 规划期间固定模型参数，只优化当前动作和虚拟状态。附录 Push-T 配置冻结 DINOv2 编码器，训练预测器等组件；这与直接训练 actor policy 的流程不同。（§4.2，附录 C，表 7–8）",
+          "3. 并行与软约束｜中间状态独立存在，各时间步同时计算模型预测，并惩罚预测与下一虚拟状态的差异。有限次优化允许动力学残差，真实执行仍依赖动作 rollout 的效果。（§3.1，式 4）",
+          "4. 梯度与噪声｜主要并行更新保留动作输入梯度；虚拟状态通过前一转移的一致性误差更新，并叠加高斯噪声。截断状态梯度后的最终更新不属于严格的 Langevin 动力学。（§3.3，式 10–12，第 5 页）",
+          "5. 同步步骤｜周期性从起点完整 rollout，仅对动作做终点目标损失的梯度更新；此阶段恢复穿过时间链的反向传播，也使用模型对状态输入的导数。（§3.4，式 13–15）",
+          "6. 动作与时域｜DINO-WM 实验将 5 个环境动作堆叠为一次模型输入，预测 5 个环境步后的状态；二维环境动作对应 10 维模型动作输入。报告的 H=50 指 50 个环境步，对应 10 次串接模型评估。（§4.2，第 6 页）",
+          "7. 结果与成本｜表 1 的 Push-T H=50 中，500 次试验的成功率为 GRASP 43.4%、GD 37.6%、CEM 30.2%；成功试验的中位规划时间分别为 15.2、76.3、96.2 秒。成功按最长 30 分钟预算内曾找到成功计划计数；这些秒级时间不能作为高频实时控制证据。（§4.2–4.3，表 1，第 6–7 页）"
+        ]
+      },
+      "en": {
+        "title": "Parallel Stochastic Gradient-Based Planning for World Models",
+        "authors": "Michael Psenka, Michael Rabbat, Aditi Krishnapriyan, Yann LeCun, Amir Bar",
+        "institutions": "University of California, Berkeley; Meta FAIR; New York University",
+        "status": "Partially read: problem, method, and main results checked (theory not fully checked; code not reproduced)",
+        "takeaway": "Keep an existing world model fixed and jointly optimize actions and virtual states using parallel consistency updates, state noise, and periodic full-rollout refinement to find goal-reaching plans.",
+        "tags": [
+          "GRASP",
+          "Trajectory Optimization",
+          "World Model",
+          "Virtual States",
+          "Stop Gradient",
+          "Stochastic Planning"
+        ],
+        "mainContent": "GRASP studies long-horizon goal planning with visual world models, addressing serial rollout dependencies, sensitive state-input gradients, and local minima. It treats intermediate states as independent variables linked by soft dynamics consistency; its main parallel phase cuts state-input gradients and adds dense goal losses and state noise, followed by periodic full-rollout gradient refinement of actions. The authors report long-horizon benefits on tasks including PointMaze, Wall-Single, and Push-T; the output is an action sequence optimized for the current start and goal.",
+        "innovations": [
+          "Gradient handling for learned models | Build on lifted-state/collocation structure, cut world-model state-input gradients, and give each action a direct goal signal through dense goal losses, reducing opportunities to exploit brittle state directions. (§3.1, §3.3, Figs. 2–3, Eqs. 8–10)",
+          "State exploration and full-rollout refinement | Perturb virtual states to explore intermediate paths, then periodically refine actions with full gradients, combining parallel exploration and serial refinement. (§§3.2–3.4, Algorithm 1)"
+        ],
+        "implementation": [
+          "1. Inputs and outputs | Take initial and goal observations, an existing world model, and a planning horizon. Encode the observations, fix start and goal, and return an optimized action sequence. (§2, Algorithm 1)",
+          "2. Model and optimized variables | Main experiments follow the DINO-WM framework and training configuration to train the model before planning. GRASP holds model parameters fixed and optimizes only the current actions and virtual states. The Push-T configuration freezes the DINOv2 encoder while training the predictor and other components; this differs from actor-policy training. (§4.2, Appendix C, Tables 7–8)",
+          "3. Parallelism and soft constraints | Independent intermediate states permit parallel model evaluations across time; penalize each prediction against the next virtual state. Finite optimization allows dynamics residuals, and execution still depends on the resulting action rollout. (§3.1, Eq. 4)",
+          "4. Gradients and noise | Main parallel updates retain action-input gradients. Virtual states follow the preceding transition consistency error plus Gaussian noise. After state-gradient cuts, the resulting updates are not strict Langevin dynamics. (§3.3, Eqs. 10–12, p. 5)",
+          "5. Synchronization | Periodically roll out from the start and update only actions using terminal goal loss. This phase restores backpropagation through time and uses state-input derivatives of the model. (§3.4, Eqs. 13–15)",
+          "6. Actions and horizon | DINO-WM experiments stack five environment actions into one model input and predict the state five environment steps ahead. Two-dimensional environment actions become ten-dimensional model inputs. Reported H=50 means 50 environment steps and ten sequential model evaluations. (§4.2, p. 6)",
+          "7. Results and cost | Table 1 reports Push-T H=50 success over 500 trials: GRASP 43.4%, GD 37.6%, and CEM 30.2%. Median planning times among successful trials are 15.2, 76.3, and 96.2 seconds. Success is best-by within a maximum 30-minute budget; these second-scale times do not establish high-frequency real-time control. (§§4.2–4.3, Table 1, pp. 6–7)"
+        ]
+      }
     }
   ]
 }
