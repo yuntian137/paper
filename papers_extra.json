@@ -7480,6 +7480,82 @@
           "7. Mechanisms and scope | Discrete codes limit soft mode mixing, and segmentation reduces cross-mode gradient interference; low reconstruction error and true mode recovery remain distinct. Generating random event times differs from confirming real events online, which requires observations/detection. Candidate-time competition should also be checked against observed transition statistics. Useful as a modeling reference for contact, switching, and reset systems. (§§4–5; the latter two points are reading analysis)"
         ]
       }
+    },
+    {
+      "id": "dhal-discrete-time-hybrid-automata-learning",
+      "aliases": [
+        "DHAL",
+        "Discrete-time Hybrid Automata Learning"
+      ],
+      "categories": [
+        "locomotion",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2503.01842v2",
+      "project": "https://umich-curly.github.io/DHAL/",
+      "arxiv": "https://arxiv.org/abs/2503.01842",
+      "year": "2025",
+      "venue": "arXiv:2503.01842 (v2)",
+      "zh": {
+        "title": "Discrete-Time Hybrid Automata Learning: Legged Locomotion Meets Skateboarding",
+        "authors": "Hang Liu, Sangli Teng, Ben Liu, Wei Zhang, Maani Ghaffari",
+        "institutions": "University of Michigan; Southern University of Science and Technology",
+        "status": "部分已读：方法、训练部署与主要实验",
+        "takeaway": "从观测与动作历史选择动力学模式，用对应编码器提取连续表示辅助 PPO；预测损失训练模式选择，部署按实时反馈更新模式与动作。",
+        "tags": [
+          "Hybrid Dynamics",
+          "Mode Identification",
+          "PPO",
+          "Beta Policy",
+          "Multi-Critic",
+          "Quadruped",
+          "Skateboarding"
+        ],
+        "mainContent": "四足机器人滑板运动包含滑行、蹬地与接触切换，单一动力学表示需要同时处理不同接触条件。DHAL 从历史观测和动作选择离散模式，用对应 β-VAE 预测下一步观测与足端接触，并把连续潜在表示输入控制策略。系统结合多 critic 与有界 Beta 策略，在 Go1 上完成滑板运动与扰动恢复；训练仍使用运动阶段信号，左前足与滑板通过球关节连接。",
+        "innovations": [
+          "离散时间模式选择与模式对应的动力学模型联合学习，省去人工模式标签和轨迹预分段；训练仍使用下一步观测与足端接触监督。",
+          "将动力学潜在表示用于 PPO 控制，并结合按奖励组独立估值和优势归一化的多 critic、Beta 动作分布，处理接触引导的运动训练。",
+          "模式数量对照显示多模式预测误差低于单模式，实机模式与滑行、过渡和蹬地阶段对应；模型容量及预测改进到控制收益的贡献仍需进一步隔离。"
+        ],
+        "implementation": [
+          "输入输出｜历史观测与动作 → 模式概率 → one-hot 模式 → 对应编码器 → 连续 latent；对应解码器预测下一步观测与各足端接触概率。离散模式与连续 latent 是不同变量。（图 3，§IV-A，式 3–7）",
+          "训练梯度｜观测 MSE、接触 BCE、KL 正则及模式概率熵联合训练动力学模块与选择器；离散选择使用直通梯度。PPO 更新 actor 和编码器，梯度不进入模式选择器。（§IV-A，式 8–9；附录 C）",
+          "策略与部署｜actor 接收连续 latent、当前观测和上一动作，输出各关节 Beta 分布参数；训练采样并缩放到动作边界，部署执行缩放后的分布均值。模式与 latent 根据新历史不断重算，网络权重保持固定。（图 3，§IV-C；附录 B）",
+          "任务设计｜训练用周期信号引导蹬地与滑行，实机可调整周期或按速度生成；学到的动力学模式与人工运动阶段信号需分开理解。三个 critic 分别对应滑行、蹬地和 sim-to-real 正则奖励。（§IV-B，图 5）",
+          "实现核查｜正文称编码器采用 Transformer，附录表 V 列为 1-D CNN、20 个历史时间步，具体实现待核代码。模式上限取 3，不要求每个模式都被使用。（§IV-A；§V-A；附录 C，表 V）",
+          "证据与边界｜动力学模式数量实验用 3 个训练种子，训练回报对比用 4 个种子。模式可视化支持物理对应，t-SNE 分组不能独立建立因果机制；预测模型精度仍不足以直接用于 MPC。（图 7–10；§VI）"
+        ]
+      },
+      "en": {
+        "title": "Discrete-Time Hybrid Automata Learning: Legged Locomotion Meets Skateboarding",
+        "authors": "Hang Liu, Sangli Teng, Ben Liu, Wei Zhang, Maani Ghaffari",
+        "institutions": "University of Michigan; Southern University of Science and Technology",
+        "status": "Partially read: method, training/deployment, and main experiments",
+        "takeaway": "Select a dynamics mode from observation/action history and feed its continuous encoding to PPO; prediction loss trains the selector, while deployment updates modes and actions from live feedback.",
+        "tags": [
+          "Hybrid Dynamics",
+          "Mode Identification",
+          "PPO",
+          "Beta Policy",
+          "Multi-Critic",
+          "Quadruped",
+          "Skateboarding"
+        ],
+        "mainContent": "Quadrupedal skateboarding involves gliding, pushing, and changing contacts, which place different dynamics demands on a shared representation. DHAL selects a discrete mode from observation/action history, predicts next observations and foot contacts with the corresponding β-VAE, and feeds its continuous latent to a control policy. Multi-critic training and a bounded Beta policy enable Go1 skateboarding and disturbance recovery; training retains phase guidance, and a spherical joint connects the left front foot to the board.",
+        "innovations": [
+          "Jointly learn discrete-time mode selection and mode-specific dynamics without manual mode labels or trajectory pre-segmentation; next observations and foot contacts still supervise training.",
+          "Use a dynamics latent in PPO and combine separately estimated, normalized reward-group advantages with a Beta action distribution for contact-guided training.",
+          "Mode-count comparisons show lower prediction error than a single mode, and hardware modes align with gliding, transitions, and pushing; model capacity and the contribution of prediction gains to control remain to be isolated."
+        ],
+        "implementation": [
+          "Inputs and outputs | History → mode probabilities → one-hot mode → corresponding encoder → continuous latent; the matching decoder predicts next observations and per-foot contact probabilities. The discrete mode and continuous latent are separate variables. (Fig. 3, §IV-A, Eqs. 3–7)",
+          "Training gradients | Observation MSE, contact BCE, KL regularization, and mode-probability entropy train dynamics modules and the selector, using straight-through gradients for discrete selection. PPO updates the actor and encoder without updating the mode selector. (§IV-A, Eqs. 8–9; Appendix C)",
+          "Policy and deployment | The actor takes the continuous latent, current observation, and previous action and outputs per-joint Beta parameters. Training samples bounded scaled actions; deployment executes the scaled distribution mean. New history recomputes modes and latents while network weights stay fixed. (Fig. 3, §IV-C; Appendix B)",
+          "Task design | Cyclic signals guide pushing and gliding in training; deployment can adjust timing or generate phases from velocity. Learned dynamics modes and supplied motion-phase guidance serve different roles. Three critics cover gliding, pushing, and sim-to-real regularization rewards. (§IV-B, Fig. 5)",
+          "Implementation check | The main text specifies a Transformer encoder, whereas Table V lists a 1-D CNN with 20 history steps; code verification remains pending. The mode upper bound is 3, without requiring all modes to be used. (§IV-A; §V-A; Appendix C, Table V)",
+          "Evidence and limits | Dynamics mode-count experiments use 3 training seeds; training-return comparisons use 4. Mode visualization supports physical correspondence, but t-SNE separation alone does not establish a causal mechanism. Prediction accuracy remains insufficient for direct MPC use. (Figs. 7–10; §VI)"
+        ]
+      }
     }
   ]
 }

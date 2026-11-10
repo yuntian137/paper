@@ -199,5 +199,13 @@
     "en": {
       "note": "Reading focus: mode recovery assigns learned labels to subtrajectories while training their vector fields; correctness still needs evaluation. Event supervision uses segmentation and adjacent labels; inference does not receive future segments. Keep three roles separate: z conditions continuous dynamics, p models random waiting times, and ψ learns the instantaneous post-event state. The jump map is fitted to pre/post-event pairs and does not aim to smooth trajectories. Without a reset, continuous ordinary ODE solutions cannot exactly represent instantaneous velocity jumps. Before sampling, the next event time has a distribution; after sampling, that realization has a concrete time. Repeated runs may sample different times, so passing a stopping time to the ODE solver preserves randomness. Survival probability \\(S(s)=P(\\tau>s)\\) describes the fraction of same-condition runs still event-free after s; it concerns the sampling distribution and is compatible with a concrete time in one run. Intensity may increase or decrease without a physical critical point; reaching a sampled cumulative-intensity threshold is a simulation construction. Random trajectory generation does not by itself establish online event detection or continuous correction after unforeseen disturbances. For conditional intensity and waiting-time relations, see Rasmussen 2018, §2.3 Proposition 2.1 and §4.1: https://arxiv.org/abs/1806.00221 . Reading covered main-text definitions and mechanisms; appendix proofs and full experiments remain unchecked."
     }
+  },
+  "dhal-discrete-time-hybrid-automata-learning": {
+    "zh": {
+      "note": "本次厘清：one-hot 选择的是动力学模块，策略接收的是编码器生成的连续 latent；分类器只有结构与模式数量上限预设，模式含义由下一步预测目标学习，并用直通梯度跨过离散采样。部署重新推断模式和 latent，固定网络参数，以实时本体观测及动作历史闭环响应；这与在线训练不同，泛化仍受训练分布限制。还要保留任务阶段信号这一条件，不能把整个控制器概括为仅依赖本体观测。"
+    },
+    "en": {
+      "note": "Reading clarification: the one-hot variable selects a dynamics module; the policy receives its encoder’s continuous latent. Only selector architecture and the mode upper bound are preset; prediction targets learn mode assignments through straight-through gradients. Deployment recomputes modes and latents with fixed weights, responding to live proprioceptive and action history in closed loop. This differs from online training, and generalization remains limited by the training distribution. Supplied task-phase guidance also matters, so the full controller cannot be described as using proprioception alone."
+    }
   }
 }
