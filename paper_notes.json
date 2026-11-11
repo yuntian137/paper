@@ -207,5 +207,13 @@
     "en": {
       "note": "Reading clarification: the one-hot variable selects a dynamics module; the policy receives its encoder’s continuous latent. Only selector architecture and the mode upper bound are preset; prediction targets learn mode assignments through straight-through gradients. Deployment recomputes modes and latents with fixed weights, responding to live proprioceptive and action history in closed loop. This differs from online training, and generalization remains limited by the training distribution. Supplied task-phase guidance also matters, so the full controller cannot be described as using proprioception alone.\n\nStructural interpretation: DHAL resembles learned state-machine mode selection plus mode-specific continuous dynamics models and one shared control policy. Discrete modes act as nodes, while joint positions, velocities, and body pose continue evolving within each mode. The selector reclassifies history every step without an explicit table of allowed node transitions; structurally it also resembles a hard-routed mixture of dynamics experts. This is an architectural analogy: prediction training learns mode meanings and switching rules, while supplied motion-phase signals separately guide pushing and gliding."
     }
+  },
+  "td-mpc-temporal-difference-control": {
+    "zh": {
+      "note": "本次阅读理清的关键：收集真实 episode 时也有在线规划；候选轨迹只在学习模型内预测，真实环境只执行首个动作。actor 与 d 在单条策略候选内串行交替，多条候选可批量；高斯候选先采整串动作，两类统一评分。一个 episode 是一条真实轨迹，batch 是从累计回放抽取的多个短片段。规划固定网络、更新分布，训练才更新模型/价值和 actor。与 SuperMimic 对照：后者用冻结模型的想象回报 BPTT 训练 actor，部署直接运行策略；TD-MPC 在线搜索动作，actor 按 Q 的动作梯度单独训练。"
+    },
+    "en": {
+      "note": "Key distinctions from this reading: collecting actual episodes also uses online planning. Candidate trajectories unfold only in the learned model, and the actual environment executes the first action. Actor and dynamics alternate sequentially within each policy candidate; multiple candidates can be batched. Gaussian candidates pre-sample actions and both sources are scored together. One episode is one actual trajectory; a training batch contains short windows from cumulative replay. Planning freezes networks and updates distributions; learning updates model/values and actor. In comparison, SuperMimic trains its actor by BPTT on imagined returns through a frozen model and deploys the policy directly; TD-MPC searches actions online and separately trains the actor with Q action gradients."
+    }
   }
 }

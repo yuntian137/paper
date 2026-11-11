@@ -7556,6 +7556,90 @@
           "Evidence and limits | Dynamics mode-count experiments use 3 training seeds; training-return comparisons use 4. Mode visualization supports physical correspondence, but t-SNE separation alone does not establish a causal mechanism. Prediction accuracy remains insufficient for direct MPC use. (Figs. 7–10; §VI)"
         ]
       }
+    },
+    {
+      "id": "td-mpc-temporal-difference-control",
+      "aliases": [
+        "TD-MPC",
+        "TOLD"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "locomotion",
+        "manipulation",
+        "vla-world-model"
+      ],
+      "pdf": "https://proceedings.mlr.press/v162/hansen22a/hansen22a.pdf",
+      "project": "https://nicklashansen.github.io/td-mpc/",
+      "arxiv": "",
+      "year": "2022",
+      "venue": "ICML 2022 / PMLR 162",
+      "zh": {
+        "title": "Temporal Difference Learning for Model Predictive Control",
+        "authors": "Nicklas Hansen, Xiaolong Wang, Hao Su",
+        "institutions": "UC San Diego",
+        "status": "部分已读：方法、训练流程与官方代码已核对；实验待进一步阅读",
+        "takeaway": "在任务相关潜空间中预测短期奖励，用末端 Q 补充远期回报；每步采样规划选动作，另从真实回放训练模型、价值和 actor。",
+        "tags": [
+          "TD-MPC",
+          "Model-Based RL",
+          "MPC",
+          "MPPI",
+          "Latent Dynamics",
+          "TD Learning",
+          "BPTT"
+        ],
+        "mainContent": "长视野规划的搜索成本与模型误差限制数据驱动 MPC，短视野又容易忽略远期收益。TD-MPC 用奖励、TD 价值和潜状态一致性目标联合训练任务相关模型，再结合短期预测奖励与末端价值进行滚动规划。作者在 DMControl 和 Meta-World 的状态及图像连续控制任务上报告样本效率与最终回报收益；当前阅读重点为方法与训练流程。",
+        "innovations": [
+          "任务相关模型｜奖励与 TD 价值误差通过多步潜状态展开反传，与潜状态一致性共同训练表示和动力学，无需完整状态或图像重建。（§4，式 6–10）",
+          "短期规划与长期评价｜用 H 步预测奖励加末端 Q 评价候选轨迹，只执行首个动作，再从真实新观测重新规划；终端价值用于有限预测视野之外的回报。（§3，式 3、算法 1）",
+          "策略辅助采样与估值｜actor 补充规划候选，并低成本近似 TD 目标中的动作最大化；在线搜索采用带 top-k 筛选的 MPPI 风格分布更新。（§3–4，式 4–5、11）"
+        ],
+        "implementation": [
+          "1. 随机启动｜论文表 4 和官方默认配置设 seed_steps=5000，按决策步计。启动时 plan() 直接返回 [-1,1] 均匀随机动作，绕过模型规划，暂不更新网络。（表 4；src/algorithm/tdmpc.py:plan）",
+          "2. 真实数据收集｜启动后每次决策先编码当前观测，再在线规划选动作，交给环境执行并记录真实转移。一个 episode 是一条实际轨迹，结束后加入累计 replay buffer；episode 内网络参数固定。（算法 2；src/train.py）",
+          "3. 两类候选｜高斯分布先生成整串动作，再由 d 递推状态；策略候选从同一 z0 出发，反复计算 \\(a_k=\\pi(z_k)+\\epsilon_k\\)、\\(z_{k+1}=d(z_k,a_k)\\)。两类在学习模型内展开，无需仿真器；单条轨迹逐步计算，多条可批量计算。（算法 1）",
+          "4. 评分与执行｜预测奖励加末端折扣 Q，统一筛选两类候选并更新采样分布 μ、σ；默认 H=5，512 条高斯候选外加 5% 策略候选，保留 64 条，通常迭代 6 轮。只执行首个动作，新观测重新编码为预测起点；上轮均值移位用于 warm start。（§3，表 4）",
+          "5. 回放训练｜从累计 episode 中采样连续 H 步片段，通常 batch=512（Dog 2048、图像 256）。只编码片段起点，沿记录动作递推潜状态；奖励误差、TD 误差和潜状态一致性以 λ=0.5 衰减加权，系数分别为 0.5、0.1、2，经 BPTT 更新 h、d、R、Q。（§4，附录 F，表 4）",
+          "6. 梯度与 actor｜TD 与一致性目标停止梯度；官方代码从真实后继观测计算 TD 目标。actor 单独最大化 Q，潜状态 detach、Q 参数固定但保留对动作的导数；该策略更新不沿动力学做 BPTT。在线规划只更新 μ、σ，训练阶段才更新网络。（式 11；src/algorithm/tdmpc.py:update、update_pi）",
+          "7. 交替频率｜官方代码每个 episode 收集 L 个决策步后，通常做 L 次更新，每次更新模型/价值后更新 actor；目标网络每 2 次更新做一次 EMA（新参数权重 0.01）。在 episode 起始计数恰为 5000 的那轮收集结束后，首次集中做 5000 次更新。（src/train.py；默认配置）",
+          "8. 时间与存储｜决策步乘 action repeat 才是仿真步。论文称回放容量 Unlimited；当前官方代码设为 min(train_steps, 1,000,000)，默认训练预算内能保留全部数据。H 是显式动力学展开长度，正文末端用 \\(Q(z_H,a_H)\\)，代码末端动作由 actor 提供。（表 4、7；ReplayBuffer、estimate_value）",
+          "9. 证据与用途｜图 3 和附录 D 的消融支持潜表示与一致性设计在所测任务中的作用；潜空间不必降维，也不减少动作搜索维数。状态空间规划同样成立，表示、损失与优化条件对收益的贡献需要分开判断；本次未复现训练。（§5，图 3，附录 D、G）"
+        ]
+      },
+      "en": {
+        "title": "Temporal Difference Learning for Model Predictive Control",
+        "authors": "Nicklas Hansen, Xiaolong Wang, Hao Su",
+        "institutions": "UC San Diego",
+        "status": "Partially read: method, training loop, and official code checked; experiments pending",
+        "takeaway": "Predict short-term rewards in a task-oriented latent model and bootstrap with terminal Q; sampled online planning selects actions, while real replay trains the model, values, and actor.",
+        "tags": [
+          "TD-MPC",
+          "Model-Based RL",
+          "MPC",
+          "MPPI",
+          "Latent Dynamics",
+          "TD Learning",
+          "BPTT"
+        ],
+        "mainContent": "Long-horizon search cost and model error limit data-driven MPC, while short horizons omit distant rewards. TD-MPC jointly trains task-oriented latent dynamics with reward, TD-value, and latent-consistency objectives, then performs receding-horizon planning with predicted rewards and terminal values. The authors report sample-efficiency and final-return gains on state- and image-based continuous control in DMControl and Meta-World; this reading focused on the method and training loop.",
+        "innovations": [
+          "Task-oriented model | Multi-step reward and TD-value errors backpropagate through latent rollouts, jointly with latent consistency, without reconstructing full states or images. (§4, Eqs. 6–10)",
+          "Short planning with long-term evaluation | Score candidates with H predicted rewards plus terminal Q, execute only the first action, and replan from the next actual observation. Terminal value covers rewards beyond the explicit horizon. (§3, Eq. 3, Algorithm 1)",
+          "Policy-assisted sampling and value learning | The actor contributes planning candidates and cheaply approximates action maximization for TD targets; online search uses MPPI-style distribution updates with top-k selection. (§3–4, Eqs. 4–5 and 11)"
+        ],
+        "implementation": [
+          "1. Random initialization phase | Table 4 and the official default configuration use 5000 seed decision steps. plan() directly returns uniform actions in [-1,1], bypassing model planning; networks are not yet trained. (Table 4; src/algorithm/tdmpc.py:plan)",
+          "2. Actual data collection | After seeding, encode the current observation, plan an action, execute it in the environment, and record the actual transition. Each episode is one executed trajectory, added to cumulative replay at its end; network parameters stay fixed during collection. (Algorithm 2; src/train.py)",
+          "3. Two candidate sources | Gaussian sampling produces complete action sequences before recurrent dynamics evaluation. Policy candidates start at the same z0 and alternate \\(a_k=\\pi(z_k)+\\epsilon_k\\) and \\(z_{k+1}=d(z_k,a_k)\\). Both unfold inside the learned model without the simulator; each trajectory is sequential, while trajectories can be batched. (Algorithm 1)",
+          "4. Scoring and execution | Sum predicted rewards and discounted terminal Q, jointly select candidates, and update μ and σ. Defaults: H=5, 512 Gaussian candidates plus 5% policy candidates, 64 elites, usually 6 iterations. Execute only the first action, re-encode each new actual observation, and shift the previous mean for warm starting. (§3, Table 4)",
+          "5. Replay training | Sample H-step windows from accumulated episodes: batch 512 normally, 2048 for Dog, 256 for pixels. Encode only the start and unfold on logged actions. Reward, TD-value, and consistency losses use temporal weight λ=0.5 and coefficients 0.5, 0.1, and 2; BPTT updates h, d, R, and Q. (§4, Appendix F, Table 4)",
+          "6. Gradients and actor | Detach TD and consistency targets; official code computes TD targets from actual next observations. Separately maximize Q for the actor with detached latents and fixed Q weights while retaining action derivatives; this actor update does not backpropagate through dynamics. Online planning changes μ and σ; training changes network parameters. (Eq. 11; update and update_pi)",
+          "7. Alternation | Normally collect L decision steps in an episode, then perform L updates. Each update trains model/values and then the actor; target EMA runs every 2 updates with new-weight coefficient 0.01. After collecting the episode whose starting step counter equals 5000, the first training burst performs 5000 updates. (src/train.py; default configuration)",
+          "8. Timing and storage | Multiply decision steps by action repeat for simulation steps. The paper lists Unlimited replay; current code uses min(train_steps, 1,000,000), retaining all data under the default budget. H counts explicit dynamics transitions; the paper uses terminal \\(Q(z_H,a_H)\\), while code obtains the terminal action from the actor. (Tables 4 and 7; ReplayBuffer and estimate_value)",
+          "9. Evidence and use | Figure 3 and Appendix D support the latent representation and consistency choices on tested tasks. Latent representations need not reduce dimension and do not reduce action-search dimension. State-space planning remains valid; representation, loss, and optimization effects require separate attribution. Training was not reproduced. (§5, Fig. 3, Appendices D and G)"
+        ]
+      }
     }
   ]
 }
