@@ -215,5 +215,13 @@
     "en": {
       "note": "Key distinctions from this reading: collecting actual episodes also uses online planning. Candidate trajectories unfold only in the learned model, and the actual environment executes the first action. Actor and dynamics alternate sequentially within each policy candidate; multiple candidates can be batched. Gaussian candidates pre-sample actions and both sources are scored together. One episode is one actual trajectory; a training batch contains short windows from cumulative replay. Planning freezes networks and updates distributions; learning updates model/values and actor. In comparison, SuperMimic trains its actor by BPTT on imagined returns through a frozen model and deploys the policy directly; TD-MPC searches actions online and separately trains the actor with Q action gradients."
     }
+  },
+  "td-mpc2-scalable-robust-world-models": {
+    "zh": {
+      "note": "与已读 TD-MPC 的连接：继续用潜模型评估动作序列，真实执行首个动作再重规划；五项更新主要改变学习稳定性、奖励尺度适应和多任务接口。latent 由确定性编码器生成，没有 CVAE 的后验采样、重建或 KL 项，但有两层塑形：SimNorm 约束几何和尺度，一致性、奖励和价值目标通过预测分支训练任务相关表示。softmax 分组像概率向量，但不会据此采样潜变量；动作随机性来自策略先验。潜状态有界不推出整体梯度或闭环控制稳定，也不赋予潜距离物理意义。做研究时优先用匹配容量、交互与计算预算的消融区分表示、目标和规划收益。"
+    },
+    "en": {
+      "note": "Connection to TD-MPC: retain latent-model action-sequence evaluation, execute the first action, and replan. The five updates mainly change learning stability, reward-scale handling, and the multitask interface. A deterministic encoder produces latents without CVAE posterior sampling, reconstruction, or KL terms, yet representation shaping remains: SimNorm constrains geometry and scale, and consistency, reward, and value losses train task-relevant features through prediction branches. Softmax groups resemble probability vectors without latent sampling; the policy prior supplies action randomness. Bounded latents do not imply globally bounded gradients, closed-loop stability, or physically meaningful distances. Match capacity, interaction, and compute when separating representation, objective, and planning contributions."
+    }
   }
 }

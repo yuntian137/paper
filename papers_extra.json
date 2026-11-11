@@ -7640,6 +7640,96 @@
           "9. Evidence and use | Figure 3 and Appendix D support the latent representation and consistency choices on tested tasks. Latent representations need not reduce dimension and do not reduce action-search dimension. State-space planning remains valid; representation, loss, and optimization effects require separate attribution. Training was not reproduced. (§5, Fig. 3, Appendices D and G)"
         ]
       }
+    },
+    {
+      "id": "td-mpc2-scalable-robust-world-models",
+      "aliases": [
+        "TD-MPC2",
+        "TD-MPC 2"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "locomotion",
+        "manipulation",
+        "vla-world-model"
+      ],
+      "pdf": "https://arxiv.org/pdf/2310.16828",
+      "project": "https://www.tdmpc2.com/",
+      "arxiv": "https://arxiv.org/abs/2310.16828",
+      "year": "2024",
+      "venue": "ICLR 2024",
+      "zh": {
+        "title": "TD-MPC2: Scalable, Robust World Models for Continuous Control",
+        "authors": "Nicklas Hansen, Hao Su, Xiaolong Wang",
+        "institutions": "UC San Diego",
+        "status": "部分已读：相对 TD-MPC 的方法更新、关键公式与主要证据已核对；未复现训练",
+        "takeaway": "沿用 TD-MPC 的短期潜模型预测、末端 Q 与在线采样规划，通过 SimNorm、离散回归、Q 集成和随机策略先验稳定学习，再用任务条件化扩展共享世界模型。",
+        "tags": [
+          "TD-MPC2",
+          "Model-Based RL",
+          "MPPI",
+          "SimNorm",
+          "Discrete Regression",
+          "Q Ensemble",
+          "Multi-Task Learning"
+        ],
+        "mainContent": "TD-MPC 在部分任务上训练不稳定，奖励尺度变化增加调参负担，直接扩大模型也未必提高性能。TD-MPC2 保留短期潜模型 rollout、末端价值和滚动规划，更新潜表示、奖励与价值目标、Q 网络及策略先验，并加入任务嵌入与动作掩码支持多任务共享。论文在 104 个在线连续控制任务上报告性能与数据效率收益，另训练单个 3.17 亿参数模型执行 80 个任务；两者属于不同实验设置。",
+        "innovations": [
+          "潜表示与优化稳定性｜SimNorm 将潜向量分组做 softmax，约束表示尺度；结合 LayerNorm、Mish 和 Q 网络 Dropout 改善优化条件。潜状态仍是确定性连续表示。（§3.1，式 5，附录 A、H）",
+          "跨奖励尺度学习｜奖励和 Q 从标量平方误差改为对数变换空间的分桶软交叉熵，潜状态一致性保留平方误差，降低训练对任务奖励幅值的敏感性。（§3.1，式 3，附录 A）",
+          "价值与策略先验｜Q 从两个增为默认五个，随机抽两个目标 Q 取最小值；最大熵随机策略替代确定性策略加噪声，减少逐任务噪声日程的调节。（§3.1，附录 A）",
+          "多任务接口｜各模块以归一化可学习任务嵌入为条件，通过观测与动作补零、有效动作掩码支持不同任务和机器人共享模型，并探索预训练后的在线微调。（§3.3，图 7–8）",
+          "实现简化｜移除 MPPI 迭代动量，用均匀回放替代优先回放，并优化采样与 Q 集成计算；这些改动保留原有规划主线。（附录 A）"
+        ],
+        "implementation": [
+          "1. 接续 TD-MPC｜仍编码当前观测，用高斯动作候选与策略先验候选进行模型内预测，按短期奖励加末端 Q 评分；MPPI 更新采样分布，只执行首个动作并从新观测重规划。在线搜索固定网络参数。（§3.2，式 6）",
+          "2. 回放与更新对象｜在线交互收集真实转移，训练从回放抽取短片段。编码起点后沿记录动作展开潜状态；一致性、奖励与 TD 价值损失联合更新 h、d、R、Q，多任务时同时学习任务嵌入；actor 另行更新。（§3.1，式 2–4）",
+          "3. SimNorm｜每组 V 维向量经 softmax 后非负且和为 1；L 组拼接得到潜状态。由此可推导平方范数不超过 L，但整个网络梯度还受动力学雅可比和多步连乘影响。默认潜维度 512、每组 8 维、温度 1。（式 5；附录 H，表 8；范数界为阅读推导）",
+          "4. 离散回归｜奖励与 TD 目标经 symlog 压缩、在相邻桶间做 two-hot 插值，网络输出 101 个桶的 logits，以软交叉熵训练；解码时先求桶中心加权均值再做 symexp。交叉熵对各 logit 的梯度为预测概率减目标权重，受限于 [-1,1]，不等于参数梯度全局有界。（§3.1，表 8；官方 common/math.py；梯度式为阅读推导）",
+          "5. TD 目标｜默认五个 Q 各有 EMA 目标网络，每次随机抽两个取最小值，与真实奖励和折扣构造停止梯度的 TD 目标。取最小值有保守偏差，用于缓解高估；相关误差和过度低估仍可能影响学习。（§3.1，附录 A）",
+          "6. actor 梯度｜最大熵目标兼顾 Q 与熵，Q 项用移动统计调尺度。策略更新停止潜状态梯度、固定 Q 参数，保留 Q 对动作的导数以更新 actor；该目标不沿动力学做回报 BPTT。原文式 4 的熵符号与最大熵描述不一致，理解时采用增加熵的方向，官方实现可交叉核对。（§3.1，式 4；官方 update_pi）",
+          "7. 多任务条件与动作｜输入任务标识选取可学习嵌入，范数限制为不超过 1；训练和推理均使用补零与有效动作掩码。策略熵仅计有效动作维度，规划也只采样有效维度，避免无效动作贡献虚假熵收益。（§3.3）",
+          "8. 默认规划与预算｜单任务基础模型 5M 参数，原版 TD-MPC 约 1M；H=3，512 条候选中含 24 条策略轨迹，64 条精英，通常迭代 6 轮，动作维度至少 20 时加 2 轮，batch=256。统一超参数方案仍含按任务 episode 长度设置折扣和启动步数的启发式；H 按决策步计，实际动作持续时间还取决于环境 action repeat。（附录 H，表 8；附录 C，表 6）",
+          "9. 证据与归因｜图 9 消融涵盖三个困难在线任务及 80 任务设置；附录 G 梯度图每任务仅展示一个种子。组件性能贡献、梯度稳定性与整体任务回报需分别判断；主对比容量不同，单独扩大原版的结果及组件消融提供进一步对照。（图 7、9，附录 A、G）",
+          "10. 扩展与成本｜80 任务模型使用来自 240 个单任务智能体回放的 5.45 亿条转移；317M 模型约需单张 RTX 3090 的 33 GPU 天。该成本描述模型训练，数据生成另需预算；图 7 是所测规模内的经验趋势。新任务适应采用在线微调，收益随任务变化。（§4.1，表 1，附录 E）"
+        ]
+      },
+      "en": {
+        "title": "TD-MPC2: Scalable, Robust World Models for Continuous Control",
+        "authors": "Nicklas Hansen, Hao Su, Xiaolong Wang",
+        "institutions": "UC San Diego",
+        "status": "Partially read: TD-MPC updates, key equations, and main evidence checked; training not reproduced",
+        "takeaway": "Retain TD-MPC short latent rollouts, terminal Q, and sampled online planning; stabilize learning with SimNorm, discrete regression, Q ensembles, and a stochastic policy prior, then condition a shared world model on tasks.",
+        "tags": [
+          "TD-MPC2",
+          "Model-Based RL",
+          "MPPI",
+          "SimNorm",
+          "Discrete Regression",
+          "Q Ensemble",
+          "Multi-Task Learning"
+        ],
+        "mainContent": "TD-MPC can train unstably on some tasks, requires tuning across reward scales, and does not reliably improve merely by increasing model size. TD-MPC2 retains short latent rollouts, terminal values, and receding-horizon planning while revising representations, reward/value objectives, Q networks, and the policy prior; task embeddings and action masks enable shared multitask models. The paper reports performance and data-efficiency gains on 104 online continuous-control tasks, and separately trains one 317M-parameter agent on 80 tasks; these are distinct experimental settings.",
+        "innovations": [
+          "Representation and optimization | Groupwise softmax SimNorm constrains latent scale; LayerNorm, Mish, and Q-network Dropout change optimization conditions. Latents remain deterministic continuous representations. (§3.1, Eq. 5, Appendices A and H)",
+          "Learning across reward scales | Replace scalar squared reward and Q errors with binned soft cross-entropy in a log-transformed space, while retaining squared latent consistency, reducing sensitivity to reward magnitude. (§3.1, Eq. 3, Appendix A)",
+          "Values and policy prior | Increase Q networks from two to five by default, use the minimum of two sampled target Q functions, and replace a deterministic noisy actor with a maximum-entropy stochastic prior to reduce noise-schedule tuning. (§3.1, Appendix A)",
+          "Multitask interface | Condition all modules on normalized learnable task embeddings; padding and valid-action masks support shared models across tasks and embodiments, with exploratory online adaptation after pretraining. (§3.3, Figs. 7–8)",
+          "Simpler implementation | Remove MPPI iteration momentum, replace prioritized replay with uniform sampling, and optimize replay sampling and Q-ensemble computation while retaining the planning framework. (Appendix A)"
+        ],
+        "implementation": [
+          "1. Continuing TD-MPC | Encode the observation, roll out Gaussian and policy-prior candidates, and score predicted rewards plus terminal Q. MPPI updates the sampling distribution, executes only the first action, and replans from each new observation. Online search keeps network weights fixed. (§3.2, Eq. 6)",
+          "2. Replay and learned variables | Collect actual transitions and train on replay windows. Encode the start, unfold on logged actions, and jointly update h, d, R, Q, and multitask embeddings with consistency, reward, and TD-value losses; update the actor separately. (§3.1, Eqs. 2–4)",
+          "3. SimNorm | Each V-dimensional softmax group is nonnegative and sums to one; concatenate L groups. This implies a squared-norm upper bound L, while full gradients still depend on dynamics Jacobians and their temporal products. Defaults: latent dimension 512, group size 8, temperature 1. (Eq. 5, Appendix H, Table 8; norm bound is a reading derivation)",
+          "4. Discrete regression | Apply symlog to rewards and TD targets, interpolate between adjacent bins with two-hot labels, and train 101 output logits with soft cross-entropy. Decode by applying symexp to the weighted bin-center mean. Each logit gradient is predicted probability minus target weight, in [-1,1]; this does not bound all parameter gradients. (§3.1, Table 8; official common/math.py; gradient is a reading derivation)",
+          "5. TD targets | Maintain EMA target copies of five Q networks, randomly choose two, and combine their minimum with actual reward and discount under stop-gradient. The minimum introduces conservatism to counter overestimation; correlated errors and excessive underestimation can still matter. (§3.1, Appendix A)",
+          "6. Actor gradients | Balance Q and entropy using moving statistics for the Q scale. Detach input latents and freeze Q weights while retaining action derivatives to update the actor; this objective does not backpropagate imagined returns through dynamics. Eq. 4 has an entropy-sign inconsistency with its maximum-entropy description; use the entropy-increasing direction and cross-check official update_pi. (§3.1, Eq. 4; official update_pi)",
+          "7. Task conditions and actions | Select a learned embedding by task identity and constrain its norm to at most one. Apply padding and valid-action masks during training and inference. Count only valid dimensions in policy entropy and sample only valid actions in planning, preventing spurious entropy rewards. (§3.3)",
+          "8. Default planning and budget | Base single-task model: 5M parameters versus approximately 1M for TD-MPC; H=3, 512 candidates including 24 policy trajectories, 64 elites, usually 6 iterations with 2 extra for action dimension at least 20, batch 256. Shared hyperparameter rules include episode-length heuristics for discount and seed steps. H counts decision steps; physical action duration also depends on environment action repeat. (Appendix H, Table 8; Appendix C, Table 6)",
+          "9. Evidence and attribution | Figure 9 ablates three difficult online tasks and an 80-task setting; Appendix G displays only one gradient seed per task. Distinguish component performance, gradient stability, and overall returns. Main comparisons differ in capacity; scaled TD-MPC and component ablations provide further controls. (Figs. 7 and 9, Appendices A and G)",
+          "10. Scaling and cost | The 80-task dataset contains 545M transitions from 240 single-task agents. Training the 317M model costs approximately 33 GPU days on one RTX 3090; generating data requires a separate budget. Figure 7 establishes an empirical trend within tested scales. Adaptation to new tasks uses online finetuning with task-dependent gains. (§4.1, Table 1, Appendix E)"
+        ]
+      }
     }
   ]
 }
