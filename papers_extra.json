@@ -7820,6 +7820,84 @@
           "7. Research implications | Positive low-dimensional distribution heads could predict event arrivals or skill completion times; actively choosing skills and durations additionally requires task objectives and control learning. These robotics uses are reading extrapolations, not tested applications. Events that may never occur require additional failure or no-future-event probability modeling."
         ]
       }
+    },
+    {
+      "id": "id-wm-hierarchical-world-models-implicit-dynamics",
+      "aliases": [
+        "ID-WM",
+        "Implicit Dynamics World Models"
+      ],
+      "categories": [
+        "vla-world-model",
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.42146",
+      "project": "https://id-wm.github.io/",
+      "arxiv": "https://arxiv.org/abs/2610.42146",
+      "year": "2026",
+      "venue": "NeurIPS 2026 / arXiv:2610.42146",
+      "zh": {
+        "title": "Hierarchical World Models with Implicit Dynamics",
+        "authors": "Gaoyue Zhou, Yvonne Wu, Zichen Jeff Cui, Nicolas Ballas, Mido Assran, Lerrel Pinto, Yann LeCun",
+        "institutions": "纽约大学 Courant Institute；Meta FAIR；AMI Labs",
+        "status": "部分已读：方法、主要结果与关键附录已核对",
+        "takeaway": "高层搜索扩散噪声来生成稀疏子目标，低层用前向世界模型搜索逐段动作，再由环境执行并反馈实际状态。",
+        "tags": [
+          "Hierarchical World Model",
+          "Diffusion",
+          "DDIM",
+          "CEM",
+          "Subgoal Planning",
+          "PushT"
+        ],
+        "mainContent": "ID-WM 研究离线世界模型的长时域目标规划，处理长动作序列的搜索困难与滚动预测误差。高层条件扩散模型学习局部未来状态分布，规划器搜索 DDIM 初始噪声来组合稀疏子目标；低层 Transformer 世界模型预测候选动作后果，再通过 CEM 求解通往当前子目标的动作。状态输入的随机目标 PushT 成功率为 77%，单层 WM 为 21%；视觉随机目标成功率为 26%，实验覆盖 Wall、Maze 和 PushT。",
+        "innovations": [
+          "局部可达性与动作求解分开｜高层学习跨一段时间的未来状态分布，低层学习动作条件的短期动力学，将长远路线与局部控制分配到不同时间尺度。（§3，图 1–2）",
+          "噪声作为隐式高层动作｜固定当前状态与跨度，确定性 DDIM 将初始噪声映射为子目标；CEM 搜索噪声序列，将局部转移组合成通向新目标的计划。（§3.1.1–3.2，式 3、5）",
+          "生成先验约束搜索｜在学到的局部状态分布中生成候选子目标，并通过噪声幅值正则减少异常转移。这里的可达性来自学习模型与数据，不是严格的物理可达性证明。（§3.2，式 6，§6.6）"
+        ],
+        "implementation": [
+          "1. 输入与架构｜输入当前观测和目标观测，在状态或特征空间规划。高层条件是当前状态与时间跨度；最终目标进入 CEM 的距离代价。低层由 MLP 动作编码器和 Transformer 预测器组成，读取近期状态与动作历史。（§3.1，图 2）",
+          "2. 离线训练｜从无奖励标签的离线轨迹取状态、动作和未来状态。高层对未来状态加噪，训练噪声预测网络；低层最小化下一状态预测的 MSE。两层使用各自的训练目标，测试时固定网络参数。（§3，式 2、4）",
+          "3. 高层规划公式｜将 DDIM 生成过程写成 \\(\\hat s_{i+1}=G_\\theta(\\hat s_i,z_i;\\Delta)\\)，从当前状态递推子目标。CEM 搜索 \\(Z=(z_0,\\ldots,z_{H_{\\rm hi}-1})\\)，最小化 \\(J_{\\rm hi}=\\|\\hat s_{H_{\\rm hi}}-s_g\\|^2+\\alpha R(Z)\\)。（§3.1.1–3.2，式 3、5）",
+          "4. 低层动作求解｜前向模型为 \\(\\hat s_{t+1}=f_{\\rm lo}(s_{t-k:t},a_{t-k:t})\\)。对当前子目标，CEM 采样动作序列、用模型逐步 rollout，再以预测终点与子目标的距离评分；规划实现了逆动力学求解功能。（§3.1.2–3.2，算法 2）",
+          "5. DDIM、CEM 与执行｜DDIM 是高层扩散采样方法；CEM 是上下层共用的无梯度采样优化器，上层搜噪声、下层搜动作。WM 预测后果，环境执行选中的整段低层动作；每段执行后读取实际状态，整串子目标完成后高层重规划。（算法 1–2）",
+          "6. 时域与参考密度｜默认 Δ=5、H_hi=5、H_lo=5，均按模型时间步理解。高层给 5 个间隔 5 步的参考点，覆盖 25 个模型步；低层每次规划 5 步，分 5 段完成这串计划。frameskip=5，因此单次高层跳转为 25 个环境步，整串约 125 个环境步。高层参考比实际轨迹稀疏，扩散去噪步数另计。（§4.4、§6.7，表 7、10–11）",
+          "7. 结果与计算对照｜主表每设置 50 组起终点、3 个种子；状态 PushT 随机目标 SR 为 0.77±0.01，SL-WM 为 0.21±0.04。单层重规划预算扩大 3 倍后为 0.28，仍低于 ID-WM。视觉随机目标中 ID-WM 为 0.26、HWM 为 0.02、DINO-WM 为 0；视觉 75 步目标分别为 0.50、0.14、0。（表 1、3、8）",
+          "8. 成本与边界｜状态设置单 L40S 的每目标推理计时为 ID-WM 53.08 秒、SL-WM 16.93 秒。层级设计缓解长时域搜索与预测误差，状态维度、数据覆盖和高层子目标的实际可执行性仍影响结果；主实验没有建立真机高维控制或高频实时能力。（§5、§6.9，表 6）"
+        ]
+      },
+      "en": {
+        "title": "Hierarchical World Models with Implicit Dynamics",
+        "authors": "Gaoyue Zhou, Yvonne Wu, Zichen Jeff Cui, Nicolas Ballas, Mido Assran, Lerrel Pinto, Yann LeCun",
+        "institutions": "Courant Institute, New York University; Meta FAIR; AMI Labs",
+        "status": "Partially read: method, main results, and key appendix sections checked",
+        "takeaway": "Search diffusion noise to generate sparse high-level subgoals, use a forward world model to search action segments, then execute them in the environment and observe actual states.",
+        "tags": [
+          "Hierarchical World Model",
+          "Diffusion",
+          "DDIM",
+          "CEM",
+          "Subgoal Planning",
+          "PushT"
+        ],
+        "mainContent": "ID-WM studies long-horizon goal planning with offline world models, addressing difficult action-sequence search and accumulated rollout error. A high-level conditional diffusion model learns local future-state distributions, and a planner searches DDIM initial noise to compose sparse subgoals; a low-level Transformer world model predicts action consequences, while CEM solves actions toward the current subgoal. Random-goal state-based PushT success is 77%, versus 21% for a single-level world model; random-goal visual success is 26%, with experiments covering Wall, Maze, and PushT.",
+        "innovations": [
+          "Separate local reachability from action solving | Learn temporally extended future-state distributions at the high level and action-conditioned short-term dynamics at the low level, assigning route selection and local control to different timescales. (§3, Figs. 1–2)",
+          "Noise as an implicit high-level action | Given the current state and temporal offset, deterministic DDIM maps initial noise to a subgoal. CEM searches noise sequences to compose local transitions into plans for new goals. (§§3.1.1–3.2, Eqs. 3, 5)",
+          "Constrain search with a generative prior | Generate candidate subgoals from learned local state distributions and penalize extreme noise to reduce unrealistic transitions. Reachability comes from the learned model and data rather than a formal physical guarantee. (§3.2, Eq. 6, §6.6)"
+        ],
+        "implementation": [
+          "1. Inputs and architecture | Take current and goal observations and plan in state or feature space. The high-level generator is conditioned on the current state and temporal offset; the final goal enters the CEM distance cost. The low-level model uses an MLP action encoder and Transformer predictor over recent state/action history. (§3.1, Fig. 2)",
+          "2. Offline training | Sample states, actions, and future states from offline trajectories without reward labels. Add noise to future states to train the high-level noise predictor, and minimize next-state MSE for the low-level model. The levels have separate training objectives, and network weights remain fixed during test-time planning. (§3, Eqs. 2, 4)",
+          "3. High-level planning | Write DDIM generation as \\(\\hat s_{i+1}=G_\\theta(\\hat s_i,z_i;\\Delta)\\), recursively generating subgoals from the current state. CEM searches \\(Z=(z_0,\\ldots,z_{H_{\\rm hi}-1})\\) to minimize \\(J_{\\rm hi}=\\|\\hat s_{H_{\\rm hi}}-s_g\\|^2+\\alpha R(Z)\\). (§§3.1.1–3.2, Eqs. 3, 5)",
+          "4. Low-level action solving | The forward model is \\(\\hat s_{t+1}=f_{\\rm lo}(s_{t-k:t},a_{t-k:t})\\). For the current subgoal, CEM samples action sequences, rolls them out through the model, and scores predicted terminal distance to that subgoal. Planning supplies the inverse-dynamics functionality. (§§3.1.2–3.2, Algorithm 2)",
+          "5. DDIM, CEM, and execution | DDIM samples the high-level diffusion model. CEM is the gradient-free sampling optimizer used at both levels: search noise above and actions below. The world model predicts consequences; the environment executes the selected full low-level action segment. Observe actual states after each segment and replan at the high level after the full subgoal sequence. (Algorithms 1–2)",
+          "6. Horizons and reference density | Defaults are Δ=5, H_hi=5, and H_lo=5 in model time steps. Five high-level references spaced five steps apart cover 25 model steps; low-level planning covers five steps at a time and completes the sequence in five segments. With frameskip=5, one high-level jump spans 25 environment steps and the full sequence about 125. High-level references are sparser than the executed trajectory; diffusion denoising steps are a separate count. (§4.4, §6.7, Tables 7, 10–11)",
+          "7. Results and compute control | The main table uses 50 start/goal pairs per setting and three seeds. Random-goal state-based PushT SR is 0.77±0.01 versus 0.21±0.04 for SL-WM. Tripling single-level replanning gives 0.28, still below ID-WM. Visual random-goal SR is 0.26 for ID-WM, 0.02 for HWM, and 0 for DINO-WM; at a 75-step goal offset these are 0.50, 0.14, and 0. (Tables 1, 3, 8)",
+          "8. Cost and scope | State-based inference time per goal on one L40S is 53.08 seconds for ID-WM versus 16.93 seconds for SL-WM. Hierarchy mitigates long-horizon search and prediction error, while state dimensionality, data coverage, and executable subgoals remain important. Main experiments do not establish high-dimensional real-robot or high-frequency real-time control. (§5, §6.9, Table 6)"
+        ]
+      }
     }
   ]
 }
