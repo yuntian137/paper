@@ -239,5 +239,15 @@
     "en": {
       "note": "Reading clarification: this combines world models at two timescales with two levels of test-time planning. The high-level generator learns future-state distributions near the current state; CEM uses the final goal for scoring. Deterministic DDIM maps fixed initial noise to a subgoal, and CEM searches noise sequences to choose a route. The low-level Transformer learns forward dynamics; CEM searches actions toward the current subgoal, supplying inverse-dynamics functionality through planning.\n\nOne high-level plan looks farther ahead but provides sparser references. Defaults give five subgoals separated by five model steps, while low-level planning covers five model steps per call. Completing the sequence takes five action segments, totaling 25 model steps or about 125 environment steps with frameskip=5. Internal prediction and actual execution are distinct: evaluate candidate segments in the model, execute the selected full segment in the environment, observe the actual state, and handle the next subgoal. Replan at the high level after the entire sequence. The world model does not execute actions, and actual states need not exactly match the references.\n\nFor discussion with a senior colleague, follow: long-horizon search and error, separation of reachability and local control, diffusion above and a Transformer below, noise search followed by action search and environment execution, then benefits and limits. Implications for our idea remain discussion questions: whether we need a reachable-subgoal interface, whether the existing low level can realize those goals within budget, and how matched data, effective horizons, and compute can isolate hierarchy's benefit. Results from these simple simulations should not be treated as evidence for high-dimensional real-robot control."
     }
+  },
+  "contactnets": {
+    "zh": {
+      "takeaway": "先学接触面的位置和接触作用方向，再由物理约束求每步冲量、更新下一状态；训练时用真实转移反推总冲量，优化能解释它的接触模型。",
+      "note": "阅读中理清了三个区别：候选接触是立方体顶点对地面；几何贴合可不承担冲量；训练损失解释已观测转移，测试则自主滚动预测。值得借鉴的是把光滑几何、物理求解和训练目标配合设计；使用时同时考虑已知非接触动力学、几何先验与初始化条件。"
+    },
+    "en": {
+      "takeaway": "Learn contact surfaces and directions, then solve physically constrained impulses to update the next state; train by recovering net impulses from observed transitions and fitting a contact model that explains them.",
+      "note": "Three distinctions clarified in reading: candidates are cube vertices against the ground; geometric touching can carry zero impulse; training explains observed transitions, while evaluation rolls out autonomously. A useful design lesson is to develop smooth geometry, physical solving, and the training objective together, while accounting for known non-contact dynamics, geometric priors, and initialization."
+    }
   }
 }

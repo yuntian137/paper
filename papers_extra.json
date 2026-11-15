@@ -7898,6 +7898,84 @@
           "8. Cost and scope | State-based inference time per goal on one L40S is 53.08 seconds for ID-WM versus 16.93 seconds for SL-WM. Hierarchy mitigates long-horizon search and prediction error, while state dimensionality, data coverage, and executable subgoals remain important. Main experiments do not establish high-dimensional real-robot or high-frequency real-time control. (§5, §6.9, Table 6)"
         ]
       }
+    },
+    {
+      "id": "contactnets",
+      "aliases": [
+        "ContactNets",
+        "Contact Nets"
+      ],
+      "categories": [
+        "bfm-dynamics",
+        "sim2real"
+      ],
+      "pdf": "https://proceedings.mlr.press/v155/pfrommer21a/pfrommer21a.pdf",
+      "project": "https://github.com/DAIRLab/contact-nets",
+      "arxiv": "https://arxiv.org/abs/2009.11193",
+      "year": "2021",
+      "venue": "CoRL 2020 · PMLR 155 (2021)",
+      "zh": {
+        "title": "ContactNets: Learning Discontinuous Contact Dynamics with Smooth, Implicit Representations",
+        "authors": "Samuel Pfrommer, Mathew Halm, Michael Posa",
+        "institutions": "宾夕法尼亚大学 GRASP Laboratory",
+        "status": "部分已读：核心方法、主要结果与相关附录已核对；未复现",
+        "takeaway": "学习光滑的接触距离和雅可比，再由接触求解器计算每步冲量并更新状态；训练通过解释真实转移的冲量优化来更新模型。",
+        "tags": [
+          "Contact Dynamics",
+          "System Identification",
+          "Signed Distance",
+          "Complementarity",
+          "Bilevel Optimization",
+          "Rigid Body",
+          "Friction"
+        ],
+        "mainContent": "碰撞与粘滑切换会产生不连续运动，直接拟合接触冲量的光滑网络容易出现穿透和持续漂移。ContactNets 在已知惯性与非接触动力学的条件下学习有符号距离和接触雅可比，训练时寻找符合物理条件、能解释真实状态转移的冲量，预测时交给接触仿真器求解下一状态。真实立方体抛掷实验中，32 次训练抛掷的模型达到与 256 次抛掷训练的端到端基线相当的位置精度和更好的旋转精度。",
+        "innovations": [
+          "光滑表示生成不连续运动｜学习距离与接触雅可比，通过互补条件、摩擦锥和最大耗散原则决定接触响应；法向雅可比由距离求导得到，使接触几何与速度映射保持一致。（§4.1）",
+          "观测一致性训练｜利用已知的真实下一状态，将各接触冲量作为隐变量；内层求解凸优化，外层更新几何或网络参数，避开对不连续仿真 rollout 求导。（§4.2，图 2）",
+          "结构与数据效率｜同一训练原则兼容低维多面体几何和叠加神经网络的 Deep 表示；实验同时评价长期位置、旋转误差和穿透程度。（§5–6）"
+        ],
+        "implementation": [
+          "1. 数据与监督｜输入状态转移 \\((x,u,x')\\)，其中 \\(x=(q,v)\\)；由 \\(F^{c,\\mathrm{data}}=M(q)(v'-v)-F^s(x,u)\\) 得到总广义接触冲量，无需逐接触力标签。惯性矩阵与非接触冲量在本文中已知。（式 9）",
+          "2. 候选接触｜立方体实验采用顶点到地面的接触近似；八个顶点分别对应候选接触，角、棱或面着地可由一个或多个顶点共同承担冲量。Polytope 学习物体系顶点位置与地面法向，Deep 再给几何函数叠加网络修正。（§5.2.1–5.2.2）",
+          "3. 损失与梯度｜\\(\\mathcal L(\\theta)=\\min_{\\lambda\\in\\mathcal K}(l_1+l_2+l_3+l_4)\\)：依次约束总冲量匹配、接触激活、非穿透和最大耗散；\\(\\mathcal K\\) 是非负法向冲量与摩擦锥约束。通过优化问题灵敏度分析计算参数梯度；凸性针对内层冲量变量，外层参数训练仍可非凸。（式 10–17）",
+          "4. 参数更新｜每条转移单独求解冲量，跨样本更新几何／网络参数；Deep 网络含两层 256 单元 tanh 隐藏层。使用 AdamW、学习率 5×10⁻⁴，加入法向与切向正交、法向位置雅可比单位长度正则。几何和表面方向从真实参数加标准差为原值 40% 的噪声初始化。（附录 A.2–A.3）",
+          "5. 预测与评价｜固定学到的参数，用 Stewart–Trinkle 接触时间步进求每步冲量，再由 \\(v'=v+M^{-1}(F^s+\\sum_iJ_i^\\top\\lambda_i)\\) 更新速度并积分构型。测试从真实初始状态自主 rollout，评价整条轨迹；这些指标与训练的物理一致性损失分开。（§5.1–5.2，附录 A.3）",
+          "6. 实验与对照｜10 cm 亚克力立方体落到木面，三个 148 Hz 相机跟踪位姿；750 次原始抛掷处理后保留 570 次，训练／验证／测试为 50%／30%／20%。端到端基线同样使用已知非接触动力学，直接学习总接触冲量。图 5 每点至少四个样本并报告 95% 置信区间；Polytope 平均穿透略低于物体宽度的 2%，基线超过 20%。（§5–6，图 5，附录 A.2）",
+          "7. 见解与边界｜几何表示、物理求解和可优化训练目标共同影响效果；本实验低维 Polytope 优于 Deep，几何先验与初始化也是数据效率的条件。方法假设刚体、准确的非接触动力学与近似非弹性／高采样率接触；多物体、弹性碰撞和闭环控制收益留待后续验证。（§4.1，§6–7）"
+        ]
+      },
+      "en": {
+        "title": "ContactNets: Learning Discontinuous Contact Dynamics with Smooth, Implicit Representations",
+        "authors": "Samuel Pfrommer, Mathew Halm, Michael Posa",
+        "institutions": "GRASP Laboratory, University of Pennsylvania",
+        "status": "Partially read: core method, main results, and relevant appendices checked; not reproduced",
+        "takeaway": "Learn smooth contact distances and Jacobians, then solve per-step impulses to update states; train the model through impulse optimization that explains observed transitions.",
+        "tags": [
+          "Contact Dynamics",
+          "System Identification",
+          "Signed Distance",
+          "Complementarity",
+          "Bilevel Optimization",
+          "Rigid Body",
+          "Friction"
+        ],
+        "mainContent": "Impacts and stick–slip transitions create discontinuous motion, while smooth networks directly fitting contact impulses can predict penetration and persistent drift. Given known inertia and contact-free dynamics, ContactNets learns signed distances and contact Jacobians, training with physically constrained impulses that explain observed transitions and using a contact simulator to predict subsequent states. On real cube tosses, models trained with 32 tosses achieve positional accuracy comparable to and rotational accuracy better than the end-to-end baseline trained with 256 tosses.",
+        "innovations": [
+          "Smooth representations generate discontinuous motion | Learn distances and contact Jacobians, then use complementarity, friction cones, and maximum dissipation to determine contact responses. Deriving normal Jacobians from distances keeps geometry consistent with contact velocity mappings. (§4.1)",
+          "Observation-consistency training | Use the observed next state and treat individual contact impulses as latent variables. Solve a convex inner problem and update geometry or network parameters in the outer loop, avoiding differentiation through discontinuous simulation rollouts. (§4.2, Fig. 2)",
+          "Structure and data efficiency | The training principle supports both low-dimensional polytope geometry and a Deep model with added neural corrections; experiments evaluate long-term position, rotation, and penetration. (§§5–6)"
+        ],
+        "implementation": [
+          "1. Data and supervision | Each sample is a transition \\((x,u,x')\\), with \\(x=(q,v)\\). Compute net generalized contact impulse as \\(F^{c,\\mathrm{data}}=M(q)(v'-v)-F^s(x,u)\\), without per-contact force labels. Inertia and non-contact impulses are known in this paper. (Eq. 9)",
+          "2. Candidate contacts | The cube experiment uses vertex-to-ground contact approximations. The eight vertices define candidates; one or several vertices can carry impulses during corner, edge, or face contact. Polytope learns body-frame vertex positions and the surface normal; Deep adds neural corrections to geometric functions. (§§5.2.1–5.2.2)",
+          "3. Loss and gradients | \\(\\mathcal L(\\theta)=\\min_{\\lambda\\in\\mathcal K}(l_1+l_2+l_3+l_4)\\) penalizes net-impulse mismatch, contact activation violations, penetration, and departures from maximum dissipation. \\(\\mathcal K\\) imposes nonnegative normal impulses and friction cones. Sensitivity analysis yields parameter gradients; convexity applies to inner impulse variables, while outer parameter learning can remain nonconvex. (Eqs. 10–17)",
+          "4. Parameter updates | Solve impulses separately for each transition and update shared geometry/network parameters. Deep uses two 256-unit tanh hidden layers. AdamW uses learning rate 5×10⁻⁴, with normal–tangent orthogonality and unit-norm position-Jacobian regularizers. Geometry and surface directions are initialized at ground-truth values plus noise with standard deviation 40% of those values. (Appendices A.2–A.3)",
+          "5. Prediction and evaluation | Freeze learned parameters and solve impulses using Stewart–Trinkle contact time stepping, update velocity with \\(v'=v+M^{-1}(F^s+\\sum_iJ_i^\\top\\lambda_i)\\), and integrate configuration. Test trajectories roll out autonomously from true initial states; trajectory metrics are separate from the physical-consistency training loss. (§§5.1–5.2, Appendix A.3)",
+          "6. Experiments and controls | A 10 cm acrylic cube lands on wood, with poses tracked by three 148 Hz cameras. Processing 750 raw tosses leaves 570, split 50%/30%/20% for training/validation/test. The end-to-end baseline also knows non-contact dynamics and directly learns net contact impulse. Figure 5 uses at least four samples per point with 95% confidence intervals; Polytope averages just below 2% of cube width in penetration, versus over 20% for the baseline. (§§5–6, Fig. 5, Appendix A.2)",
+          "7. Insights and scope | Geometry, physical solving, and an optimizable training objective jointly shape performance. Polytope outperforms Deep here, making geometric priors and initialization relevant to data efficiency. Assumptions include rigid bodies, accurate contact-free dynamics, and approximately inelastic or high-rate sampled contact; multi-object, elastic-impact, and closed-loop control benefits remain future directions. (§4.1, §§6–7)"
+        ]
+      }
     }
   ]
 }
