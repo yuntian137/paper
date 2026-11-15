@@ -7352,7 +7352,7 @@
         "authors": "Michael Psenka, Michael Rabbat, Aditi Krishnapriyan, Yann LeCun, Amir Bar",
         "institutions": "加利福尼亚大学伯克利分校；Meta FAIR；纽约大学",
         "status": "部分已读：问题设定、方法与主要结果已核对（未完整核查理论或复现代码）",
-        "takeaway": "固定已有世界模型，联合优化动作序列与虚拟状态，通过并行一致性更新、状态加噪和周期性完整 rollout 修正来搜索到达目标的计划。",
+        "takeaway": "固定世界模型，在并行阶段联合更新动作与虚拟状态并加噪，再周期性串行 rollout 校准状态、沿完整时间链反传更新动作。",
         "tags": [
           "GRASP",
           "Trajectory Optimization",
@@ -7361,7 +7361,7 @@
           "Stop Gradient",
           "Stochastic Planning"
         ],
-        "mainContent": "GRASP 研究视觉世界模型上的长时域目标规划，处理串行 rollout 的计算依赖、状态输入梯度敏感性与局部极小值。方法将中间状态设为独立变量，用软动力学一致性连接时间步，在主要并行更新中截断模型的状态输入梯度、加入逐步目标损失和状态噪声，再周期性用完整 rollout 梯度修正动作。作者在 PointMaze、Wall-Single 和 Push-T 等任务上报告长时域规划收益；规划输出为针对当前起点与目标优化的动作序列。",
+        "mainContent": "GRASP 研究视觉世界模型上的长时域目标规划，处理串行 rollout 的计算依赖、状态输入梯度敏感性与局部极小值。并行阶段将中间状态设为独立变量，同时计算各步模型预测，用一致性损失与逐步目标损失更新动作和虚拟状态，并对状态加噪；这一阶段截断模型对状态输入的梯度。周期性同步时，从起点串行 rollout 校准状态，再根据终点误差沿完整时间链反传更新动作，世界模型参数始终固定。作者在 PointMaze、Wall-Single 和 Push-T 等任务上报告长时域规划收益，输出针对当前起点与目标优化的动作序列。",
         "innovations": [
           "面向学习模型的梯度处理｜在已有 lifted-state／collocation 结构上，截断世界模型对状态输入的梯度，并用逐步目标损失给各步动作提供目标信号，降低利用模型脆弱状态方向的机会。（§3.1、§3.3，图 2–3，式 8–10）",
           "状态空间探索与完整 rollout 修正｜直接扰动虚拟状态以探索不同中间路径，再通过周期性完整梯度步骤修正动作，将并行探索与串行细化结合。（§3.2–3.4，算法 1）"
@@ -7369,11 +7369,12 @@
         "implementation": [
           "1. 输入输出｜输入初始观测、目标观测、已有世界模型和规划视域；编码后固定起点与目标，规划器返回动作序列。（§2，算法 1）",
           "2. 模型与更新对象｜主实验沿用 DINO-WM 框架及其训练配置，先训练世界模型；GRASP 规划期间固定模型参数，只优化当前动作和虚拟状态。附录 Push-T 配置冻结 DINOv2 编码器，训练预测器等组件；这与直接训练 actor policy 的流程不同。（§4.2，附录 C，表 7–8）",
-          "3. 并行与软约束｜中间状态独立存在，各时间步同时计算模型预测，并惩罚预测与下一虚拟状态的差异。有限次优化允许动力学残差，真实执行仍依赖动作 rollout 的效果。（§3.1，式 4）",
-          "4. 梯度与噪声｜主要并行更新保留动作输入梯度；虚拟状态通过前一转移的一致性误差更新，并叠加高斯噪声。截断状态梯度后的最终更新不属于严格的 Langevin 动力学。（§3.3，式 10–12，第 5 页）",
-          "5. 同步步骤｜周期性从起点完整 rollout，仅对动作做终点目标损失的梯度更新；此阶段恢复穿过时间链的反向传播，也使用模型对状态输入的导数。（§3.4，式 13–15）",
-          "6. 动作与时域｜DINO-WM 实验将 5 个环境动作堆叠为一次模型输入，预测 5 个环境步后的状态；二维环境动作对应 10 维模型动作输入。报告的 H=50 指 50 个环境步，对应 10 次串接模型评估。（§4.2，第 6 页）",
-          "7. 结果与成本｜表 1 的 Push-T H=50 中，500 次试验的成功率为 GRASP 43.4%、GD 37.6%、CEM 30.2%；成功试验的中位规划时间分别为 15.2、76.3、96.2 秒。成功按最长 30 分钟预算内曾找到成功计划计数；这些秒级时间不能作为高频实时控制证据。（§4.2–4.3，表 1，第 6–7 页）"
+          "3. 并行计算在哪里｜每轮开始时，所有虚拟状态和动作都已有数值，各步模型直接读取本轮保存的输入，可放入同一 batch 计算，无需等待前一步输出。一致性损失要求各步预测接近下一虚拟状态；多轮优化逐渐协调这条轨迹，有限次优化仍允许动力学残差。（§3.1，图 2，式 4）",
+          "4. 并行联合更新｜每轮更新动作和中间虚拟状态：动作梯度穿过当前步模型；虚拟状态通过前一转移损失的目标端接收梯度，靠近前一步预测，再叠加高斯噪声。仅截断虚拟状态作为模型输入时穿过模型的梯度路径，因此状态在两次同步之间持续变化。此时的状态更新不属于严格的 Langevin 动力学。（§3.3，式 8–12，算法 1 第 5–6 行）",
+          "5. 周期性同步｜用当前动作从起点串行 rollout，以连续预测结果重新设置状态，再根据终点误差沿完整时间链反传更新动作。同步中的状态由模型递推计算，梯度下降只更新动作；计算使用模型的状态输入导数与动作输入导数，世界模型权重保持固定。一次同步可包含多次 GD，每次按当前动作重新 rollout 后再反传。（§3.4，式 13–15，算法 1 第 7–8 行）",
+          "6. 同步时机｜按规划器内部优化轮数周期性触发。表 3 的 Push-T H=40 配置每 100 次随机并行更新执行一次同步，默认同步包含 25 次完整 rollout 的动作 GD 更新；这些计数属于规划计算，与环境动作执行步数分开。（§3.4，表 3）",
+          "7. 动作与时域｜DINO-WM 实验将 5 个环境动作堆叠为一次模型输入，预测 5 个环境步后的状态；二维环境动作对应 10 维模型动作输入。报告的 H=50 指 50 个环境步，对应 10 次串接模型评估。（§4.2，第 6 页）",
+          "8. 结果与成本｜表 1 的 Push-T H=50 中，500 次试验的成功率为 GRASP 43.4%、GD 37.6%、CEM 30.2%；成功试验的中位规划时间分别为 15.2、76.3、96.2 秒。成功按最长 30 分钟预算内曾找到成功计划计数；这些秒级时间不能作为高频实时控制证据。（§4.2–4.3，表 1，第 6–7 页）"
         ]
       },
       "en": {
@@ -7381,7 +7382,7 @@
         "authors": "Michael Psenka, Michael Rabbat, Aditi Krishnapriyan, Yann LeCun, Amir Bar",
         "institutions": "University of California, Berkeley; Meta FAIR; New York University",
         "status": "Partially read: problem, method, and main results checked (theory not fully checked; code not reproduced)",
-        "takeaway": "Keep an existing world model fixed and jointly optimize actions and virtual states using parallel consistency updates, state noise, and periodic full-rollout refinement to find goal-reaching plans.",
+        "takeaway": "Keep the world model fixed, jointly update actions and noisy virtual states in a parallel phase, then periodically use serial rollouts to recalibrate states and backpropagate through the full time chain to update actions.",
         "tags": [
           "GRASP",
           "Trajectory Optimization",
@@ -7390,7 +7391,7 @@
           "Stop Gradient",
           "Stochastic Planning"
         ],
-        "mainContent": "GRASP studies long-horizon goal planning with visual world models, addressing serial rollout dependencies, sensitive state-input gradients, and local minima. It treats intermediate states as independent variables linked by soft dynamics consistency; its main parallel phase cuts state-input gradients and adds dense goal losses and state noise, followed by periodic full-rollout gradient refinement of actions. The authors report long-horizon benefits on tasks including PointMaze, Wall-Single, and Push-T; the output is an action sequence optimized for the current start and goal.",
+        "mainContent": "GRASP studies long-horizon goal planning with visual world models, addressing serial rollout dependencies, sensitive state-input gradients, and local minima. The parallel phase treats intermediate states as independent variables, evaluates model predictions across time simultaneously, updates actions and virtual states using consistency and dense goal losses, and adds state noise; model state-input gradients are cut in this phase. Periodic synchronization rolls out serially from the start to recalibrate states, then backpropagates terminal error through the full time chain to update actions; model weights remain fixed throughout. The authors report long-horizon benefits on tasks including PointMaze, Wall-Single, and Push-T, returning an action sequence optimized for the current start and goal.",
         "innovations": [
           "Gradient handling for learned models | Build on lifted-state/collocation structure, cut world-model state-input gradients, and give each action a direct goal signal through dense goal losses, reducing opportunities to exploit brittle state directions. (§3.1, §3.3, Figs. 2–3, Eqs. 8–10)",
           "State exploration and full-rollout refinement | Perturb virtual states to explore intermediate paths, then periodically refine actions with full gradients, combining parallel exploration and serial refinement. (§§3.2–3.4, Algorithm 1)"
@@ -7398,11 +7399,12 @@
         "implementation": [
           "1. Inputs and outputs | Take initial and goal observations, an existing world model, and a planning horizon. Encode the observations, fix start and goal, and return an optimized action sequence. (§2, Algorithm 1)",
           "2. Model and optimized variables | Main experiments follow the DINO-WM framework and training configuration to train the model before planning. GRASP holds model parameters fixed and optimizes only the current actions and virtual states. The Push-T configuration freezes the DINOv2 encoder while training the predictor and other components; this differs from actor-policy training. (§4.2, Appendix C, Tables 7–8)",
-          "3. Parallelism and soft constraints | Independent intermediate states permit parallel model evaluations across time; penalize each prediction against the next virtual state. Finite optimization allows dynamics residuals, and execution still depends on the resulting action rollout. (§3.1, Eq. 4)",
-          "4. Gradients and noise | Main parallel updates retain action-input gradients. Virtual states follow the preceding transition consistency error plus Gaussian noise. After state-gradient cuts, the resulting updates are not strict Langevin dynamics. (§3.3, Eqs. 10–12, p. 5)",
-          "5. Synchronization | Periodically roll out from the start and update only actions using terminal goal loss. This phase restores backpropagation through time and uses state-input derivatives of the model. (§3.4, Eqs. 13–15)",
-          "6. Actions and horizon | DINO-WM experiments stack five environment actions into one model input and predict the state five environment steps ahead. Two-dimensional environment actions become ten-dimensional model inputs. Reported H=50 means 50 environment steps and ten sequential model evaluations. (§4.2, p. 6)",
-          "7. Results and cost | Table 1 reports Push-T H=50 success over 500 trials: GRASP 43.4%, GD 37.6%, and CEM 30.2%. Median planning times among successful trials are 15.2, 76.3, and 96.2 seconds. Success is best-by within a maximum 30-minute budget; these second-scale times do not establish high-frequency real-time control. (§§4.2–4.3, Table 1, pp. 6–7)"
+          "3. Where computation is parallel | All virtual states and actions already have values at the start of each iteration. Model calls read these stored inputs and can share a batch without waiting for earlier outputs. Consistency losses match predictions to the next virtual states, and successive optimization iterations coordinate the trajectory; finite optimization still permits dynamics residuals. (§3.1, Fig. 2, Eq. 4)",
+          "4. Parallel joint updates | Every iteration updates actions and intermediate virtual states. Action gradients pass through the current model call; virtual states receive gradients as targets of the preceding transition loss, move toward preceding predictions, and receive Gaussian noise. Only their paths through model state inputs are cut, so states keep changing between synchronization phases. These state updates are not strict Langevin dynamics. (§3.3, Eqs. 8–12, Algorithm 1 lines 5–6)",
+          "5. Periodic synchronization | Serially roll out current actions from the start, reset states to the consecutive predictions, and backpropagate terminal error through the full time chain to update actions. States in this phase are computed recursively, and gradient descent updates only actions. Both model state-input and action-input derivatives are used, while model weights remain fixed. One synchronization phase can contain multiple GD updates, each recomputing the rollout with current actions before backpropagation. (§3.4, Eqs. 13–15, Algorithm 1 lines 7–8)",
+          "6. Synchronization schedule | Trigger synchronization periodically by internal planning iterations. The Push-T H=40 configuration in Table 3 synchronizes every 100 stochastic parallel updates and uses 25 full-rollout action GD updates by default. These counts describe planning computation and are separate from executed environment steps. (§3.4, Table 3)",
+          "7. Actions and horizon | DINO-WM experiments stack five environment actions into one model input and predict the state five environment steps ahead. Two-dimensional environment actions become ten-dimensional model inputs. Reported H=50 means 50 environment steps and ten sequential model evaluations. (§4.2, p. 6)",
+          "8. Results and cost | Table 1 reports Push-T H=50 success over 500 trials: GRASP 43.4%, GD 37.6%, and CEM 30.2%. Median planning times among successful trials are 15.2, 76.3, and 96.2 seconds. Success is best-by within a maximum 30-minute budget; these second-scale times do not establish high-frequency real-time control. (§§4.2–4.3, Table 1, pp. 6–7)"
         ]
       }
     },
@@ -7554,6 +7556,79 @@
           "Task design | Cyclic signals guide pushing and gliding in training; deployment can adjust timing or generate phases from velocity. Learned dynamics modes and supplied motion-phase guidance serve different roles. Three critics cover gliding, pushing, and sim-to-real regularization rewards. (§IV-B, Fig. 5)",
           "Implementation check | The main text specifies a Transformer encoder, whereas Table V lists a 1-D CNN with 20 history steps; code verification remains pending. The mode upper bound is 3, without requiring all modes to be used. (§IV-A; §V-A; Appendix C, Table V)",
           "Evidence and limits | Dynamics mode-count experiments use 3 training seeds; training-return comparisons use 4. Mode visualization supports physical correspondence, but t-SNE separation alone does not establish a causal mechanism. Prediction accuracy remains insufficient for direct MPC use. (Figs. 7–10; §VI)"
+        ]
+      }
+    },
+    {
+      "id": "neural-event-ode",
+      "aliases": [
+        "Neural Event ODE",
+        "Neural Event Functions"
+      ],
+      "categories": [
+        "numerical-solvers"
+      ],
+      "pdf": "https://arxiv.org/pdf/2011.03902v4",
+      "project": "",
+      "arxiv": "https://arxiv.org/abs/2011.03902",
+      "year": "2020",
+      "venue": "ICLR 2021",
+      "zh": {
+        "title": "Learning Neural Event Functions for Ordinary Differential Equations",
+        "authors": "Ricky T. Q. Chen, Brandon Amos, Maximilian Nickel",
+        "institutions": "University of Toronto; Vector Institute; Facebook AI Research",
+        "status": "正文与实验附录已整理（arXiv v4；未复现代码）",
+        "takeaway": "用事件函数学习何时停止连续积分，在事件处瞬时更新状态，再继续求解；通过事件时间的隐式梯度联合训练动力学、触发条件与更新规则。",
+        "tags": [
+          "Neural ODE",
+          "Hybrid Dynamics",
+          "Differentiable Event Handling",
+          "Implicit Differentiation",
+          "Temporal Point Process",
+          "Discrete Control"
+        ],
+        "mainContent": "连续时间系统中的碰撞和模式切换包含瞬时变化，普通 Neural ODE 的连续轨迹难以直接表达这些过程。Neural Event ODE 将连续动力学、零点触发的事件函数和瞬时状态更新串联，并用隐函数定理对事件时间求导。实验展示了切换动力学恢复、碰撞建模及时间点过程的仿真式训练；碰撞任务的主要优势是减少函数评估次数，预测误差与普通 Neural ODE 接近。",
+        "innovations": [
+          "可学习事件机制｜以事件函数的首次零点定义终止时间，将 ODE 事件处理作为可微建模组件；连续动力学、事件函数和瞬时更新均可含可学习参数。（§1、§3.1，算法 1）",
+          "事件时间反传｜用隐函数定理获得事件时间对输入和参数的导数，再把损失梯度整理为可由一次伴随 ODE 求解计算的向量—Jacobian 乘积。（§3，式 9–12）",
+          "点过程重参数化｜将累计条件强度达到指数噪声阈值的时刻作为采样事件，使梯度能够穿过事件时间，用于 reverse KL 训练与连续时间离散控制。（§5，式 13–16）"
+        ],
+        "implementation": [
+          "模型流程｜连续积分至事件函数为零，调用瞬时更新函数，再从更新后的状态继续积分，直到总时间范围结束。弹球例子在落地时保持位置连续、瞬时改变速度；切换系统则更新动力学混合权重。（§1.1、§3.1、§4.1）",
+          "求导接口｜把事件参数扩充为导数为零的状态变量，可统一计算其梯度；方法在 PyTorch 的 torchdiffeq 中实现。隐式梯度公式含沿轨迹的事件函数时间导数的倒数，局部求导要求该导数非零。（§3，式 9–12）",
+          "切换系统｜100 条短训练轨迹，验证和测试各 25 条较长轨迹；训练时间长度 4，测试长度 12。表 1 测试 MSE：LSTM 0.261 ± 0.078，Neural ODE 0.157 ± 0.005，Neural Event ODE 0.093 ± 0.037。（§4.1、附录 A）",
+          "碰撞实验｜用 Pymunk/Chipmunk 生成双球轨迹，1000 个训练初始位置，验证与测试各 25 个；以 25 步子序列训练。100 步测试 MSE 为 0.19 ± 0.02，对照 Neural ODE 为 0.18 ± 0.02；对应动力学 NFE 约为 350 对 7820，事件函数另需约 360 次评估。NFE 不等于同倍数的实际运行时间提升。（§4.2，表 2、附录 A）",
+          "点过程与控制｜采样单位指数分布阈值并积分正条件强度至阈值；多维点过程的不同事件索引对应不同离散控制值。HIV 仿真使用 4 个控制状态，Hodgkin–Huxley 仿真使用开关电流；图 4 的重参数化方法优于 REINFORCE，控制实验运行 3 个种子，并测试固定阈值的确定性策略。（§5、附录 A）",
+          "局限与使用条件｜事件始终不触发时，事件参数收不到梯度；批内轨迹的事件时刻不同会增加积分重启开销；事件数量改变可能使目标不连续。碰撞预测的早期误差会影响长序列轨迹，控制结果来自可微仿真环境。（§4.2、§5–6）"
+        ]
+      },
+      "en": {
+        "title": "Learning Neural Event Functions for Ordinary Differential Equations",
+        "authors": "Ricky T. Q. Chen, Brandon Amos, Maximilian Nickel",
+        "institutions": "University of Toronto; Vector Institute; Facebook AI Research",
+        "status": "Main text and experimental appendix summarized (arXiv v4; code not reproduced)",
+        "takeaway": "Learn when continuous integration stops with an event function, update the state instantaneously, and resume solving; implicit event-time gradients jointly train dynamics, triggers, and updates.",
+        "tags": [
+          "Neural ODE",
+          "Hybrid Dynamics",
+          "Differentiable Event Handling",
+          "Implicit Differentiation",
+          "Temporal Point Process",
+          "Discrete Control"
+        ],
+        "mainContent": "Collisions and mode switches introduce instantaneous changes that continuous Neural ODE trajectories cannot directly represent. Neural Event ODE chains continuous dynamics, zero-crossing event functions, and instantaneous updates, using implicit differentiation through event times. Experiments cover switching dynamics, collisions, and simulation-based temporal point process training; collision prediction matches ordinary Neural ODE accuracy while requiring fewer function evaluations.",
+        "innovations": [
+          "Learnable events | Define termination by the first event-function root and expose event handling as a differentiable primitive; dynamics, event functions, and instantaneous updates can all have learnable parameters. (§1 and §3.1, Algorithm 1)",
+          "Event-time backpropagation | Apply the implicit function theorem and reorganize the loss gradient into a vector–Jacobian product computed with one adjoint ODE solve. (§3, Eqs. 9–12)",
+          "Point process reparameterization | Sample events by integrating conditional intensity to exponential-noise thresholds, enabling event-time gradients for reverse-KL training and discrete control in continuous time. (§5, Eqs. 13–16)"
+        ],
+        "implementation": [
+          "Model loop | Integrate to an event-function zero, apply an instantaneous update, and resume integration until the final horizon. Bouncing balls retain continuous position but change velocity instantly; switching systems update dynamics mixture weights. (§1.1, §3.1, and §4.1)",
+          "Gradient interface | Augment the state with constant event parameters to obtain their gradients through state sensitivities. Implemented in PyTorch/torchdiffeq. The implicit formula divides by the event function derivative along the trajectory, requiring a nonzero derivative for local differentiation. (§3, Eqs. 9–12)",
+          "Switching dynamics | Train on 100 short trajectories; validation and test each contain 25 longer trajectories. Training duration is 4 and test duration is 12. Table 1 test MSE: LSTM 0.261 ± 0.078, Neural ODE 0.157 ± 0.005, Neural Event ODE 0.093 ± 0.037. (§4.1 and Appendix A)",
+          "Collisions | Generate two-ball trajectories with Pymunk/Chipmunk using 1000 training initial positions and 25 each for validation/test; train on 25-step subsequences. At 100 steps, MSE is 0.19 ± 0.02 versus 0.18 ± 0.02 for Neural ODE. Dynamics NFE is about 350 versus 7820, with about 360 additional event-function evaluations. NFE ratios are not measured wall-clock speedups. (§4.2, Table 2, and Appendix A)",
+          "Point processes and control | Draw unit-exponential thresholds and integrate positive conditional intensities until they are reached. Multivariate event indices select discrete control values. HIV simulation uses 4 control states; Hodgkin–Huxley simulation uses on/off current. Figure 4 favors reparameterization over REINFORCE; control experiments use 3 seeds and also evaluate fixed-threshold deterministic policies. (§5 and Appendix A)",
+          "Limits | Events that never trigger receive no event-parameter gradient; asynchronous minibatch events cause integration restarts; changes in event count can make objectives discontinuous. Early collision errors affect long trajectories, and control results use differentiable simulated environments. (§4.2 and §5–6)"
         ]
       }
     },
