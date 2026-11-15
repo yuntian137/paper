@@ -249,5 +249,13 @@
       "takeaway": "Learn contact surfaces and directions, then solve physically constrained impulses to update the next state; train by recovering net impulses from observed transitions and fitting a contact model that explains them.",
       "note": "Three distinctions clarified in reading: candidates are cube vertices against the ground; geometric touching can carry zero impulse; training explains observed transitions, while evaluation rolls out autonomously. A useful design lesson is to develop smooth geometry, physical solving, and the training objective together, while accounting for known non-contact dynamics, geometric priors, and initialization."
     }
+  },
+  "more-multi-physics-robotic-world-models": {
+    "zh": {
+      "note": "本次讨论把 MoRE 理解为“历史分类器控制的切换动力学模型”：共享编码器后，带类别监督的硬路由每步选一个预设专家，再预测连续点云运动。试探交互用来获得运动响应，推、碰等也可提供历史；路由结果是 one-hot 专家选择，部署时网络参数固定。\n\n状态机是帮助理解的类比。论文每步可重新路由，但没有显式的模式转移图，也没有单独学习接触、粘着、滑动、脱离等状态的转移规律；刚体/软体偏向物体属性，抓取/非抓取偏向交互状态。把离散模式转移与模式内连续演化进一步分开建模，是本次讨论提出的延伸思路。"
+    },
+    "en": {
+      "note": "Our discussion interprets MoRE as switched dynamics controlled by a history-based classifier: after shared encoding, class-supervised hard routing selects one predefined expert per step to predict continuous point-cloud motion. Probing supplies motion responses; pushing or other brief interactions can provide history. Routing is one-hot expert selection, with network parameters fixed during deployment.\n\nA state-machine analogy helps interpretation. The paper can reroute at each step, but provides no explicit mode-transition graph or separately learned transitions among contact, sticking, sliding, and separation. Rigid/deformable mainly describes object properties, whereas prehensile/non-prehensile describes interaction modes. Separately modeling discrete mode transitions and continuous within-mode evolution is an extension raised in this discussion."
+    }
   }
 }

@@ -7976,6 +7976,79 @@
           "7. Insights and scope | Geometry, physical solving, and an optimizable training objective jointly shape performance. Polytope outperforms Deep here, making geometric priors and initialization relevant to data efficiency. Assumptions include rigid bodies, accurate contact-free dynamics, and approximately inelastic or high-rate sampled contact; multi-object, elastic-impact, and closed-loop control benefits remain future directions. (§4.1, §§6–7)"
         ]
       }
+    },
+    {
+      "id": "more-multi-physics-robotic-world-models",
+      "aliases": [
+        "MoRE"
+      ],
+      "categories": [
+        "manipulation",
+        "vla-world-model"
+      ],
+      "pdf": "https://alwaysleepy.github.io/MoRE-WM-site/assets/MoRE_CoRL2026.pdf",
+      "project": "https://alwaysleepy.github.io/MoRE-WM-site/",
+      "arxiv": "",
+      "year": "2026",
+      "venue": "CoRL 2026 Spotlight",
+      "zh": {
+        "title": "MoRE: Mixture-of-Experts for Multi-Physics Robotic World Models",
+        "authors": "Ziyu Zhu, Shaowei Liu, Albert J. Zhai, Henry Che, Wei-Chiu Ma, Shenlong Wang",
+        "institutions": "University of Illinois Urbana-Champaign；Georgia Institute of Technology；Cornell University",
+        "status": "部分已读：快速核对方法、主要结果与关键附录",
+        "takeaway": "共享几何与运动编码器，从交互历史判断物理类别，每步硬选择一个具有对应运动表达的专家来预测物体点云。",
+        "tags": [
+          "MoE",
+          "3D World Model",
+          "Hard Routing",
+          "Rigid / Deformable",
+          "MPC"
+        ],
+        "mainContent": "MoRE 面向刚体、软体以及抓取和非抓取交互中的异质动力学，用统一模型预测机器人动作条件下的物体点云运动。它共享几何与运动编码器，并根据历史交互，在刚体非抓取、软体非抓取、软体抓取三个专家中逐步选择一个；刚体头输出整体 SE(3) 变换，软体头输出逐点位移。混合仿真与真实数据训练、self-rollout 和物理专家分工改善了预测结果，并在推箱子与软玩具姿态匹配真机 MPC 任务上改善了控制表现。",
+        "innovations": [
+          "按物理类别和交互方式设置三个运动专家，共享表征并保留不同输出约束；刚体专家用整体 SE(3) 变换从结构上保持形状，两个软体专家分别学习非抓取和抓取交互的逐点位移。",
+          "使用带类别监督的 one-hot 硬路由，每个 rollout 步重新选择一个专家，使模型能随交互历史切换预测分支。",
+          "采用 self-rollout 训练，把预测点云继续作为输入并在整个短窗口计算损失，减轻训练与自回归推理之间的分布偏移。"
+        ],
+        "implementation": [
+          "输入当前物体点云、历史物体与工具点云及下一步工具动作；机器人底层控制通过正运动学转换成完整工具点云，动作条件保留工具几何。",
+          "采用 8 步历史和 3 步训练预测窗口，工具用 100 个点表示；冻结的 Uni3D 提取当前物体几何特征，Transformer 编码运动历史，再通过 cross-attention 融合，供路由和专家解码使用。（§4.1、附录 A.2）",
+          "训练数据约为 2 万条 Isaac Sim 仿真交互和 7000 条真实交互；先在仿真数据上预热路由器与专家，再用仿真和真实数据联合微调，混合采样比例为 1:1。（§4.1、附录 A.1）",
+          "训练损失包含点云重建项和路由交叉熵；self-rollout 回灌的预测停止梯度。推理时自回归更新历史，路由是专家选择，不涉及现场更新模型参数。",
+          "MPC 先用短暂随机交互初始化运动历史，再对候选工具动作进行模型 rollout，以预测终点与目标点云的 Chamfer Distance 评分，执行所选动作后重新观察和规划。（§3.5、附录 A.3）",
+          "结果核对｜DROID 上 PointWorld → MoRE 的 RMSE：刚体非抓取 0.031→0.023，软体非抓取 0.028→0.014，软体抓取 0.029→0.021；仅评估被操作物体的运动点，训练已包含 DROID。近似匹配容量的消融支持显式专家、硬路由和 self-rollout 的作用。（表 3–4、§4.3–4.4）",
+          "边界与成本｜当前聚焦单个被操作物体，不处理同时发生的多物体耦合；不显式估计质量、摩擦、弹性等细粒度参数。真机点云使用四台 D455 融合及 SAM3 分割；20 FPS 指模型推理速度。（§5、附录 A.3）"
+        ]
+      },
+      "en": {
+        "title": "MoRE: Mixture-of-Experts for Multi-Physics Robotic World Models",
+        "authors": "Ziyu Zhu, Shaowei Liu, Albert J. Zhai, Henry Che, Wei-Chiu Ma, Shenlong Wang",
+        "institutions": "University of Illinois Urbana-Champaign; Georgia Institute of Technology; Cornell University",
+        "status": "Partially read: method, main results, and key appendix sections checked in a quick read",
+        "takeaway": "Share geometry and motion encoders, infer the physics regime from interaction history, and hard-select one expert with a suitable motion representation at each step to predict object point clouds.",
+        "tags": [
+          "MoE",
+          "3D World Model",
+          "Hard Routing",
+          "Rigid / Deformable",
+          "MPC"
+        ],
+        "mainContent": "MoRE predicts action-conditioned object point-cloud dynamics across heterogeneous rigid, deformable, prehensile, and non-prehensile interactions with one model. Shared geometry and motion encoders feed a stepwise choice among rigid non-prehensile, deformable non-prehensile, and deformable prehensile experts; the rigid head predicts a global SE(3) transform, while deformable heads predict per-point displacements. Mixed simulation and real-world training, self-rollout, and specialized experts improve prediction, with stronger real-world MPC results on box pushing and soft-toy pose matching.",
+        "innovations": [
+          "Three motion experts are organized by physical regime and interaction type, sharing representations while retaining distinct output constraints: global SE(3) warping preserves rigid shape, and two deformable experts learn per-point motion for non-prehensile and prehensile interactions separately.",
+          "Class-supervised one-hot hard routing selects one expert again at each rollout step, allowing the prediction branch to change with interaction history.",
+          "Self-rollout training feeds predicted point clouds back as inputs and computes losses over the short rollout window to reduce the distribution shift between training and autoregressive inference."
+        ],
+        "implementation": [
+          "Inputs include the current object point cloud, object and tool histories, and the next tool action. Low-level robot controls are converted through forward kinematics into full tool point clouds, retaining tool geometry as the action condition.",
+          "The model uses 8 history steps and a 3-step training prediction window, with 100 tool points. Frozen Uni3D extracts current-object geometry, a Transformer encodes motion history, and cross-attention fuses the features for routing and expert decoding. (§4.1, Appendix A.2)",
+          "Training uses approximately 20K Isaac Sim interaction episodes and 7K real-world episodes. The router and experts are warmed up on simulation data before joint fine-tuning with a 1:1 mixture of simulation and real data. (§4.1, Appendix A.1)",
+          "The loss combines point-cloud reconstruction and routing cross-entropy; predictions fed back during self-rollout are gradient-detached. Inference updates history autoregressively; routing selects an expert without updating model parameters on site.",
+          "MPC initializes motion history with short random interactions, rolls out candidate tool actions, scores predicted endpoints by Chamfer distance to the goal point cloud, and observes and replans after executing the selected action. (§3.5, Appendix A.3)",
+          "Checked results | PointWorld → MoRE RMSE on DROID is 0.031→0.023 for rigid non-prehensile, 0.028→0.014 for deformable non-prehensile, and 0.029→0.021 for deformable prehensile interactions. Evaluation covers moving points of the manipulated object, and training includes DROID. Approximately capacity-matched ablations support explicit experts, hard routing, and self-rollout. (Tables 3–4, §§4.3–4.4)",
+          "Scope and cost | The model focuses on one manipulated object and does not handle simultaneous coupled multi-object interactions or explicitly estimate fine-grained mass, friction, or elasticity. Real-world point clouds use four fused D455 cameras with SAM3 segmentation; 20 FPS refers to model inference. (§5, Appendix A.3)"
+        ]
+      }
     }
   ]
 }
