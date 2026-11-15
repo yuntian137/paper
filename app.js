@@ -170,6 +170,7 @@ const categories = [
   { id: "benchmark-dataset", label: { zh: "Benchmark / Dataset", en: "Benchmark / Dataset" } },
   { id: "numerical-solvers", label: { zh: "数值求解 / 科学机器学习", en: "Numerical Solvers / Scientific ML" }, description: { zh: "PDE 离散系统、迭代求解、预条件与神经算子，关注数值精度、收敛效率及学习模块与传统算法的结合。", en: "Discretized PDE systems, iterative solvers, preconditioning, and neural operators, focusing on numerical accuracy, convergence, and learned components within classical algorithms." } },
   { id: "llm-inference", label: { zh: "大模型 / 推理加速", en: "LLMs / Inference Acceleration" }, description: { zh: "大语言模型与推理模型的高效推理，涵盖稀疏注意力、KV cache、解码优化与计算开销。", en: "Efficient inference for language and reasoning models, including sparse attention, KV caches, decoding optimizations, and computational cost." } },
+  {"id": "temporal-modeling", "label": {"zh": "事件序列 / 时间建模", "en": "Event Sequences / Temporal Modeling"}, "description": {"zh": "时间点过程、不规则事件序列与等待时间分布，关注条件密度、事件预测与序列生成。", "en": "Temporal point processes, irregular event sequences, and waiting-time distributions, focusing on conditional densities, event prediction, and sequence generation."}},
 ];
 
 const papers = [

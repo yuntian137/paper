@@ -7742,6 +7742,84 @@
           "16. Candidates across search iterations | At each planning call, encode the current actual observation and alternate actor actions with latent dynamics to generate policy sequences before the MPPI loop. Keep these action sequences fixed throughout that call and reuse them in scoring; resample Gaussian candidates every iteration from the latest μ and σ. Both sources enter the same elite selection. Selected policy candidates also contribute return-weighted actions to Gaussian means and standard deviations, guiding subsequent samples. All network weights remain fixed, although sampled terminal actions or Q subsets can change scores of a fixed sequence. After actual execution and a new observation, regenerate policy sequences from the new latent start; shift the previous mean for warm starting and reinitialize standard deviations. (Official _plan, _estimate_value, and WorldModel.Q)"
         ]
       }
+    },
+    {
+      "id": "intensity-free-learning-temporal-point-processes",
+      "aliases": [
+        "Intensity-Free TPP",
+        "IFL-TPP",
+        "LogNormMix"
+      ],
+      "categories": [
+        "temporal-modeling"
+      ],
+      "pdf": "https://arxiv.org/pdf/1909.12127",
+      "project": "https://github.com/shchur/ifl-tpp",
+      "arxiv": "https://arxiv.org/abs/1909.12127",
+      "year": "2020",
+      "venue": "ICLR 2020",
+      "zh": {
+        "title": "Intensity-Free Learning of Temporal Point Processes",
+        "authors": "Oleksandr Shchur, Marin Biloš, Stephan Günnemann",
+        "institutions": "慕尼黑工业大学",
+        "status": "部分已读：问题、方法、连续时间、样本结构与梯度路径已理清；理论和实验尚未完整精读",
+        "takeaway": "RNN 编码既往事件，用对数正态混合直接预测下一事件的连续等待时间分布，使似然、均值与采样都容易计算。",
+        "tags": [
+          "Temporal Point Process",
+          "Conditional Density Estimation",
+          "LogNormMix",
+          "Mixture Density Network",
+          "Normalizing Flow",
+          "RNN",
+          "Continuous Event Time"
+        ],
+        "mainContent": "不规则事件序列需要根据历史预测下一事件何时发生；简单强度模型限制分布形状，复杂强度又可能增加积分与采样成本。本文把时间点过程学习转为条件密度估计，由 RNN 历史表示生成 normalizing flow 或对数正态混合的参数。LogNormMix 能表达复杂等待时间分布，并直接计算似然、显式均值与无需求根的采样；事件时间预测实验显示其测试负对数似然具有竞争力。",
+        "innovations": [
+          "建模视角｜直接学习条件等待时间密度，将神经密度估计工具接入时间点过程；仍可通过密度与生存函数恢复条件强度。（§2–3、§3.4、附录 A）",
+          "对数正态混合｜用多个正值分量表达多峰和不同尺度，同时保留显式矩计算与直接采样；本文 DSFlow、SOSFlow 的生成方向需要数值求逆。（§3.1–3.2）",
+          "条件信息与生成用途｜拼接历史表示、可选元数据与可学习序列向量，并展示事件缺失补全和序列表示学习。（§3.3、§5.3–5.5）"
+        ],
+        "implementation": [
+          "1. 数据与张量｜原始记录是事件时间序列，转换为正值间隔 \\(\\tau_i=t_i-t_{i-1}\\)。例如时间 [1,3,8,9] 产生间隔 [2,5,1]；示意训练输入 [2,5]、目标 [5,1]，RNN 各位置只读取已有前缀。批量输入可组织为 [B,T,1]，T 按事件位置计，相邻位置的物理时间不必相等。（§2、附录 D.1；数组为阅读示例）",
+          "2. 条件编码｜RNN 读取取对数并中心化的历史间隔，输出 \\(h_i\\)；可选元数据 \\(y_i\\) 和序列向量 \\(e_j\\) 拼接为条件向量。主时间预测实验只用历史表示；带标记实验另加入事件类型输入与预测损失。（§3.3、§5.1–5.2、附录 D.1）",
+          "3. 分布输出｜仿射头输出混合权重 logits、位置和 log-scale；softmax 使权重和为 1，指数变换使尺度为正。\\(\\mu_k,s_k\\) 描述 log 等待时间空间，输出的是每个历史条件下的一维连续密度。（式 2–3）",
+          "4. 似然与梯度｜最小化 \\(-\\sum_i\\log p_\\theta(\\tau_i\\mid c_i)\\)。使用真实目标间隔评价全部混合分量的加权密度，精确边缘化离散分量变量，无需采样；梯度经过分布头和展开的 RNN，可选序列向量也被更新。（§2–3、附录 D.1）",
+          "5. 预测与生成｜均值为 \\(\\sum_k w_k\\exp(\\mu_k+s_k^2/2)\\)；生成时先抽分量，再令 \\(\\tau=\\exp(\\mu_k+s_k\\epsilon)\\)，其中 \\(\\epsilon\\sim\\mathcal N(0,1)\\)。需要对生成结果反传时，离散选择的权重梯度另用 Straight-Through Gumbel 估计，该估计有偏；普通似然训练无需此技巧。（§3.2、附录 D.6）",
+          "6. 理论与证据｜通用逼近结果描述足够多分量在紧集上逼近连续密度的能力，条件建模还依赖历史编码；它不给固定模型的优化或泛化保证。主要时间预测对比共用 RNN 流程，在六个真实数据集上报告测试 NLL，并平均十次划分；密度预测质量与时间点预测误差分别判断。（§3.4、§5.1、附录 D）",
+          "7. 研究启发｜可将正值低维分布头用于事件到达或技能完成时间预测；主动选择技能及持续时间还需任务目标与控制学习。这些机器人用途属于阅读迁移设想，原文未验证；事件可能永远不发生时，还需补充失败或不再发生的概率模型。"
+        ]
+      },
+      "en": {
+        "title": "Intensity-Free Learning of Temporal Point Processes",
+        "authors": "Oleksandr Shchur, Marin Biloš, Stephan Günnemann",
+        "institutions": "Technical University of Munich",
+        "status": "Partially read: problem, method, continuous time, sample structure, and gradient paths clarified; theory and experiments not fully reviewed",
+        "takeaway": "Encode event history with an RNN and directly predict continuous waiting times with a log-normal mixture, making likelihoods, means, and sampling easy to compute.",
+        "tags": [
+          "Temporal Point Process",
+          "Conditional Density Estimation",
+          "LogNormMix",
+          "Mixture Density Network",
+          "Normalizing Flow",
+          "RNN",
+          "Continuous Event Time"
+        ],
+        "mainContent": "Irregular event sequences require predicting the next event time from history; simple intensity models restrict distribution shapes, while complex intensities can increase integration and sampling costs. The paper treats temporal point process learning as conditional density estimation, generating normalizing-flow or log-normal-mixture parameters from an RNN history representation. LogNormMix expresses complex waiting-time distributions with directly evaluated likelihoods, explicit means, and sampling without root finding, achieving competitive test negative log-likelihoods in event-time experiments.",
+        "innovations": [
+          "Modeling viewpoint | Directly learn conditional waiting-time densities, connecting neural density estimation with temporal point processes; conditional intensities remain recoverable from densities and survival functions. (§§2–3, §3.4, Appendix A)",
+          "Log-normal mixture | Multiple positive components express multimodality and different scales while retaining explicit moments and direct sampling; the paper’s DSFlow and SOSFlow require numerical inversion for generation. (§§3.1–3.2)",
+          "Conditions and generative uses | Concatenate history, optional metadata, and learned sequence embeddings, with demonstrations in missing-event imputation and sequence representation learning. (§3.3, §§5.3–5.5)"
+        ],
+        "implementation": [
+          "1. Data and tensors | Convert event timestamps to positive intervals \\(\\tau_i=t_i-t_{i-1}\\). For example, [1,3,8,9] yields [2,5,1]; illustrative inputs [2,5] predict targets [5,1], with each RNN position reading only its prefix. Batch inputs can have shape [B,T,1]; T indexes events, whose physical spacings need not be equal. (§2, Appendix D.1; arrays are reading examples)",
+          "2. Context encoding | Feed log-transformed, centered past intervals to an RNN to obtain \\(h_i\\), optionally concatenating metadata \\(y_i\\) and learned sequence embeddings \\(e_j\\). Main event-time prediction uses history only; marked experiments add event-type inputs and prediction loss. (§3.3, §§5.1–5.2, Appendix D.1)",
+          "3. Distribution outputs | Affine heads produce weight logits, locations, and log-scales; softmax normalizes weights and exponentiation ensures positive scales. \\(\\mu_k,s_k\\) describe log waiting times. Every history context defines a one-dimensional continuous density. (Eqs. 2–3)",
+          "4. Likelihood gradients | Minimize \\(-\\sum_i\\log p_\\theta(\\tau_i\\mid c_i)\\), evaluating every weighted component at observed targets. Exact marginalization over the discrete component variable avoids sampling; gradients traverse distribution heads and the unrolled RNN, also updating optional sequence embeddings. (§§2–3, Appendix D.1)",
+          "5. Prediction and generation | The mean is \\(\\sum_k w_k\\exp(\\mu_k+s_k^2/2)\\). Sample a component and set \\(\\tau=\\exp(\\mu_k+s_k\\epsilon)\\), with \\(\\epsilon\\sim\\mathcal N(0,1)\\). Backpropagation through generated outcomes additionally uses a biased Straight-Through Gumbel estimator for discrete weight selection; ordinary likelihood training does not need it. (§3.2, Appendix D.6)",
+          "6. Theory and evidence | Universal approximation concerns continuous densities on compact sets with sufficiently many components; conditional modeling also depends on history encoding. It does not guarantee optimization or generalization of a fixed model. Main time-prediction comparisons share an RNN pipeline and report test NLL on six real datasets, averaged over ten splits; density quality and point-prediction error are separate claims. (§3.4, §5.1, Appendix D)",
+          "7. Research implications | Positive low-dimensional distribution heads could predict event arrivals or skill completion times; actively choosing skills and durations additionally requires task objectives and control learning. These robotics uses are reading extrapolations, not tested applications. Events that may never occur require additional failure or no-future-event probability modeling."
+        ]
+      }
     }
   ]
 }

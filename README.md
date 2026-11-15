@@ -71,7 +71,10 @@ vla-world-model     -> VLA / 世界模型
 benchmark-dataset   -> Benchmark / Dataset
 numerical-solvers   -> 数值求解 / 科学机器学习
 llm-inference       -> 大模型 / 推理加速
+temporal-modeling   -> 事件序列 / 时间建模
 ```
+
+`temporal-modeling` 用于时间点过程、不规则事件序列与等待时间分布。Intensity-Free TPP 归入此类；机器人技能持续时间等应用作为阅读迁移思路记录。
 
 `llm-inference` 用于大语言模型与推理模型的推理效率研究，包括稀疏注意力、KV cache 和解码优化。LessIsMore 归入此类。
 

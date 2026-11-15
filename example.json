@@ -142,6 +142,11 @@
       "id": "llm-inference",
       "zh": "大模型 / 推理加速",
       "en": "LLMs / Inference Acceleration"
+    },
+    {
+      "id": "temporal-modeling",
+      "zh": "事件序列 / 时间建模",
+      "en": "Event Sequences / Temporal Modeling"
     }
   ],
   "papers": [
