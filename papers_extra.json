@@ -7762,7 +7762,7 @@
         "title": "Intensity-Free Learning of Temporal Point Processes",
         "authors": "Oleksandr Shchur, Marin Biloš, Stephan Günnemann",
         "institutions": "慕尼黑工业大学",
-        "status": "部分已读：问题、方法、连续时间、样本结构与梯度路径已理清；理论和实验尚未完整精读",
+        "status": "部分已读：问题、方法、连续时间、样本结构与梯度路径已理清；理论和实验尚未完整核查",
         "takeaway": "RNN 编码既往事件，用对数正态混合直接预测下一事件的连续等待时间分布，使似然、均值与采样都容易计算。",
         "tags": [
           "Temporal Point Process",
@@ -7793,7 +7793,7 @@
         "title": "Intensity-Free Learning of Temporal Point Processes",
         "authors": "Oleksandr Shchur, Marin Biloš, Stephan Günnemann",
         "institutions": "Technical University of Munich",
-        "status": "Partially read: problem, method, continuous time, sample structure, and gradient paths clarified; theory and experiments not fully reviewed",
+        "status": "Partially read: problem, method, continuous time, sample structure, and gradient paths clarified; theory and experiments not fully checked",
         "takeaway": "Encode event history with an RNN and directly predict continuous waiting times with a log-normal mixture, making likelihoods, means, and sampling easy to compute.",
         "tags": [
           "Temporal Point Process",
