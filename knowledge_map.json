@@ -592,12 +592,12 @@
         "en": "Numerical solvers & preconditioning"
       },
       "description": {
-        "zh": "NPC 与 NPO 围绕迭代求解效率，保留为方法旁支；与机器人规划的具体接入尚需验证。",
-        "en": "NPC and NPO study iterative solver efficiency; concrete integration into robot planning remains to be established."
+        "zh": "NPC 调度同伦求解，已有点云配准与多视图三角化实验；NPO 学习 PDE 线性系统的预条件作用，向机器人规划的迁移仍需验证。",
+        "en": "NPC schedules homotopy solvers and is evaluated on point-cloud registration and multi-view triangulation; NPO learns preconditioning for PDE linear systems, with transfer to robot planning still to be tested."
       },
       "focus": {
-        "zh": "学的是求解调度还是线性系统的预条件？",
-        "en": "Is the learned component solver scheduling or a preconditioner?"
+        "zh": "区分步长与校正预算调度、线性系统预条件，以及接入目标求解器需要的结构与接口。",
+        "en": "Separate step-size and correction-budget scheduling from linear-system preconditioning, then check the structure and interface required by the target solver."
       },
       "entries": [
         "npc-neural-predictor-corrector",
@@ -845,6 +845,7 @@
       "k4-robustness"
     ],
     "high-performance-reinforcement-learning-on-spot-optimizi": [
+      "k4-identification",
       "k4-robustness"
     ],
     "neuralsim-augmenting-differentiable-simulators-with-neur": [
@@ -994,7 +995,8 @@
       "k5-fidelity"
     ],
     "npc-neural-predictor-corrector": [
-      "support-numerics"
+      "support-numerics",
+      "k3-perception"
     ],
     "vpies-privileged-scaffold-locomotion": [
       "k3-estimation",
@@ -1788,6 +1790,71 @@
       "basis": {
         "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
         "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "high-performance-reinforcement-learning-on-spot-optimizi",
+      "target": "spi-active",
+      "type": "contrast",
+      "reason": {
+        "zh": "二者都用真实响应校准仿真参数；Spot 以分布距离和 CMA-ES 优化参数，SPI-Active 结合轨迹匹配与主动探索进行辨识。",
+        "en": "Both calibrate simulation parameters from real responses: Spot optimizes distributional distances with CMA-ES, while SPI-Active combines trajectory matching with active exploration for identification."
+      },
+      "basis": {
+        "zh": "跨论文机制对照：Spot，arXiv:2504.17857v2，§III-B–C；SPI-Active，CoRL 2025 正式发表版摘要（PMLR 305）。",
+        "en": "Cross-paper mechanism comparison: Spot, arXiv:2504.17857v2, §III-B–C; SPI-Active, abstract of the CoRL 2025 proceedings version (PMLR 305)."
+      }
+    },
+    {
+      "source": "dextrah-g",
+      "target": "dextrah-rgb",
+      "type": "component",
+      "reason": {
+        "zh": "DextrAH-RGB 明示沿用 DextrAH-G 的 geometric fabric 与动作空间，在此控制接口上学习 RGB 输入策略。",
+        "en": "DextrAH-RGB explicitly reuses DextrAH-G’s geometric fabric and action space, learning an RGB-input policy on that control interface."
+      },
+      "basis": {
+        "zh": "原文明确的组件使用：DextrAH-RGB，arXiv:2412.01791v2，§III-A。",
+        "en": "Component reuse explicitly stated in DextrAH-RGB, arXiv:2412.01791v2, §III-A."
+      }
+    },
+    {
+      "source": "pi0",
+      "target": "pi05-open-world-vla",
+      "type": "extension",
+      "reason": {
+        "zh": "π0.5 扩展 π0 的异构数据协同训练，加入高层子任务预测并调整训练流程，以提高开放世界任务泛化。",
+        "en": "π0.5 extends π0 with heterogeneous-data co-training, high-level subtask prediction, and a revised training procedure for open-world task generalization."
+      },
+      "basis": {
+        "zh": "原文方法扩展：π0.5，arXiv:2504.16054v1，§IV、§V-D。",
+        "en": "Method extension described in π0.5, arXiv:2504.16054v1, §IV and §V-D."
+      }
+    },
+    {
+      "source": "pi05-open-world-vla",
+      "target": "pi06-recap",
+      "type": "extension",
+      "reason": {
+        "zh": "从 π0.5 先扩展为 π0.6 基座，再用 RECAP 将优势条件与真实交互经验纳入策略学习，得到 π0.6*。",
+        "en": "π0.5 is first extended into the π0.6 base model; RECAP then adds advantage conditioning and real interaction experience to policy learning, producing π0.6*."
+      },
+      "basis": {
+        "zh": "原文方法扩展及中间基座：π0.6*，arXiv:2511.14759v1，§V-A–B。",
+        "en": "Method extension and intermediate base model described in π0.6*, arXiv:2511.14759v1, §V-A–B."
+      }
+    },
+    {
+      "source": "dreamwaq",
+      "target": "himloco",
+      "type": "contrast",
+      "reason": {
+        "zh": "二者都由本体历史联合学习显式速度与隐式响应；DreamWaQ 以 β-VAE 重建下一观测，HIMLoco 对历史与下一状态的 prototype 分配做对比式对齐，显式速度仍用回归监督。",
+        "en": "Both learn explicit velocity and implicit response from proprioceptive history. DreamWaQ reconstructs the next observation with a β-VAE; HIMLoco aligns prototype assignments between history and successor-state views, while retaining regression supervision for velocity."
+      },
+      "basis": {
+        "zh": "跨论文机制对照：DreamWaQ，arXiv:2301.10602v2，§II-C；HIMLoco，arXiv:2312.11460v3，§3.2。",
+        "en": "Cross-paper mechanism comparison: DreamWaQ, arXiv:2301.10602v2, §II-C; HIMLoco, arXiv:2312.11460v3, §3.2."
       }
     }
   ],
