@@ -91,7 +91,7 @@ const uiText = {
     copyFullPrompt: "复制全文",
     promptCopied: "已复制全文",
     promptLoading: "正在载入 Prompt…",
-    promptLoadFailed: "Prompt 载入失败，请刷新页面后重试。",
+    promptLoadFailed: "Prompt 载入失败，请关闭后重新打开重试。",
     hideSidebar: "隐藏分类栏",
     showSidebar: "显示分类栏",
     resizeSidebar: "调整分类栏宽度",
@@ -188,7 +188,7 @@ const uiText = {
     copyFullPrompt: "Copy full prompt",
     promptCopied: "Full prompt copied",
     promptLoading: "Loading prompts…",
-    promptLoadFailed: "Unable to load prompts. Refresh the page and try again.",
+    promptLoadFailed: "Unable to load prompts. Close and reopen to retry.",
     hideSidebar: "Hide categories",
     showSidebar: "Show categories",
     resizeSidebar: "Resize categories",
@@ -197,16 +197,13 @@ const uiText = {
 
 const siteMetaPath = "site_meta.json";
 const siteMeta = {
-  lastUpdated: {
-    iso: "2026-10-10",
-    zh: "2026-10-10",
-    en: "Oct 10, 2026",
-  },
+  lastUpdated: null,
 };
 
 const readingPromptsPath = "reading_prompts_v4.json?v=20261108-framework-guide";
 let readingPrompts = [];
 let promptLoadFailed = false;
+let promptLoadPromise = null;
 
 const unassignedCategory = {
   id: "unassigned",
@@ -4365,6 +4362,7 @@ const nodes = {
   promptModal: document.querySelector("#prompt-modal"),
   promptCardList: document.querySelector("#prompt-card-list"),
   promptStatus: document.querySelector("#prompt-status"),
+  sidebar: document.querySelector("#sidebar"),
   sidebarToggle: document.querySelector("#sidebar-toggle"),
   sidebarRestore: document.querySelector("#sidebar-restore"),
   sidebarResizer: document.querySelector("#sidebar-resizer"),
@@ -4642,7 +4640,7 @@ function upsertPaperList(target, imported) {
 
 async function loadExternalPapers() {
   try {
-    const response = await fetch(externalPapersPath, { cache: "no-cache" });
+    const response = await fetch(externalPapersPath);
     if (!response.ok) return 0;
     const imported = parsePaperJson(await response.text());
     upsertPaperList(papers, imported);
@@ -4652,11 +4650,14 @@ async function loadExternalPapers() {
   }
 }
 
-async function loadPaperNotes() {
+async function loadPaperNotes(papersReady) {
   try {
-    const response = await fetch(externalNotesPath, { cache: "no-cache" });
+    const response = await fetch(externalNotesPath);
     if (!response.ok) return 0;
-    return parsePaperNotes(await response.text());
+    const source = await response.text();
+    // Download alongside papers, but match notes only after new papers are merged.
+    await papersReady;
+    return parsePaperNotes(source);
   } catch {
     return 0;
   }
@@ -4664,16 +4665,16 @@ async function loadPaperNotes() {
 
 async function loadSiteMeta() {
   try {
-    const response = await fetch(siteMetaPath, { cache: "no-cache" });
+    const response = await fetch(siteMetaPath);
     if (!response.ok) return false;
     const payload = await response.json();
     const lastUpdated = payload && typeof payload === "object" ? payload.lastUpdated : null;
     if (!lastUpdated || typeof lastUpdated !== "object") return false;
 
     siteMeta.lastUpdated = {
-      iso: stringField(lastUpdated.iso) || siteMeta.lastUpdated.iso,
-      zh: stringField(lastUpdated.zh) || stringField(lastUpdated.iso) || siteMeta.lastUpdated.zh,
-      en: stringField(lastUpdated.en) || stringField(lastUpdated.iso) || siteMeta.lastUpdated.en,
+      iso: stringField(lastUpdated.iso),
+      zh: stringField(lastUpdated.zh) || stringField(lastUpdated.iso),
+      en: stringField(lastUpdated.en) || stringField(lastUpdated.iso),
     };
     return true;
   } catch {
@@ -4683,7 +4684,7 @@ async function loadSiteMeta() {
 
 async function loadPromptData() {
   try {
-    const response = await fetch(readingPromptsPath, { cache: "no-cache" });
+    const response = await fetch(readingPromptsPath);
     if (!response.ok) throw new Error("Prompt request failed.");
     const payload = await response.json();
     const items = payload && typeof payload === "object" && Array.isArray(payload.prompts) ? payload.prompts : [];
@@ -4707,6 +4708,15 @@ async function loadPromptData() {
     if (!nodes.promptModal.hidden) renderPromptCards();
     return false;
   }
+}
+
+function ensurePromptData() {
+  if (readingPrompts.length) return Promise.resolve(true);
+  if (!promptLoadPromise) {
+    promptLoadFailed = false;
+    promptLoadPromise = loadPromptData().finally(() => { promptLoadPromise = null; });
+  }
+  return promptLoadPromise;
 }
 
 function localPaper(paper) {
@@ -4750,7 +4760,7 @@ function matchesCategory(paper, categoryId) {
 
 async function loadKnowledgeMap() {
   try {
-    const response = await fetch("knowledge_map.json", { cache: "no-cache" });
+    const response = await fetch("knowledge_map.json");
     if (!response.ok) throw new Error("Knowledge map request failed");
     const data = await response.json();
     if (!Array.isArray(data.categories) || !data.assignments || !Array.isArray(data.relations) ||
@@ -4826,16 +4836,47 @@ function tagItems(items, className = "") {
   return items.map((item) => `<span class="tag${extraClass}">${escapeHtml(item)}</span>`).join("");
 }
 
+let mathJaxPromise = null;
+let mathTypesetQueue = Promise.resolve();
+
+function loadMathJax() {
+  if (mathJaxPromise) return mathJaxPromise;
+  window.MathJax = {
+    tex: {
+      inlineMath: [["$", "$"], ["\\(", "\\)"]],
+      displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      processEscapes: true,
+    },
+    startup: { typeset: false },
+  };
+  mathJaxPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js";
+    script.async = true;
+    const failed = () => {
+      script.remove();
+      mathJaxPromise = null;
+      reject(new Error("MathJax could not be loaded."));
+    };
+    script.onerror = failed;
+    script.onload = () => {
+      if (!window.MathJax.startup?.promise) return failed();
+      window.MathJax.startup.promise.then(() => resolve(window.MathJax), failed);
+    };
+    document.head.append(script);
+  });
+  return mathJaxPromise;
+}
+
 function typesetMath() {
-  if (!window.MathJax || !window.MathJax.typesetPromise) return;
-
-  const targets = [nodes.paperList, nodes.paperDetail].filter(Boolean);
-
-  if (window.MathJax.typesetClear) {
-    window.MathJax.typesetClear(targets);
-  }
-
-  window.MathJax.typesetPromise(targets).catch(() => {});
+  const targets = [nodes.paperList, nodes.paperDetail];
+  if (!targets.some((node) => /\\\(|\\\[|\$/.test(node.textContent))) return;
+  // Load after content is visible; queued passes always use the current DOM.
+  mathTypesetQueue = mathTypesetQueue.then(async () => {
+    const mathJax = await loadMathJax();
+    mathJax.typesetClear(targets);
+    await mathJax.typesetPromise(targets);
+  }).catch(() => {});
 }
 
 function searchableText(paper) {
@@ -4926,19 +4967,25 @@ function clearFilters() {
   render();
 }
 
+function renderUpdateBadge() {
+  if (nodes.updateBadge) {
+    const lastUpdated = siteMeta.lastUpdated;
+    nodes.updateBadge.hidden = !lastUpdated;
+    if (!lastUpdated) return;
+    nodes.updateBadge.innerHTML = `
+      <span>${text("lastUpdated")}</span>
+      <time datetime="${escapeHtml(lastUpdated.iso)}">${escapeHtml(lastUpdated[state.lang])}</time>
+    `;
+  }
+}
+
 function syncLanguage() {
   nodes.html.lang = state.lang === "zh" ? "zh-CN" : "en";
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     const key = node.dataset.i18n;
     node.textContent = text(key);
   });
-  if (nodes.updateBadge) {
-    const lastUpdated = siteMeta.lastUpdated;
-    nodes.updateBadge.innerHTML = `
-      <span>${text("lastUpdated")}</span>
-      <time datetime="${escapeHtml(lastUpdated.iso)}">${escapeHtml(lastUpdated[state.lang])}</time>
-    `;
-  }
+  renderUpdateBadge();
   nodes.search.placeholder = text("searchPlaceholder");
   document.querySelector(".search-box kbd").textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
   nodes.langButtons.forEach((button) => {
@@ -5193,6 +5240,35 @@ function render() {
   renderList();
 }
 
+function refreshNotesView() {
+  const active = document.activeElement;
+  const focusRoot = [nodes.categoryNav, nodes.paperList, nodes.paperDetail].find((node) => node.contains(active));
+  const focusAttribute = ["id", "data-paper-id", "data-category", "data-expand-category", "data-detail-target", "href"]
+    .find((attribute) => active.hasAttribute(attribute));
+  const focusSelector = focusAttribute
+    ? `${active.tagName.toLowerCase()}[${focusAttribute}="${CSS.escape(active.getAttribute(focusAttribute))}"]`
+    : active.matches(".detail-authors > summary") ? ".detail-authors > summary" : null;
+  const readerScroll = nodes.paperDetail.scrollTop;
+  const authorsOpen = nodes.paperDetail.querySelector(".detail-authors")?.open;
+  const sidebarScroll = nodes.sidebar.scrollTop;
+  const pageScroll = { left: window.scrollX, top: window.scrollY, behavior: "instant" };
+  const anchor = Array.from(nodes.paperDetail.querySelectorAll("[id]"))
+    .find((node) => node.getBoundingClientRect().top >= nodes.paperDetail.getBoundingClientRect().top);
+  const anchorOffset = anchor?.getBoundingClientRect().top;
+  renderCategories();
+  renderList();
+  const authors = nodes.paperDetail.querySelector(".detail-authors");
+  if (authors) authors.open = Boolean(authorsOpen);
+  nodes.paperDetail.scrollTop = readerScroll;
+  const updatedAnchor = anchor && document.getElementById(anchor.id);
+  if (nodes.paperDialog.open && updatedAnchor) {
+    nodes.paperDetail.scrollTop += updatedAnchor.getBoundingClientRect().top - anchorOffset;
+  }
+  nodes.sidebar.scrollTop = sidebarScroll;
+  if (focusRoot && focusSelector) focusRoot.querySelector(focusSelector)?.focus({ preventScroll: true });
+  window.scrollTo(pageScroll);
+}
+
 nodes.langButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.lang = button.dataset.lang;
@@ -5376,8 +5452,9 @@ function renderPromptCards() {
 
 function openPromptModal() {
   nodes.promptStatus.textContent = "";
-  renderPromptCards();
   nodes.promptModal.hidden = false;
+  void ensurePromptData();
+  renderPromptCards();
 }
 
 function closePromptModal() {
@@ -5416,14 +5493,18 @@ document.addEventListener("keydown", (event) => {
 });
 
 async function initialize() {
+  let rendered = false;
+  const papersReady = loadExternalPapers();
+  void loadPaperNotes(papersReady).then((matched) => {
+    if (rendered && matched) refreshNotesView();
+  });
+  void loadSiteMeta().then(renderUpdateBadge);
   await Promise.all([
-    loadSiteMeta(),
     loadKnowledgeMap(),
-    loadExternalPapers(),
-    loadPromptData(),
+    papersReady,
   ]);
-  await loadPaperNotes();
   render();
+  rendered = true;
 }
 
 initialize();

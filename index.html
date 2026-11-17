@@ -9,26 +9,9 @@
       content="A bilingual paper reading notebook with main content, innovations, implementation notes, categories, and links."
     />
     <link rel="preload" as="image" href="assets/backgrounds/explorer-black-hole.jpg" />
+    <link rel="preload" as="fetch" href="papers_extra.json" crossorigin />
+    <link rel="preload" as="fetch" href="knowledge_map.json" crossorigin />
     <link rel="stylesheet" href="styles.css?v=20261117-explorer-sidebar" />
-    <script>
-      window.MathJax = {
-        tex: {
-          inlineMath: [
-            ["$", "$"],
-            ["\\(", "\\)"],
-          ],
-          displayMath: [
-            ["$$", "$$"],
-            ["\\[", "\\]"],
-          ],
-          processEscapes: true,
-        },
-      };
-    </script>
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
-    ></script>
   </head>
   <body>
     <div class="ambient-scene" aria-hidden="true">
@@ -138,6 +121,6 @@
       </section>
     </div>
 
-    <script src="app.js?v=20261117-explorer"></script>
+    <script src="app.js?v=20261117-loading"></script>
   </body>
 </html>
