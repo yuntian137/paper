@@ -1,6 +1,6 @@
 # Paper Reading Notes
 
-这是一个适合部署到 GitHub Pages 的中英文机器人论文阅读笔记站点。项目是纯静态页面，不需要构建步骤；论文数据、分类、搜索和详情渲染都维护在 `app.js` 中。
+这是一个适合部署到 GitHub Pages 的中英文机器人论文阅读笔记站点。项目是纯静态页面，不需要构建步骤；论文渲染与筛选维护在 `app.js`，知识体系与跨论文关系维护在 `knowledge_map.json`。
 
 ## 最小执行流程
 
@@ -32,87 +32,67 @@ https://yuntian137.github.io/paper/
 ```txt
 index.html                页面结构
 styles.css                页面样式
-app.js                    UI 文案、论文数据、分类、筛选、搜索和详情渲染
+app.js                    UI 文案、内置论文、筛选、搜索和详情渲染
+knowledge_map.json        知识体系简介、论文归类、跨体系连接和论文关系
 example.json              给论文阅读 agent 使用的论文卡片填写模板
 papers_extra.json         可选的新增论文 JSON 数据，网站启动时自动读取
 paper_notes.json          个人复习笔记，按 id、标题片段或链接匹配论文
 site_meta.json            站点元信息，例如最近更新时间
 ```
 
-网站发布只依赖 `app.js`、`papers_extra.json`、`paper_notes.json`、`site_meta.json` 和外部论文链接。
+网站发布使用 `index.html`、`styles.css`、`app.js`、`assets/backgrounds/`、`knowledge_map.json`、`papers_extra.json`、`paper_notes.json`、`site_meta.json`、`reading_prompts_v4.json` 和外部论文链接。
 
-## 分类方式
+## 知识图谱与论文分类
 
 页面默认使用卡片视图，展示论文简称、官方标题、核心理解与少量关键词。点击卡片可打开完整阅读笔记，关闭后继续浏览原来的位置。顶部支持全文搜索、阅读状态与首发年份筛选，以及按收录顺序、论文年份或标题排序；侧栏的“个人笔记”只显示有个人补充的条目。搜索快捷键为 `Ctrl+K`（macOS 为 `⌘K`）。
 
+背景使用用户选定的 [MotionBGS — Explorer of the Black Hole](https://motionbgs.com/spaceman-black-hole) 循环视频，保存在 `assets/backgrounds/explorer-black-hole.mp4`（3840×2160、26.3 秒）。4K 原素材为 HEVC，已转为浏览器通用的 H.264 格式，并将视频索引前置以便开始播放；配套同名 JPG 为静态封面。视频静音循环，保留原片的宇航员、地貌、云层与黑洞动态，并加深蓝遮罩保护文字对比度。顶部“背景 · 动态 / 静态”按钮可暂停并记住选择；阅读详情、Prompt 弹窗打开或页面进入后台时暂停，系统启用“减少动态效果”时保持静态。卡片与阅读详情保留不透明底色，直接位于背景上的标题改用浅字；视频无法播放时显示静态封面。背景不响应鼠标，打印时隐藏。
+
 阅读状态筛选按已有卡片说明归为“已精读”“部分已读”和“已整理”，详细阅读范围保留在详情中。年份含修订说明的记录按首个年份参与筛选和排序；“最近收录”按数据中的条目顺序展示，不代表论文或笔记的更新时间。
 
-网站默认打开最近主要阅读的 **BFM / 通用运动控制**。分类同时保留研究机制和任务应用两个维度：
+知识图谱包含分类层级、体系之间的连接，以及附有依据说明的论文关系。网站默认打开全库总览，以研究问题组织 **6 个主体系、22 个子体系**。同一论文可以跨体系归类；父体系汇总子体系并按论文 ID 去重。归类不改变阅读状态，也不代表用户已掌握该专题。
 
-```txt
-BFM 父分类与子分类：按控制机制组织基座、训练方法和前置工作
-任务与应用分类：保留原有运动控制、操作、迁移等入口
-关键词：用于描述方法、硬件、任务和迁移方式，并参与搜索
+| 主体系 | 子体系 |
+|---|---|
+| `k1` 行为目标与运动能力 | `k1-tracking` 跟踪与蒸馏、`k1-style` 风格奖励、`k1-skills` 技能空间、`k1-goals` 目标接口、`k1-reward` 奖励条件化、`k1-action` 动作参数化 |
+| `k2` 几何、接触与物理可行性 | `k2-retarget` 重定向、`k2-contact` 交互与接触、`k2-constraints` 约束与柔顺 |
+| `k3` 观测、历史与状态推断 | `k3-estimation` 状态与历史、`k3-perception` 感知反馈、`k3-distillation` 特权信息与蒸馏 |
+| `k4` 动力学差异与真实部署 | `k4-identification` 辨识与校准、`k4-robustness` 鲁棒性与形态、`k4-adaptation` 适应与残差 |
+| `k5` 世界模型与决策计算 | `k5-fidelity` 准确性标准、`k5-decision` 决策计算、`k5-horizon` 长时域结构、`k5-time` 时间与模式 |
+| `k6` 经验、语义与任务泛化 | `k6-data` 数据覆盖、`k6-learning` 示范与微调、`k6-semantics` 语义与动作模型 |
+
+`support-numerics`（数值求解）和 `support-inference`（推理效率）保留为旁支。未映射的新条目进入“待归类”，不会从全库消失。Intensity-Free TPP 在时间与事件子体系中作为概率建模的连接阅读，机器人控制用途仍属迁移设想。
+
+每个分类提供问题简介、阅读抓手与代表论文入口；主体系页展开子体系，总览和体系页可展开带说明的跨体系连接。卡片显示所属子体系和一个相关论文入口。详情提供可返回的跨论文跳转，并区分：
+
+- `relations`：人工整理的组件使用、方法扩展、替代路线、机制对照、互补问题、结构类比或前置概念。每条有稳定论文 ID、双语理由和依据说明；`source → target` 只在组件/扩展等关系中表达依赖方向，类比与对照不代表历史继承。
+- “同专题继续读”：根据共同子体系推荐，并明确标注不代表方法继承或可直接组合。
+
+运动控制、操作、Sim2Real、真机 RL、遥操作、VLA / WM、数据集等保留为横向筛选，与体系、阅读状态、年份和搜索共同生效。代表论文入口始终展示完整专题入口，不受论文列表筛选影响。侧栏分类计数是整个库的数量，不随筛选改变。
+
+### 分类与关系字段
+
+`knowledge_map.json` 集中维护：
+
+- `categories`：`id`、双语 `label` / `description` / `focus`、代表论文 `entries`。主体系用 `code: "K1"` 至 `"K6"`，子体系用 `parent`。
+- `assignments`：已有论文 ID 到子体系 ID 数组的明确映射，是已有条目分类的来源。保留原卡片内容，不批量重写历史分类。
+- `connections`：主体系之间的 `source`、`target` 与双语 `reason`。
+- `relations`：论文之间的 `source`、`target`、`type`、双语 `reason` / `basis`。依据现有材料做综合时须如此标明；只有原文支持才写方法继承或直接组件使用。详细原文定位继续保存在论文实现方法与笔记中。
+- `contexts`：横向标签及双语名称。
+
+**新增论文**直接在卡片的 `categories` 填一个或多个新子体系 ID，`contexts` 填横向标签；没有 `assignments` 的新卡片会直接采用这些分类。**调整已有论文归类**修改 `assignments[paper.id]`；其优先级高于卡片 `categories`。历史卡片中的任务标签仍兼容为横向筛选，旧 `bfm-*` 标签不再驱动主导航。不要把新旧分类两边同步维护成两份来源。
+
+```json
+{
+  "id": "paper-id",
+  "categories": ["k3-estimation", "k4-adaptation"],
+  "contexts": ["locomotion", "sim2real"]
+}
 ```
 
-分类由 `app.js` 的 `categories` 数组维护。BFM 子分类通过 `parent: "bfm"` 建立层级，父分类自动汇总并按论文 id 去重计数。当前 BFM 分类为：
+新增子体系时同步 `knowledge_map.json` 与 `example.json` 的 `available_categories`；横向标签同步 `available_contexts`。检查分类/论文 ID 无重复、所有 parent/entry/关系端点均有效，已有论文全覆盖、归类不重复。分类变更时更新 `site_meta.json`。加载失败会保留论文浏览并显示提示。
 
-```txt
-bfm                 -> BFM / 通用运动控制（父分类）
-  bfm-fb            -> FB / 奖励可编程
-  bfm-tracking      -> 运动跟踪 / 技能蒸馏
-  bfm-goal          -> 掩码目标 / 多模态接口
-  bfm-latent        -> 连续潜空间 / 运动先验
-  bfm-token         -> 离散 Token / 技能序列
-  bfm-generative    -> 生成式控制 / 动作过渡
-  bfm-dynamics      -> 动力学 / 模型与优化
-  bfm-data          -> 数据 / 运动重定向
-  bfm-adaptation    -> 适应 / 迁移与鲁棒性
-```
-
-例如，FB、Meta Motivo / FB-CPR、BFM-Zero 放入 `bfm-fb`；ScaleBFM 放入 `bfm-tracking` 和 `bfm-goal`；UMR、GMR、OmniRetarget 放入 `bfm-data`。支持工作的分类说明会解释它与通用控制的连接。任务与应用分类 id 为：
-
-```txt
-locomotion          -> 运动控制 / Locomotion
-parkour-terrain     -> 跑酷 / 多地形运动
-manipulation        -> Manipulation
-loco-manipulation   -> Loco-Manipulation
-sim2real            -> Sim2Real / 动力学辨识
-real-robot-rl       -> 真机 RL
-imitation-teleop    -> 模仿学习 / 遥操作
-vla-world-model     -> VLA / 世界模型
-benchmark-dataset   -> Benchmark / Dataset
-numerical-solvers   -> 数值求解 / 科学机器学习
-llm-inference       -> 大模型 / 推理加速
-temporal-modeling   -> 事件序列 / 时间建模
-```
-
-`temporal-modeling` 用于时间点过程、不规则事件序列与等待时间分布。Intensity-Free TPP 归入此类；机器人技能持续时间等应用作为阅读迁移思路记录。
-
-`llm-inference` 用于大语言模型与推理模型的推理效率研究，包括稀疏注意力、KV cache 和解码优化。LessIsMore 归入此类。
-
-`numerical-solvers` 用于 PDE 离散系统、迭代求解、预条件与神经算子等数值方法；按论文的主要贡献分类，不因其可用于机器人仿真而自动归入 BFM 或运动控制。
-
-`parkour-terrain` 用于以复杂地形运动为主要任务的工作，包括地形感知、精准落脚、踏脚石与窄梁通过、障碍跨越、跑酷和多地形适应。AME-1、Extreme Parkour、PIE、DeepLoco 等归入这一类，同时保留 `locomotion`、`sim2real` 或相关机制分类。仅在演示中偶尔涉及地形的通用方法按主要贡献分类。
-
-一篇论文可以属于多个页面分类，例如：
-
-```js
-categories: ["bfm-goal", "bfm-latent", "locomotion", "sim2real"]
-```
-
-关键词由每篇论文的 `tags` 字段维护，适合放方法、硬件、任务和细粒度主题，例如：
-
-```txt
-PPO, SAC, Diffusion Policy, BC, DAgger, residual RL
-humanoid, quadruped, dexterous hand, bimanual
-in-hand manipulation, grasping, tool use, velocity tracking
-system identification, domain randomization, real-world finetuning
-```
-
-论文选一个或多个 BFM 子分类即可出现在父分类，子类间允许交叉。任务分类继续按实际贡献选择。新增分类时同步更新 `categories`、论文记录和 `example.json` 的 `available_categories`。
-
-论文可增加 `aliases` 数组保存常用简称。搜索 UMR、ScaleBFM、Humanoid Transformer 或 Meta Motivo 都能定位对应的正式标题；同一论文只保留一个条目。
+`tags` 继续用于方法、硬件、任务等关键词，并参与搜索；`aliases` 保存 UMR、ScaleBFM 等简称，同一论文只保留一个正式标题条目。
 
 ## 使用精读 Prompt
 
@@ -156,7 +136,7 @@ system identification, domain randomization, real-world finetuning
 2. JSON 对象字段和 `app.js` 里的 `papers` 对象保持一致。
 3. `arxiv`、`project` 和 `pdf` 可以留空；非空时只能填写以 `https://` 开头的纯 URL，禁止使用 `[文字](URL)` 形式的 Markdown 链接。
 4. `pdf` 可以留空或写外部 PDF 链接；不要写本地 PDF 路径。
-5. `categories` 使用上面的分类 id；BFM 相关论文优先选择 `bfm-*` 子分类，并保留任务与应用分类。
+5. `categories` 使用上面的新子体系 id；`contexts` 使用横向标签 id。已有条目的归类以 `knowledge_map.json` 的 `assignments` 为准。
 6. 建议同时补充 `zh` 和 `en` 两套内容，保证中英文切换稳定。
 7. `zh.title` 和 `en.title` 必须完全一致，均使用论文官方英文标题；中文正文可以保留 PPO、RL、VLA、Sim-to-Real 等必要英文缩写和专业术语。
 8. `takeaway` 用一句话直接解释核心机制，方便复习。`mainContent` 按“问题 → 方法 → 结果”写 2–4 句；只保留影响理解的必要条件，避免反复写“论文没有证明”“不能保证”等保护措辞。
@@ -169,7 +149,8 @@ system identification, domain randomization, real-world finetuning
   "papers": [
     {
       "id": "paper-id",
-      "categories": ["manipulation", "sim2real"],
+      "categories": ["k3-estimation", "k4-adaptation"],
+      "contexts": ["manipulation", "sim2real"],
       "pdf": "https://arxiv.org/pdf/xxxx.xxxxx",
       "project": "https://example.com",
       "arxiv": "https://arxiv.org/abs/xxxx.xxxxx",
@@ -251,7 +232,7 @@ value 可以直接写字符串，网站会当作 `takeaway` 显示在卡片和�
 
 ## 本地预览
 
-这个站点没有构建流程，直接打开 `index.html` 即可预览。若要测试 `papers_extra.json` 自动加载，建议在仓库根目录启动一个静态服务器：
+这个站点没有构建流程。知识体系、扩展论文和笔记通过 fetch 加载，本地预览请在仓库根目录启动静态服务器：
 
 ```sh
 python3 -m http.server 8000

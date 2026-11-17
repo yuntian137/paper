@@ -1,7 +1,38 @@
 const uiText = {
   zh: {
+    backgroundMotion: "黑洞探索背景动画",
+    backgroundOn: "背景 · 动态",
+    backgroundOff: "背景 · 静态",
+    pauseBackground: "暂停黑洞探索循环视频",
+    playBackground: "播放黑洞探索循环视频",
+    failedBackground: "视频暂不可用，显示静态画面",
+    reducedBackground: "已跟随系统的减少动态效果设置",
+    overviewDescription: "从六个研究问题进入全库。同一篇论文可连接多个体系，计数按论文去重；这是可随阅读修订的分析框架。",
+    supportTopics: "旁支与待连接",
+    allContexts: "全部横向标签",
+    contexts: "任务 / 应用标签",
+    readingFocus: "阅读抓手",
+    entryPapers: "从这些论文开始",
+    systemConnections: "体系之间怎样连接",
+    connectedSystems: "连接其他体系",
+    paperConnections: "论文之间的联系",
+    sameQuestion: "同专题继续读",
+    sameQuestionHint: "按共同子体系推荐；归类相同不代表方法继承或可直接组合。",
+    relationScope: "关系根据库内材料综合整理；点击论文查看已有方法记录与原文链接。",
+    component: "组件使用",
+    extension: "方法扩展",
+    alternative: "替代路线",
+    contrast: "机制对照",
+    complement: "互补问题",
+    analogy: "结构类比",
+    concept: "前置概念",
+    backPaper: "返回上一篇",
+    expandGroup: "展开子体系",
+    collapseGroup: "收起子体系",
+    mapLoadFailed: "知识体系暂未加载成功，论文仍可浏览；请刷新重试。",
+    noRelations: "这篇论文的具体机制关系尚待整理，可先沿所属子体系继续阅读。",
     myLibrary: "我的论文库",
-    researchDirections: "研究方向",
+    researchDirections: "知识体系",
     personalCollection: "个人笔记",
     readingStatus: "阅读状态",
     allYears: "全部年份",
@@ -32,16 +63,15 @@ const uiText = {
     searchLabel: "搜索论文",
     searchPlaceholder: "搜索标题、方法、关键词…",
     papers: "篇论文",
-    topics: "个方向",
-    libraryLabel: "论文库 / 研究方向",
-    allPapers: "全部论文",
+    topics: "个主体系",
+    libraryLabel: "论文库 / 问题与机制",
+    allPapers: "体系总览 / 全部论文",
     showing: "显示",
     of: "共",
     items: "篇",
     noResults: "没有找到匹配的论文。",
     taskCategories: "任务与应用",
-    expandBfm: "展开 BFM 子分类",
-    collapseBfm: "收起 BFM 子分类",
+
     venue: "来源",
     year: "年份",
     status: "状态",
@@ -67,8 +97,39 @@ const uiText = {
     resizeSidebar: "调整分类栏宽度",
   },
   en: {
+    backgroundMotion: "Black hole exploration animation",
+    backgroundOn: "Scene · On",
+    backgroundOff: "Scene · Still",
+    pauseBackground: "Pause the black hole exploration loop",
+    playBackground: "Play the black hole exploration loop",
+    failedBackground: "Video unavailable; showing the still image",
+    reducedBackground: "Motion disabled by your system preference",
+    overviewDescription: "Explore six research questions across the library. Papers may connect several systems; counts use unique papers. This analytical framework evolves with reading.",
+    supportTopics: "Side branches & open connections",
+    allContexts: "All cross-cutting tags",
+    contexts: "Task / application tags",
+    readingFocus: "What to compare",
+    entryPapers: "Start with these papers",
+    systemConnections: "How the systems connect",
+    connectedSystems: "Connected systems",
+    paperConnections: "Connections between papers",
+    sameQuestion: "Continue within this topic",
+    sameQuestionHint: "Suggested by shared subsystems; co-membership does not imply inheritance or direct compatibility.",
+    relationScope: "Relationships synthesize library material. Open a paper for existing method notes and original sources.",
+    component: "Component use",
+    extension: "Method extension",
+    alternative: "Alternative approach",
+    contrast: "Mechanism comparison",
+    complement: "Complementary questions",
+    analogy: "Structural analogy",
+    concept: "Prerequisite concept",
+    backPaper: "Back to previous paper",
+    expandGroup: "Expand subsystems",
+    collapseGroup: "Collapse subsystems",
+    mapLoadFailed: "The knowledge map could not be loaded. Papers are still available; refresh to retry.",
+    noRelations: "Specific mechanism relationships have yet to be mapped. Continue through the paper’s subsystems.",
     myLibrary: "My library",
-    researchDirections: "Research directions",
+    researchDirections: "Knowledge systems",
     personalCollection: "Personal notes",
     readingStatus: "Reading status",
     allYears: "All years",
@@ -99,16 +160,15 @@ const uiText = {
     searchLabel: "Search papers",
     searchPlaceholder: "Title, author, keyword",
     papers: "papers",
-    topics: "topics",
-    libraryLabel: "Library / Research directions",
-    allPapers: "All Papers",
+    topics: "systems",
+    libraryLabel: "Library / Questions & mechanisms",
+    allPapers: "Overview / All papers",
     showing: "Showing",
     of: "of",
     items: "items",
     noResults: "No matching papers found.",
     taskCategories: "Tasks & applications",
-    expandBfm: "Expand BFM categories",
-    collapseBfm: "Collapse BFM categories",
+
     venue: "Venue",
     year: "Year",
     status: "Status",
@@ -148,30 +208,15 @@ const readingPromptsPath = "reading_prompts_v4.json?v=20261108-framework-guide";
 let readingPrompts = [];
 let promptLoadFailed = false;
 
-const categories = [
-  { id: "bfm", label: { zh: "BFM / 通用运动控制", en: "BFM / General Motor Control" }, description: { zh: "围绕通用运动控制整理基座、训练方法，以及动力学、数据与迁移工作。按机制细分，同一篇论文可以出现在多个方向。", en: "Control foundations, training methods, dynamics, data, and transfer, grouped by mechanism. Papers can belong to several directions." } },
-  { id: "bfm-fb", parent: "bfm", label: { zh: "FB / 奖励可编程", en: "FB / Reward Conditioning" }, description: { zh: "从长期访问关系学习共享表示，再把奖励、目标或参考动作编码为任务向量：FB → Meta Motivo / FB-CPR → BFM-Zero。", en: "Learn long-term occupancy representations and encode rewards, goals, or motion into task vectors: FB → Meta Motivo / FB-CPR → BFM-Zero." } },
-  { id: "bfm-tracking", parent: "bfm", label: { zh: "运动跟踪 / 技能蒸馏", en: "Tracking / Distillation" }, description: { zh: "通过物理运动跟踪、单动作专家与技能蒸馏训练可复用控制器，关注动作覆盖、反馈执行和多技能整合。", en: "Reusable controllers trained through physical motion tracking, specialist policies, and skill distillation." } },
-  { id: "bfm-goal", parent: "bfm", label: { zh: "掩码目标 / 多模态接口", en: "Masked Goals / Interfaces" }, description: { zh: "把全身、稀疏关节、头手、文本或任务空间命令接入同一个控制器，关注目标补全和不同输入模式。", en: "One controller accepts full-body, sparse-joint, head-and-hand, text, or task-space commands through goal completion and shared interfaces." } },
-  { id: "bfm-latent", parent: "bfm", label: { zh: "连续潜空间 / 运动先验", en: "Continuous Latents / Priors" }, description: { zh: "把动作库压缩为可调用的连续技能空间或运动先验，供高层策略和新任务复用。", en: "Motion libraries become reusable continuous skill spaces or motion priors for higher-level policies and new tasks." } },
-  { id: "bfm-token", parent: "bfm", label: { zh: "离散 Token / 技能序列", en: "Discrete Tokens / Skills" }, description: { zh: "用 FSQ 等量化方法构建离散技能接口，再进行序列建模、跨模态对齐或高层控制。", en: "Quantized skill interfaces, including FSQ, support sequence modeling, cross-modal alignment, and higher-level control." } },
-  { id: "bfm-generative", parent: "bfm", label: { zh: "生成式控制 / 动作过渡", en: "Generative Control / Transitions" }, description: { zh: "用 Diffusion、Flow Matching 或生成式中间件产生动作、短期参考与恢复轨迹，关注在线参考调整和行为切换。", en: "Diffusion, flow matching, and generative middleware produce actions, short-term references, and recovery motions." } },
-  { id: "bfm-dynamics", parent: "bfm", label: { zh: "动力学 / 模型与优化", en: "Dynamics / Models & Optimization" }, description: { zh: "简化动力学、轨迹优化、模型控制与状态估计，为参考生成、执行和过渡提供物理结构。", en: "Reduced dynamics, trajectory optimization, model-based control, and state estimation provide physical structure for references, execution, and transitions." } },
-  { id: "bfm-data", parent: "bfm", label: { zh: "数据 / 运动重定向", en: "Data / Motion Retargeting" }, description: { zh: "人体动作重建、数据集、运动学与动力学重定向，连接人体行为数据和机器人参考轨迹。", en: "Human motion reconstruction, datasets, and kinematic or dynamic retargeting connect behavior data to robot references." } },
-  { id: "bfm-adaptation", parent: "bfm", label: { zh: "适应 / 迁移与鲁棒性", en: "Adaptation / Transfer & Robustness" }, description: { zh: "动力学适应、特权信息、教师—学生学习和 Sim2Real，为通用控制器的部署与鲁棒性提供方法基础。", en: "Dynamics adaptation, privileged information, teacher–student learning, and sim-to-real methods support deployment and robustness." } },
-  { id: "locomotion", label: { zh: "运动控制 / Locomotion", en: "Motion Control / Locomotion" } },
-  { id: "parkour-terrain", label: { zh: "跑酷 / 多地形运动", en: "Parkour / Multi-terrain" }, description: { zh: "复杂地形上的感知运动、精准落脚、障碍跨越与地形适应，覆盖踏脚石、窄梁、间隙和跑酷等任务。", en: "Perceptive locomotion, precise foothold selection, obstacle traversal, and terrain adaptation across stepping stones, narrow beams, gaps, and parkour courses." } },
-  { id: "manipulation", label: { zh: "Manipulation", en: "Manipulation" } },
-  { id: "loco-manipulation", label: { zh: "Loco-Manipulation", en: "Loco-Manipulation" } },
-  { id: "sim2real", label: { zh: "Sim2Real / 动力学辨识", en: "Sim2Real / System ID" } },
-  { id: "real-robot-rl", label: { zh: "真机 RL", en: "Real-Robot RL" } },
-  { id: "imitation-teleop", label: { zh: "模仿学习 / 遥操作", en: "Imitation / Teleop" } },
-  { id: "vla-world-model", label: { zh: "VLA / 世界模型", en: "VLA / World Model" } },
-  { id: "benchmark-dataset", label: { zh: "Benchmark / Dataset", en: "Benchmark / Dataset" } },
-  { id: "numerical-solvers", label: { zh: "数值求解 / 科学机器学习", en: "Numerical Solvers / Scientific ML" }, description: { zh: "PDE 离散系统、迭代求解、预条件与神经算子，关注数值精度、收敛效率及学习模块与传统算法的结合。", en: "Discretized PDE systems, iterative solvers, preconditioning, and neural operators, focusing on numerical accuracy, convergence, and learned components within classical algorithms." } },
-  { id: "llm-inference", label: { zh: "大模型 / 推理加速", en: "LLMs / Inference Acceleration" }, description: { zh: "大语言模型与推理模型的高效推理，涵盖稀疏注意力、KV cache、解码优化与计算开销。", en: "Efficient inference for language and reasoning models, including sparse attention, KV caches, decoding optimizations, and computational cost." } },
-  {"id": "temporal-modeling", "label": {"zh": "事件序列 / 时间建模", "en": "Event Sequences / Temporal Modeling"}, "description": {"zh": "时间点过程、不规则事件序列与等待时间分布，关注条件密度、事件预测与序列生成。", "en": "Temporal point processes, irregular event sequences, and waiting-time distributions, focusing on conditional densities, event prediction, and sequence generation."}},
-];
+const unassignedCategory = {
+  id: "unassigned",
+  label: { zh: "待归类", en: "Not yet mapped" },
+  description: { zh: "这些条目还没有接入知识体系，保留在全库中，等待根据研究问题归类。", en: "These papers remain in the library and await mapping by research question." },
+  entries: [],
+};
+let categories = [unassignedCategory];
+let knowledgeMap = { assignments: {}, connections: [], relations: [], contexts: [] };
+let knowledgeMapFailed = false;
 
 const papers = [
   {
@@ -4292,15 +4337,18 @@ const paperInstitutionOverrides = {
 const paperNotes = new Map();
 
 const state = {
-  lang: localStorage.getItem("paper-notes-lang") || "zh",
-  category: "bfm",
-  bfmExpanded: localStorage.getItem("paper-bfm-expanded") !== "0",
+  lang: localStorage.getItem("paper-notes-lang") === "en" ? "en" : "zh",
+  category: "all",
+  expandedCategories: new Set(),
+  context: "all",
+  readerHistory: [],
   query: "",
   selectedId: null,
   notesOnly: false,
   status: "all",
   year: "all",
   sort: "recent",
+  ambientMotion: localStorage.getItem("paper-ambient-motion") !== "0",
   layout: {
     sidebarCollapsed: localStorage.getItem("paper-layout-sidebar-collapsed") === "1",
     sidebarWidth: Number(localStorage.getItem("paper-layout-sidebar-width")) || 220,
@@ -4310,6 +4358,8 @@ const state = {
 const nodes = {
   html: document.documentElement,
   body: document.body,
+  motionToggle: document.querySelector("#motion-toggle"),
+  backgroundVideo: document.querySelector("#background-video"),
   langButtons: Array.from(document.querySelectorAll(".lang-button")),
   promptButton: document.querySelector("#prompt-button"),
   promptModal: document.querySelector("#prompt-modal"),
@@ -4320,6 +4370,9 @@ const nodes = {
   sidebarResizer: document.querySelector("#sidebar-resizer"),
   paperDialog: document.querySelector("#paper-dialog"),
   detailClose: document.querySelector("#detail-close"),
+  knowledgeGuide: document.querySelector("#knowledge-guide"),
+  contextFilter: document.querySelector("#context-filter"),
+  detailBack: document.querySelector("#detail-back"),
   statusFilter: document.querySelector("#status-filter"),
   yearFilter: document.querySelector("#year-filter"),
   sortOrder: document.querySelector("#sort-order"),
@@ -4364,6 +4417,45 @@ function saveLayout() {
   localStorage.setItem("paper-layout-sidebar-collapsed", state.layout.sidebarCollapsed ? "1" : "0");
   localStorage.setItem("paper-layout-sidebar-width", String(state.layout.sidebarWidth));
 }
+
+const reducedMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+let ambientPlaybackBlocked = false;
+
+function applyAmbientMotion() {
+  const unavailable = Boolean(nodes.backgroundVideo.error);
+  const enabled = state.ambientMotion && !reducedMotionPreference.matches && !unavailable && !ambientPlaybackBlocked;
+  const playing = enabled && !document.hidden && !nodes.paperDialog.open && nodes.promptModal.hidden;
+  nodes.body.classList.toggle("has-ambient-motion", playing);
+  if (playing) {
+    if (nodes.backgroundVideo.paused) nodes.backgroundVideo.play().catch((error) => {
+      if (error.name !== "AbortError" && state.ambientMotion) {
+        ambientPlaybackBlocked = true;
+        applyAmbientMotion();
+      }
+    });
+  } else {
+    nodes.backgroundVideo.pause();
+  }
+  nodes.motionToggle.setAttribute("aria-pressed", String(enabled));
+  nodes.motionToggle.disabled = reducedMotionPreference.matches || unavailable;
+  nodes.motionToggle.querySelector("span").textContent = text(enabled ? "backgroundOn" : "backgroundOff");
+  nodes.motionToggle.setAttribute("aria-label", text("backgroundMotion"));
+  nodes.motionToggle.title = text(unavailable ? "failedBackground" : reducedMotionPreference.matches ? "reducedBackground" : enabled ? "pauseBackground" : "playBackground");
+}
+
+nodes.motionToggle.addEventListener("click", () => {
+  state.ambientMotion = ambientPlaybackBlocked ? true : !state.ambientMotion;
+  ambientPlaybackBlocked = false;
+  localStorage.setItem("paper-ambient-motion", state.ambientMotion ? "1" : "0");
+  applyAmbientMotion();
+});
+reducedMotionPreference.addEventListener("change", applyAmbientMotion);
+document.addEventListener("visibilitychange", applyAmbientMotion);
+nodes.backgroundVideo.addEventListener("error", applyAmbientMotion);
+nodes.backgroundVideo.querySelector("source").addEventListener("error", applyAmbientMotion);
+const backgroundModalObserver = new MutationObserver(applyAmbientMotion);
+backgroundModalObserver.observe(nodes.paperDialog, { attributes: true, attributeFilter: ["open"] });
+backgroundModalObserver.observe(nodes.promptModal, { attributes: true, attributeFilter: ["hidden"] });
 
 function stringField(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -4411,6 +4503,7 @@ function normalizePaperRecord(rawPaper) {
     id,
     aliases: stringArray(rawPaper.aliases),
     categories: stringArray(rawPaper.categories),
+    contexts: stringArray(rawPaper.contexts),
     pdf: stringField(rawPaper.pdf),
     project: stringField(rawPaper.project),
     arxiv: stringField(rawPaper.arxiv),
@@ -4638,10 +4731,35 @@ function categoryCount(categoryId) {
   return papers.filter((paper) => matchesCategory(paper, categoryId)).length;
 }
 
+function paperCategories(paper) {
+  const assigned = knowledgeMap.assignments[paper.id] || paper.categories;
+  const valid = assigned.filter((id) => categories.some((category) => category.id === id));
+  return valid.length ? valid : ["unassigned"];
+}
+
+function paperContexts(paper) {
+  return [...new Set([...(paper.contexts || []), ...paper.categories])]
+    .filter((id) => knowledgeMap.contexts.some((context) => context.id === id));
+}
+
 function matchesCategory(paper, categoryId) {
-  return categoryId === "all" || paper.categories.some((id) =>
+  return categoryId === "all" || paperCategories(paper).some((id) =>
     id === categoryId || categories.find((category) => category.id === id)?.parent === categoryId
   );
+}
+
+async function loadKnowledgeMap() {
+  try {
+    const response = await fetch("knowledge_map.json", { cache: "no-cache" });
+    if (!response.ok) throw new Error("Knowledge map request failed");
+    const data = await response.json();
+    if (!Array.isArray(data.categories) || !data.assignments || !Array.isArray(data.relations) ||
+        !Array.isArray(data.connections) || !Array.isArray(data.contexts)) throw new Error("Invalid knowledge map");
+    knowledgeMap = data;
+    categories = [...data.categories, unassignedCategory];
+  } catch {
+    knowledgeMapFailed = true;
+  }
 }
 
 function categorySearchLabels(categoryId) {
@@ -4733,7 +4851,8 @@ function searchableText(paper) {
     localized.mainContent,
     localized.innovations.join(" "),
     localized.implementation.join(" "),
-    paper.categories.flatMap(categorySearchLabels).join(" "),
+    paperCategories(paper).flatMap(categorySearchLabels).join(" "),
+    paperContexts(paper).map((id) => knowledgeMap.contexts.find((c) => c.id === id).label[state.lang]).join(" "),
     localized.tags.join(" "),
     paper.year,
     paper.venue,
@@ -4769,6 +4888,7 @@ function filteredPapers() {
   const query = state.query.trim().toLowerCase();
   const list = papers.filter((paper) =>
     matchesCategory(paper, state.category) &&
+    (state.context === "all" || paperContexts(paper).includes(state.context)) &&
     (!state.notesOnly || paperNotes.has(paper.id)) &&
     (state.status === "all" || readingStage(paper) === state.status) &&
     (state.year === "all" || publicationYear(paper) === state.year) &&
@@ -4783,6 +4903,8 @@ function renderFilters() {
   const options = (items, selected) => items.map(([value, label]) =>
     `<option value="${escapeHtml(value)}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`
   ).join("");
+  nodes.contextFilter.innerHTML = options([["all", text("allContexts")], ...knowledgeMap.contexts.map((c) => [c.id, c.label[state.lang]])], state.context);
+  nodes.contextFilter.parentElement.classList.toggle("is-active", state.context !== "all");
   nodes.statusFilter.innerHTML = options([
     ["all", text("readingStatus")],
     ...["reviewed", "partial", "summarized"].map((stage) => [stage, stageLabel(stage)]),
@@ -4795,6 +4917,7 @@ function renderFilters() {
 }
 
 function clearFilters() {
+  state.context = "all";
   state.query = "";
   state.status = "all";
   state.year = "all";
@@ -4827,56 +4950,138 @@ function syncLanguage() {
   }
   applyLayout();
   renderFilters();
+  applyAmbientMotion();
+}
+
+function categoryButton(id, label, count) {
+  const active = !state.notesOnly && state.category === id;
+  return `<button class="category-button ${active ? "is-active" : ""}" type="button"
+    data-category="${escapeHtml(id)}" aria-pressed="${active}"><span>${escapeHtml(label)}</span><small>${count}</small></button>`;
 }
 
 function renderCategories() {
-  nodes.categoryCount.textContent = categories.filter((category) => !category.parent).length;
-
-  const button = (id, label, count) => `
-    <button class="category-button ${!state.notesOnly && state.category === id ? "is-active" : ""}"
-      type="button" data-category="${id}" aria-pressed="${!state.notesOnly && state.category === id}"
-      title="${escapeHtml(label)}">
-      <span>${escapeHtml(label)}</span><small>${count}</small>
-    </button>`;
-
+  const systems = categories.filter((category) => category.code);
+  nodes.categoryCount.textContent = systems.length;
   nodes.categoryNav.innerHTML = `
-    ${button("all", text("allPapers"), papers.length)}
+    ${categoryButton("all", text("allPapers"), papers.length)}
     <button class="category-button ${state.notesOnly ? "is-active" : ""}" type="button" data-notes-only aria-pressed="${state.notesOnly}"><span>${text("personalCollection")}</span><small>${paperNotes.size}</small></button>
     <p class="category-section-label">${text("researchDirections")}</p>
-    <div class="category-group">
-      <div class="category-group-header">
-        ${button("bfm", state.lang === "zh" ? "BFM / 通用控制" : "BFM / Motor Control", categoryCount("bfm"))}
-        <button class="category-group-toggle" type="button" data-category-toggle="bfm"
-          aria-expanded="${state.bfmExpanded}" aria-controls="bfm-subcategories"
-          aria-label="${text(state.bfmExpanded ? "collapseBfm" : "expandBfm")}">
-          ${state.bfmExpanded ? "−" : "+"}
-        </button>
-      </div>
-      <div class="category-children" id="bfm-subcategories" ${state.bfmExpanded ? "" : "hidden"}>
-        ${categories.filter((category) => category.parent === "bfm")
-          .map((category) => button(category.id, category.label[state.lang], categoryCount(category.id))).join("")}
-      </div>
-    </div>
-    <p class="category-section-label">${text("taskCategories")}</p>
-    ${categories.filter((category) => !category.parent && category.id !== "bfm")
-      .map((category) => button(category.id, category.label[state.lang], categoryCount(category.id))).join("")}`;
+    ${systems.map((category) => {
+      const expanded = state.expandedCategories.has(category.id);
+      return `<div class="category-group"><div class="category-group-header">
+        ${categoryButton(category.id, category.label[state.lang], categoryCount(category.id))}
+        <button class="category-group-toggle" type="button" data-category-toggle="${category.id}"
+          aria-expanded="${expanded}" aria-controls="${category.id}-children"
+          aria-label="${text(expanded ? "collapseGroup" : "expandGroup")} · ${escapeHtml(category.label[state.lang])}">${expanded ? "−" : "+"}</button>
+        </div><div class="category-children" id="${category.id}-children" ${expanded ? "" : "hidden"}>
+        ${categories.filter((c) => c.parent === category.id).map((c) => categoryButton(c.id, c.label[state.lang], categoryCount(c.id))).join("")}
+        </div></div>`;
+    }).join("")}
+    <p class="category-section-label">${text("supportTopics")}</p>
+    ${categories.filter((c) => !c.parent && !c.code && (c.id !== "unassigned" || categoryCount(c.id)))
+      .map((c) => categoryButton(c.id, c.label[state.lang], categoryCount(c.id))).join("")}`;
+}
+
+function paperLinkButton(id, className = "topic-link") {
+  const paper = papers.find((p) => p.id === id);
+  return paper ? `<button type="button" class="${className}" data-paper-id="${escapeHtml(id)}" aria-haspopup="dialog" title="${escapeHtml(localPaper(paper).title)}">${escapeHtml(paperDisplayName(paper))} <span aria-hidden="true">↗</span></button>` : "";
+}
+
+function topicTile(category) {
+  return `<button type="button" class="topic-tile" data-category="${category.id}">
+    <span class="topic-tile-heading"><strong>${escapeHtml(category.label[state.lang])}</strong><span class="topic-tile-meta">${categoryCount(category.id)} ${text("papers")}</span></span>
+    <p>${escapeHtml(category.description[state.lang])}</p>
+    </button>`;
+}
+
+function renderKnowledgeGuide() {
+  if (state.notesOnly) { nodes.knowledgeGuide.innerHTML = ""; return; }
+  const selected = categories.find((c) => c.id === state.category);
+  const parentId = selected?.parent || selected?.id;
+  const systems = categories.filter((c) => c.code);
+  const links = knowledgeMap.connections.filter((c) => !selected || c.source === parentId || c.target === parentId);
+  const connections = links.length ? `<details class="system-connections"><summary>${text("systemConnections")}</summary>
+    <div class="system-link-list">${links.map((c) => `<div class="system-link">
+      <div><button class="topic-link" type="button" data-category="${c.source}">${escapeHtml(categoryLabel(c.source))}</button>
+      <span aria-hidden="true">→</span><button class="topic-link" type="button" data-category="${c.target}">${escapeHtml(categoryLabel(c.target))}</button></div>
+      <p>${escapeHtml(c.reason[state.lang])}</p></div>`).join("")}</div></details>` : "";
+  nodes.knowledgeGuide.innerHTML = `${knowledgeMapFailed ? `<p class="map-status" role="status">${text("mapLoadFailed")}</p>` : ""}
+    ${selected ? `
+      ${selected.parent ? `<button class="topic-link topic-parent" type="button" data-category="${selected.parent}">← ${escapeHtml(categoryLabel(selected.parent))}</button>` : ""}
+      ${selected.focus ? `<div class="reading-focus"><strong>${text("readingFocus")}</strong><p>${escapeHtml(selected.focus[state.lang])}</p></div>` : ""}
+      ${selected.entries?.length ? `<div class="entry-papers"><span>${text("entryPapers")}</span><div>${selected.entries.map((id) => paperLinkButton(id)).join("")}</div></div>` : ""}
+      <div class="topic-grid subsystem-grid">${categories.filter((c) => c.parent === selected.id).map(topicTile).join("")}</div>`
+      : `<div class="topic-grid">${systems.map(topicTile).join("")}</div>`}
+    ${connections}`;
+}
+
+function relatedPapers(paper) {
+  return knowledgeMap.relations.filter((r) => r.source === paper.id || r.target === paper.id)
+    .map((relation) => ({ relation, paper: papers.find((p) => p.id === (relation.source === paper.id ? relation.target : relation.source)) }))
+    .filter((item) => item.paper);
+}
+
+function sameTopicPapers(paper) {
+  const current = paperCategories(paper).filter((id) => id !== "unassigned");
+  const linked = new Set(relatedPapers(paper).map((item) => item.paper.id));
+  return papers.filter((p) => p.id !== paper.id && !linked.has(p.id))
+    .map((p) => ({ paper: p, shared: paperCategories(p).filter((id) => current.includes(id)) }))
+    .filter((item) => item.shared.length)
+    .sort((a, b) => b.shared.length - a.shared.length || paperDisplayName(a.paper).localeCompare(paperDisplayName(b.paper)))
+    .slice(0, 3);
+}
+
+function categoryChips(paper, limit = Infinity) {
+  const ids = paperCategories(paper);
+  return ids.slice(0, limit).map((id) => `<button type="button" class="tag category-tag" data-category="${escapeHtml(id)}">${escapeHtml(categoryLabel(id))}</button>`).join("") + (ids.length > limit ? `<button type="button" class="tag category-tag" data-paper-id="${escapeHtml(paper.id)}" aria-label="${text("researchDirections")}">+${ids.length - limit}</button>` : "");
+}
+
+function renderPaperConnections(paper) {
+  const related = relatedPapers(paper);
+  const suggestions = sameTopicPapers(paper);
+  return `<section class="detail-section paper-connections" id="detail-connections"><h3>${text("paperConnections")}</h3>
+    <p class="connection-hint">${text(related.length ? "relationScope" : "noRelations")}</p>
+    <div class="relation-list">${related.map(({ relation: r, paper: target }) => `<article class="relation-card">
+      <span class="relation-type">${text(r.type)}</span>
+      ${paperLinkButton(target.id)}<p>${escapeHtml(r.reason[state.lang])}</p>
+      <small>${escapeHtml(r.basis[state.lang])}</small></article>`).join("")}</div>
+    ${suggestions.length ? `<h4>${text("sameQuestion")}</h4><p class="connection-hint">${text("sameQuestionHint")}</p><div class="same-topic-list">
+      ${suggestions.map(({ paper: p, shared }) => `<div>${paperLinkButton(p.id)}<small>${shared.map((id) => escapeHtml(categoryLabel(id))).join(" · ")}</small></div>`).join("")}</div>` : ""}
+    </section>`;
+}
+
+function selectCategory(categoryId) {
+  if (categoryId !== "all" && !categories.some((c) => c.id === categoryId)) return;
+  if (nodes.paperDialog.open) {
+    nodes.paperDialog.close();
+    state.query = ""; state.context = "all"; state.status = "all"; state.year = "all";
+    nodes.search.value = "";
+  }
+  state.category = categoryId;
+  state.notesOnly = false;
+  const category = categories.find((c) => c.id === categoryId);
+  if (category?.code || category?.parent) state.expandedCategories.add(category.parent || category.id);
+  render();
+  nodes.viewTitle.focus({ preventScroll: true });
+  nodes.viewTitle.scrollIntoView({ block: "start" });
 }
 
 function renderList() {
   const list = filteredPapers();
   nodes.paperCount.textContent = papers.length;
   nodes.viewTitle.textContent = state.notesOnly ? text("personalCollection") : state.category === "all" ? text("allPapers") : categoryLabel(state.category);
-  const description = state.notesOnly ? "" : categories.find((category) => category.id === state.category)?.description?.[state.lang] || "";
+  const description = state.notesOnly ? "" : state.category === "all" ? text("overviewDescription") : categories.find((category) => category.id === state.category)?.description?.[state.lang] || "";
   nodes.viewDescription.textContent = description;
   nodes.viewDescription.hidden = !description;
   nodes.resultCount.textContent = `${text("showing")} ${list.length} ${text("of")} ${papers.length} ${text("items")}`;
-  nodes.resetFilters.hidden = !state.query && state.status === "all" && state.year === "all" && !state.notesOnly;
+  nodes.resetFilters.hidden = !state.query && state.status === "all" && state.year === "all" && state.context === "all" && !state.notesOnly;
+  renderKnowledgeGuide();
+  if (nodes.paperDialog.open) renderDetail(papers.find((paper) => paper.id === state.selectedId));
   if (!list.length) {
     nodes.paperList.innerHTML = `<div class="empty-state"><strong>${text("noResults")}</strong><p>${text("noResultsHint")}</p><button class="action-link" type="button" data-reset-filters>${text("clearFilters")}</button></div>`;
     return;
   }
   nodes.paperList.innerHTML = list.map(renderPaperCard).join("");
-  if (nodes.paperDialog.open) renderDetail(papers.find((paper) => paper.id === state.selectedId));
   typesetMath();
 }
 
@@ -4886,24 +5091,33 @@ function renderPaperCard(paper, index) {
   const name = paperDisplayName(paper);
   const hasShortName = name !== localized.title;
   const stage = readingStage(paper);
-  const visibleTags = localized.tags.filter((tag) => normalizeMatchKey(tag) !== normalizeMatchKey(name)).slice(0, 3);
-  return `
-    <button class="paper-card ${index === 0 ? "is-featured" : ""}" type="button" data-paper-id="${escapeHtml(paper.id)}" aria-haspopup="dialog" aria-controls="paper-dialog" aria-label="${escapeHtml(localized.title)} · ${text("viewNotes")}">
-      <div class="meta-row"><span class="card-venue" title="${escapeHtml(paper.venue)}">${escapeHtml(paper.year)} · ${escapeHtml(paper.venue)}</span><span class="reading-status" data-stage="${stage}" title="${escapeHtml(localized.status)}">${stageLabel(stage)}</span></div>
-      <div class="paper-card-heading"><h3 class="${hasShortName ? (name.length > 22 ? "is-medium" : "") : "is-long"}">${escapeHtml(name)}</h3>${hasShortName ? `<p class="paper-card-title">${escapeHtml(localized.title)}</p>` : ""}</div>
-      <p class="paper-card-takeaway">${renderText(note.takeaway || localized.mainContent)}</p>
-      <div class="paper-card-tags"><div class="tag-row">${tagItems(visibleTags)}</div></div>
-      <div class="paper-card-footer"><span>${text(paperNotes.has(paper.id) ? "hasPersonalNote" : "bilingualNotes")}</span><span class="card-read">${text("viewNotes")} ↗</span></div>
-    </button>`;
+  const relation = relatedPapers(paper)[0];
+  const suggestion = relation ? null : sameTopicPapers(paper)[0];
+  const target = relation?.paper || suggestion?.paper;
+  return `<article class="paper-card ${index === 0 ? "is-featured" : ""}">
+    <button class="paper-card-main" type="button" data-paper-id="${escapeHtml(paper.id)}" aria-haspopup="dialog" aria-controls="paper-dialog" aria-label="${escapeHtml(localized.title)} · ${text("viewNotes")}">
+      <span class="meta-row"><span class="card-venue" title="${escapeHtml(paper.venue)}">${escapeHtml(paper.year)} · ${escapeHtml(paper.venue)}</span><span class="reading-status" data-stage="${stage}" title="${escapeHtml(localized.status)}">${stageLabel(stage)}</span></span>
+      <span class="paper-card-heading"><strong class="card-title ${hasShortName ? (name.length > 22 ? "is-medium" : "") : "is-long"}">${escapeHtml(name)}</strong>${hasShortName ? `<span class="paper-card-title">${escapeHtml(localized.title)}</span>` : ""}</span>
+      <span class="paper-card-takeaway">${renderText(note.takeaway || localized.mainContent)}</span>
+      <span class="paper-card-footer"><span>${text(paperNotes.has(paper.id) ? "hasPersonalNote" : "bilingualNotes")}</span><span class="card-read">${text("viewNotes")} ↗</span></span>
+    </button>
+    <div class="paper-card-tags"><div class="tag-row">${categoryChips(paper, 2)}</div></div>
+    ${target ? `<div class="card-connection"><span>${text(relation ? relation.relation.type : "sameQuestion")}</span>${paperLinkButton(target.id)}</div>` : ""}
+    </article>`;
 }
 
-function openPaper(paperId) {
+function openPaper(paperId, fromHistory = false) {
   const paper = papers.find((item) => item.id === paperId);
   if (!paper) return;
+  const alreadyOpen = nodes.paperDialog.open;
+  if (alreadyOpen && !fromHistory && state.selectedId !== paperId) {
+    state.readerHistory.push({ id: state.selectedId, scrollTop: nodes.paperDetail.scrollTop });
+  } else if (!alreadyOpen) state.readerHistory = [];
   state.selectedId = paperId;
   renderDetail(paper);
-  nodes.paperDialog.showModal();
+  if (!alreadyOpen) nodes.paperDialog.showModal();
   nodes.paperDetail.scrollTop = 0;
+  if (alreadyOpen) nodes.paperDetail.querySelector("#paper-dialog-title").focus({ preventScroll: true });
   typesetMath();
 }
 
@@ -4913,7 +5127,9 @@ function renderDetail(paper) {
   const localized = localPaper(paper);
   const note = localPaperNote(paper);
   const institutions = localInstitutions(paper);
-  const categoryTags = tagItems(paper.categories.map(categoryLabel), "category-tag");
+  const categoryTags = categoryChips(paper);
+  nodes.detailBack.hidden = state.readerHistory.length === 0;
+  nodes.detailBack.textContent = `← ${text("backPaper")}`;
   const keywordTags = tagItems(localized.tags, "keyword-tag");
   const links = [
     [paper.pdf, text("pdf")],
@@ -4945,6 +5161,7 @@ function renderDetail(paper) {
     : "";
   const detailNav = `
     <nav class="detail-nav" aria-label="paper sections">
+      <button type="button" data-detail-target="detail-connections">${text("paperConnections")}</button>
       <button type="button" data-detail-target="detail-summary">${text("detailNavSummary")}</button>
       <button type="button" data-detail-target="detail-innovations">${text("detailNavInnovations")}</button>
       <button type="button" data-detail-target="detail-implementation">${text("detailNavImplementation")}</button>
@@ -4954,17 +5171,19 @@ function renderDetail(paper) {
 
   nodes.paperDetail.innerHTML = `
     <div class="detail-meta"><span>${escapeHtml(paper.year)}</span><span>${escapeHtml(paper.venue)}</span><span>${escapeHtml(localized.status)}</span></div>
-    <h2 class="detail-title" id="paper-dialog-title">${escapeHtml(localized.title)}</h2>
+    <h2 class="detail-title" id="paper-dialog-title" tabindex="-1">${escapeHtml(localized.title)}</h2>
     <details class="detail-authors"><summary>${text("authorsInstitutions")}</summary><p>${escapeHtml(localized.authors)}</p>${institutionLine}</details>
     <div class="link-row" id="detail-links">${linkAction}</div>
+    <div class="tag-row detail-category-links">${categoryTags}</div>
     ${takeaway}
     ${detailNav}
+    ${renderPaperConnections(paper)}
     ${personalNote}
     <section class="detail-section" id="detail-summary"><h3>${text("mainContent")}</h3><p>${renderText(localized.mainContent)}</p></section>
     <section class="detail-section" id="detail-innovations"><h3>${text("innovations")}</h3><ul>${listItems(localized.innovations)}</ul></section>
     <section class="detail-section" id="detail-implementation"><h3>${text("implementation")}</h3><ul>${listItems(localized.implementation)}</ul></section>
     <section class="keyword-section"><h3>${text("keywords")}</h3><div class="tag-row">${keywordTags}</div></section>
-    <section class="keyword-section"><h3>${text("researchDirections")}</h3><div class="tag-row">${categoryTags}</div></section>
+
   `;
 }
 
@@ -4999,6 +5218,12 @@ nodes.sidebarRestore.addEventListener("click", () => {
 });
 
 nodes.detailClose.addEventListener("click", () => nodes.paperDialog.close());
+nodes.detailBack.addEventListener("click", () => {
+  const previous = state.readerHistory.pop();
+  if (!previous) return;
+  openPaper(previous.id, true);
+  nodes.paperDetail.scrollTop = previous.scrollTop;
+});
 nodes.paperDialog.addEventListener("click", (event) => {
   if (event.target !== nodes.paperDialog) return;
   const rect = nodes.paperDialog.getBoundingClientRect();
@@ -5037,6 +5262,12 @@ nodes.sidebarResizer.addEventListener("keydown", (event) => {
   applyLayout();
 });
 
+nodes.contextFilter.addEventListener("change", () => {
+  state.context = nodes.contextFilter.value;
+  renderFilters();
+  renderList();
+});
+
 nodes.statusFilter.addEventListener("change", () => {
   state.status = nodes.statusFilter.value;
   renderFilters();
@@ -5068,26 +5299,20 @@ nodes.categoryNav.addEventListener("click", (event) => {
   }
   const toggle = event.target.closest("[data-category-toggle]");
   if (toggle) {
-    state.bfmExpanded = !state.bfmExpanded;
-    localStorage.setItem("paper-bfm-expanded", state.bfmExpanded ? "1" : "0");
+    const id = toggle.dataset.categoryToggle;
+    if (state.expandedCategories.has(id)) state.expandedCategories.delete(id);
+    else state.expandedCategories.add(id);
     renderCategories();
-    return;
+    nodes.categoryNav.querySelector(`[data-category-toggle="${id}"]`)?.focus();
   }
-  const button = event.target.closest("[data-category]");
-  if (!button) return;
-  state.category = button.dataset.category;
-  state.notesOnly = false;
-  renderCategories();
-  renderList();
 });
 
-nodes.paperList.addEventListener("click", (event) => {
-  if (event.target.closest("[data-reset-filters]")) {
-    clearFilters();
-    return;
-  }
-  const button = event.target.closest("[data-paper-id]");
-  if (button) openPaper(button.dataset.paperId);
+document.addEventListener("click", (event) => {
+  const category = event.target.closest("[data-category]");
+  if (category) { selectCategory(category.dataset.category); return; }
+  const paper = event.target.closest("[data-paper-id]");
+  if (paper) { openPaper(paper.dataset.paperId); return; }
+  if (event.target.closest("[data-reset-filters]")) clearFilters();
 });
 
 nodes.paperDetail.addEventListener("click", (event) => {
@@ -5193,6 +5418,7 @@ document.addEventListener("keydown", (event) => {
 async function initialize() {
   await Promise.all([
     loadSiteMeta(),
+    loadKnowledgeMap(),
     loadExternalPapers(),
     loadPromptData(),
   ]);

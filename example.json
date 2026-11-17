@@ -26,135 +26,158 @@
     "zh 和 en 必须事实一致；允许自然翻译，但不得增删实验数字、结论或限制。",
     "如果只想记录一句个人理解，不要新增完整论文对象，改 paper_notes.json 即可。",
     "aliases 可填写 UMR、ScaleBFM、Humanoid Transformer 等常用简称，用于搜索；同一论文保留一个正式标题条目。",
-    "BFM 相关论文选择一个或多个 bfm-* 子分类，网站自动汇总到 bfm 父分类；同时保留任务、应用与迁移分类。"
+    "categories 选择研究问题对应的子体系，可交叉；contexts 从 available_contexts 选择任务与应用标签。已有条目分类以 knowledge_map.json 的 assignments 为准，改分类时更新该映射。"
   ],
   "available_categories": [
     {
-      "id": "bfm",
-      "zh": "BFM / 通用运动控制",
-      "en": "BFM / General Motor Control"
+      "id": "k1-tracking",
+      "zh": "跟踪与能力蒸馏",
+      "en": "Tracking & skill distillation",
+      "parent": "k1"
     },
     {
-      "id": "bfm-fb",
-      "zh": "FB / 奖励可编程",
-      "en": "FB / Reward Conditioning",
-      "parent": "bfm"
+      "id": "k1-style",
+      "zh": "风格与模仿奖励",
+      "en": "Style & imitation rewards",
+      "parent": "k1"
     },
     {
-      "id": "bfm-tracking",
-      "zh": "运动跟踪 / 技能蒸馏",
-      "en": "Tracking / Distillation",
-      "parent": "bfm"
+      "id": "k1-skills",
+      "zh": "技能空间与层级调用",
+      "en": "Skill spaces & hierarchical reuse",
+      "parent": "k1"
     },
     {
-      "id": "bfm-goal",
-      "zh": "掩码目标 / 多模态接口",
-      "en": "Masked Goals / Interfaces",
-      "parent": "bfm"
+      "id": "k1-goals",
+      "zh": "目标补全与控制接口",
+      "en": "Goal completion & control interfaces",
+      "parent": "k1"
     },
     {
-      "id": "bfm-latent",
-      "zh": "连续潜空间 / 运动先验",
-      "en": "Continuous Latents / Priors",
-      "parent": "bfm"
+      "id": "k1-reward",
+      "zh": "奖励条件化与 FB",
+      "en": "Reward conditioning & FB",
+      "parent": "k1"
     },
     {
-      "id": "bfm-token",
-      "zh": "离散 Token / 技能序列",
-      "en": "Discrete Tokens / Skills",
-      "parent": "bfm"
+      "id": "k1-action",
+      "zh": "动作参数化与参考生成",
+      "en": "Action parameterization & reference generation",
+      "parent": "k1"
     },
     {
-      "id": "bfm-generative",
-      "zh": "生成式控制 / 动作过渡",
-      "en": "Generative Control / Transitions",
-      "parent": "bfm"
+      "id": "k2-retarget",
+      "zh": "几何到动力学重定向",
+      "en": "From geometric to dynamic retargeting",
+      "parent": "k2"
     },
     {
-      "id": "bfm-dynamics",
-      "zh": "动力学 / 模型与优化",
-      "en": "Dynamics / Models & Optimization",
-      "parent": "bfm"
+      "id": "k2-contact",
+      "zh": "交互表示与接触结构",
+      "en": "Interaction representations & contact structure",
+      "parent": "k2"
     },
     {
-      "id": "bfm-data",
-      "zh": "数据 / 运动重定向",
-      "en": "Data / Motion Retargeting",
-      "parent": "bfm"
+      "id": "k2-constraints",
+      "zh": "约束、柔顺与反馈",
+      "en": "Constraints, compliance & feedback",
+      "parent": "k2"
     },
     {
-      "id": "bfm-adaptation",
-      "zh": "适应 / 迁移与鲁棒性",
-      "en": "Adaptation / Transfer & Robustness",
-      "parent": "bfm"
+      "id": "k3-estimation",
+      "zh": "状态估计与历史表征",
+      "en": "State estimation & history representations",
+      "parent": "k3"
     },
     {
-      "id": "locomotion",
-      "zh": "运动控制 / Locomotion",
-      "en": "Motion Control / Locomotion"
+      "id": "k3-perception",
+      "zh": "视觉、触觉与地图反馈",
+      "en": "Visual, tactile & map feedback",
+      "parent": "k3"
     },
     {
-      "id": "parkour-terrain",
-      "zh": "跑酷 / 多地形运动",
-      "en": "Parkour / Multi-terrain"
+      "id": "k3-distillation",
+      "zh": "特权信息与教师—学生",
+      "en": "Privileged information & teacher–student learning",
+      "parent": "k3"
     },
     {
-      "id": "manipulation",
-      "zh": "Manipulation",
-      "en": "Manipulation"
+      "id": "k4-identification",
+      "zh": "辨识与物理模型校准",
+      "en": "Identification & physical model calibration",
+      "parent": "k4"
     },
     {
-      "id": "loco-manipulation",
-      "zh": "Loco-Manipulation",
-      "en": "Loco-Manipulation"
+      "id": "k4-robustness",
+      "zh": "随机化、鲁棒性与形态",
+      "en": "Randomization, robustness & morphology",
+      "parent": "k4"
     },
     {
-      "id": "sim2real",
-      "zh": "Sim2Real / 动力学辨识",
-      "en": "Sim2Real / System ID"
+      "id": "k4-adaptation",
+      "zh": "在线适应与残差修正",
+      "en": "Online adaptation & residual correction",
+      "parent": "k4"
     },
     {
-      "id": "real-robot-rl",
-      "zh": "真机 RL",
-      "en": "Real-Robot RL"
+      "id": "k5-fidelity",
+      "zh": "W1 · 模型准确性的标准",
+      "en": "W1 · What must a model get right?",
+      "parent": "k5"
     },
     {
-      "id": "imitation-teleop",
-      "zh": "模仿学习 / 遥操作",
-      "en": "Imitation / Teleop"
+      "id": "k5-decision",
+      "zh": "W2 · 模型怎样变成决策",
+      "en": "W2 · From models to decisions",
+      "parent": "k5"
     },
     {
-      "id": "vla-world-model",
-      "zh": "VLA / 世界模型",
-      "en": "VLA / World Model"
+      "id": "k5-horizon",
+      "zh": "W3 · 长时域与优化结构",
+      "en": "W3 · Long horizons & optimization structure",
+      "parent": "k5"
     },
     {
-      "id": "benchmark-dataset",
-      "zh": "Benchmark / Dataset",
-      "en": "Benchmark / Dataset"
+      "id": "k5-time",
+      "zh": "W4 · 时间、事件与动力学模式",
+      "en": "W4 · Time, events & dynamics modes",
+      "parent": "k5"
     },
     {
-      "id": "numerical-solvers",
-      "zh": "数值求解 / 科学机器学习",
-      "en": "Numerical Solvers / Scientific ML"
+      "id": "k6-data",
+      "zh": "数据来源与经验覆盖",
+      "en": "Data sources & experience coverage",
+      "parent": "k6"
     },
     {
-      "id": "llm-inference",
-      "zh": "大模型 / 推理加速",
-      "en": "LLMs / Inference Acceleration"
+      "id": "k6-learning",
+      "zh": "示范、探索与经验微调",
+      "en": "Demonstrations, exploration & finetuning",
+      "parent": "k6"
     },
     {
-      "id": "temporal-modeling",
-      "zh": "事件序列 / 时间建模",
-      "en": "Event Sequences / Temporal Modeling"
+      "id": "k6-semantics",
+      "zh": "语义、多任务与动作模型",
+      "en": "Semantics, multitask & action models",
+      "parent": "k6"
+    },
+    {
+      "id": "support-numerics",
+      "zh": "数值求解与预条件",
+      "en": "Numerical solvers & preconditioning"
+    },
+    {
+      "id": "support-inference",
+      "zh": "注意力与推理效率",
+      "en": "Attention & inference efficiency"
     }
   ],
   "papers": [
     {
       "id": "paper-id-in-english-slug",
       "categories": [
-        "manipulation",
-        "sim2real"
+        "k3-estimation",
+        "k4-adaptation"
       ],
       "pdf": "https://arxiv.org/pdf/xxxx.xxxxx",
       "project": "",
@@ -204,7 +227,58 @@
           "Confirmed implementation details such as training pipeline, model structure, inputs/outputs, reward design, data source, or deployment setup.",
           "If the paper does not specify details, write: not specified in the paper."
         ]
-      }
+      },
+      "contexts": [
+        "locomotion",
+        "sim2real"
+      ]
+    }
+  ],
+  "available_contexts": [
+    {
+      "id": "locomotion",
+      "zh": "运动控制",
+      "en": "Locomotion"
+    },
+    {
+      "id": "parkour-terrain",
+      "zh": "跑酷 / 多地形",
+      "en": "Parkour / terrain"
+    },
+    {
+      "id": "manipulation",
+      "zh": "操作",
+      "en": "Manipulation"
+    },
+    {
+      "id": "loco-manipulation",
+      "zh": "移动操作",
+      "en": "Loco-manipulation"
+    },
+    {
+      "id": "sim2real",
+      "zh": "Sim2Real",
+      "en": "Sim2Real"
+    },
+    {
+      "id": "real-robot-rl",
+      "zh": "真机 RL",
+      "en": "Real-robot RL"
+    },
+    {
+      "id": "imitation-teleop",
+      "zh": "模仿 / 遥操作",
+      "en": "Imitation / teleoperation"
+    },
+    {
+      "id": "vla-world-model",
+      "zh": "VLA / 世界模型",
+      "en": "VLA / world models"
+    },
+    {
+      "id": "benchmark-dataset",
+      "zh": "数据集 / 基准",
+      "en": "Datasets / benchmarks"
     }
   ]
 }

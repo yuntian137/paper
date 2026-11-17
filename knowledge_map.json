@@ -1,0 +1,1859 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "k1",
+      "label": {
+        "zh": "行为目标与运动能力",
+        "en": "Behavior goals & motor skills"
+      },
+      "description": {
+        "zh": "把“希望做什么”变成可复用的反馈控制能力：跟踪、风格奖励、技能空间和任务条件分别提供不同接口。",
+        "en": "Turn desired behavior into reusable feedback control through tracking, style rewards, skills, and task conditioning."
+      },
+      "focus": {
+        "zh": "先区分参考轨迹、技能 latent 和奖励向量，再看新任务需要训练哪一层。",
+        "en": "Distinguish references, skill latents, and reward vectors; identify which layer needs training for a new task."
+      },
+      "entries": [
+        "phc-perpetual-humanoid-control",
+        "ase-adversarial-skill-embeddings",
+        "fb-learning-one-representation-to-optimize-all-rewards"
+      ],
+      "code": "K1"
+    },
+    {
+      "id": "k1-tracking",
+      "label": {
+        "zh": "跟踪与能力蒸馏",
+        "en": "Tracking & skill distillation"
+      },
+      "description": {
+        "zh": "完整参考给出每时刻的目标，跟踪器负责物理反馈；蒸馏把多个专家的能力整合到共享策略。",
+        "en": "References specify time-varying targets; trackers provide physical feedback, while distillation consolidates specialist policies."
+      },
+      "focus": {
+        "zh": "动作覆盖、恢复能力与目标接口怎样共同影响复用？",
+        "en": "How do motion coverage, recovery, and goal interfaces affect reuse?"
+      },
+      "entries": [
+        "phc-perpetual-humanoid-control",
+        "sonic-supersizing-motion-tracking"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k1-style",
+      "label": {
+        "zh": "风格与模仿奖励",
+        "en": "Style & imitation rewards"
+      },
+      "description": {
+        "zh": "把示范转成训练信号：匹配动作分布、参考误差或扩散 score。奖励模型与执行策略承担不同功能。",
+        "en": "Convert demonstrations into training signals using distribution matching, reference errors, or diffusion scores."
+      },
+      "focus": {
+        "zh": "训练时谁提供奖励，部署时哪些模块仍存在？",
+        "en": "Which module supplies training rewards, and which modules remain at deployment?"
+      },
+      "entries": [
+        "amp-adversarial-motion-priors",
+        "smp-motion-priors"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k1-skills",
+      "label": {
+        "zh": "技能空间与层级调用",
+        "en": "Skill spaces & hierarchical reuse"
+      },
+      "description": {
+        "zh": "连续 latent、离散 token 和技能混合把低层能力暴露给高层；技能的可控性取决于训练目标与解码接口。",
+        "en": "Continuous latents, discrete tokens, and skill mixtures expose motor abilities to higher-level control."
+      },
+      "focus": {
+        "zh": "同样叫 latent，表示动作片段、任务还是环境？",
+        "en": "Does a latent represent motion, a task, or the environment?"
+      },
+      "entries": [
+        "ase-adversarial-skill-embeddings",
+        "pulse-universal-humanoid-motion-representations",
+        "gpc-generative-pretrained-controller"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k1-goals",
+      "label": {
+        "zh": "目标补全与控制接口",
+        "en": "Goal completion & control interfaces"
+      },
+      "description": {
+        "zh": "用掩码、稀疏关节、文本或任务空间命令驱动控制，比较目标缺失时怎样补全动作。",
+        "en": "Control from masked, sparse-joint, language, or task-space goals; compare how missing motion targets are completed."
+      },
+      "focus": {
+        "zh": "补全目标的不确定性与估计环境状态的不确定性有何区别？",
+        "en": "How does uncertainty about missing goals differ from uncertainty about the environment?"
+      },
+      "entries": [
+        "maskedmimic",
+        "hover-versatile-neural-whole-body-controller"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k1-reward",
+      "label": {
+        "zh": "奖励条件化与 FB",
+        "en": "Reward conditioning & FB"
+      },
+      "description": {
+        "zh": "用长期访问关系表示行为，再将新奖励编码为任务向量；与预先学出的运动技能空间形成对照。",
+        "en": "Represent long-term occupancy and encode new rewards as task vectors; contrast this with pretrained motor skills."
+      },
+      "focus": {
+        "zh": "零样本换奖励依赖怎样的表示与数据覆盖？",
+        "en": "What representation and coverage support zero-shot reward changes?"
+      },
+      "entries": [
+        "fb-learning-one-representation-to-optimize-all-rewards",
+        "metamotivo-fb-cpr",
+        "bfm-zero-humanoid-control"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k1-action",
+      "label": {
+        "zh": "动作参数化与参考生成",
+        "en": "Action parameterization & reference generation"
+      },
+      "description": {
+        "zh": "直接动作、轨迹调制、连续动作动力学和生成式参考决定反馈发生在哪里，也影响动作块之间的衔接。",
+        "en": "Direct actions, trajectory modulation, action dynamics, and generated references place feedback at different levels."
+      },
+      "focus": {
+        "zh": "生成参考、优化命令和输出关节动作分别由谁负责？",
+        "en": "Which module generates references, optimizes commands, or outputs joint actions?"
+      },
+      "entries": [
+        "pmtg-policies-modulating-trajectory-generators",
+        "ode-policy-action-dynamics",
+        "spline-policy"
+      ],
+      "parent": "k1"
+    },
+    {
+      "id": "k2",
+      "label": {
+        "zh": "几何、接触与物理可行性",
+        "en": "Geometry, contact & feasibility"
+      },
+      "description": {
+        "zh": "把人体动作、任务目标与物体交互转成机器人可执行的运动，区分几何匹配、动力学可行和闭环约束。",
+        "en": "Turn human motion and object interactions into executable robot motion, separating geometry, dynamics, and feedback constraints."
+      },
+      "focus": {
+        "zh": "几何上像、仿真中可行与执行时安全，分别由什么机制支持？",
+        "en": "What supports geometric similarity, dynamic feasibility, and execution constraints?"
+      },
+      "entries": [
+        "gmr-retargeting-matters",
+        "shooting-for-contact-dsms",
+        "constrainedmimic"
+      ],
+      "code": "K2"
+    },
+    {
+      "id": "k2-retarget",
+      "label": {
+        "zh": "几何到动力学重定向",
+        "en": "From geometric to dynamic retargeting"
+      },
+      "description": {
+        "zh": "IK、表面对应、轨迹优化与学习式修正逐步引入不同约束；最终参考还要交给跟踪器执行。",
+        "en": "IK, surface correspondences, trajectory optimization, and learned corrections impose different constraints before tracking."
+      },
+      "focus": {
+        "zh": "优化变量是姿态、控制输入，还是跟踪器参数？",
+        "en": "Are the optimization variables poses, controls, or tracker parameters?"
+      },
+      "entries": [
+        "gmr-retargeting-matters",
+        "dynaretarget",
+        "shooting-for-contact-dsms"
+      ],
+      "parent": "k2"
+    },
+    {
+      "id": "k2-contact",
+      "label": {
+        "zh": "交互表示与接触结构",
+        "en": "Interaction representations & contact structure"
+      },
+      "description": {
+        "zh": "用相对几何、距离场、接触日程或接触求解器保留交互关系；它们可以是目标、观测或动力学组件。",
+        "en": "Relative geometry, distance fields, contact schedules, and solvers encode interaction as targets, observations, or dynamics."
+      },
+      "focus": {
+        "zh": "相似的接触特征进入奖励、控制条件还是物理求解？",
+        "en": "Do contact features enter rewards, control conditions, or physical solvers?"
+      },
+      "entries": [
+        "omniretarget",
+        "lessmimic-distance-field-interaction",
+        "contactnets"
+      ],
+      "parent": "k2"
+    },
+    {
+      "id": "k2-constraints",
+      "label": {
+        "zh": "约束、柔顺与反馈",
+        "en": "Constraints, compliance & feedback"
+      },
+      "description": {
+        "zh": "显式安全约束、柔顺控制和反馈结构决定如何响应偏差与接触；理论保证依赖各自的模型和假设。",
+        "en": "Explicit constraints, compliance, and feedback structure govern responses to deviations and contact under different assumptions."
+      },
+      "focus": {
+        "zh": "保持目标与允许让位如何取舍？哪些保证依赖准确模型？",
+        "en": "When should a controller resist or yield, and which guarantees depend on model accuracy?"
+      },
+      "entries": [
+        "constrainedmimic",
+        "chip-hindsight-perturbation",
+        "todorov-jordan-2002-optimal-feedback-control"
+      ],
+      "parent": "k2"
+    },
+    {
+      "id": "k3",
+      "label": {
+        "zh": "观测、历史与状态推断",
+        "en": "Observation, history & state inference"
+      },
+      "description": {
+        "zh": "部署时只能看到部分信息：显式估计、历史表征、视觉地图和教师—学生学习提供不同的信息补足途径。",
+        "en": "Partial observations motivate explicit estimation, history representations, perceptual maps, and teacher–student learning."
+      },
+      "focus": {
+        "zh": "需要补的是物理状态、环境参数，还是训练时才有的监督信息？",
+        "en": "Is the missing information physical state, environment parameters, or training-only supervision?"
+      },
+      "entries": [
+        "contact-aided-inekf-robot-state-estimation",
+        "rma-rapid-motor-adaptation-for-legged-robots",
+        "sitt-student-informed-teacher-training"
+      ],
+      "code": "K3"
+    },
+    {
+      "id": "k3-estimation",
+      "label": {
+        "zh": "状态估计与历史表征",
+        "en": "State estimation & history representations"
+      },
+      "description": {
+        "zh": "滤波器显式维护物理状态，历史编码器学习控制所需上下文；预测辅助目标不自动等于可用于规划的世界模型。",
+        "en": "Filters track physical states; history encoders infer control context. Auxiliary prediction alone does not imply a planning model."
+      },
+      "focus": {
+        "zh": "隐变量能否解释、被监督，或被策略直接利用？",
+        "en": "Is the latent interpretable, supervised, or directly consumed by a policy?"
+      },
+      "entries": [
+        "contact-aided-inekf-robot-state-estimation",
+        "dreamwaq",
+        "himloco"
+      ],
+      "parent": "k3"
+    },
+    {
+      "id": "k3-perception",
+      "label": {
+        "zh": "视觉、触觉与地图反馈",
+        "en": "Visual, tactile & map feedback"
+      },
+      "description": {
+        "zh": "把图像、触觉和地形地图变成与动作相关的信息，比较主动接触、注意力选择和多模态融合。",
+        "en": "Extract action-relevant information from images, touch, and terrain maps using contact, attention, and multimodal fusion."
+      },
+      "focus": {
+        "zh": "感知误差会怎样进入控制闭环？",
+        "en": "How do perceptual errors enter the control loop?"
+      },
+      "entries": [
+        "ame-1-attention-based-map-encoding",
+        "tacgnn",
+        "pie-parkour-implicit-explicit"
+      ],
+      "parent": "k3"
+    },
+    {
+      "id": "k3-distillation",
+      "label": {
+        "zh": "特权信息与教师—学生",
+        "en": "Privileged information & teacher–student learning"
+      },
+      "description": {
+        "zh": "训练阶段可见的信息在部署时消失；蒸馏、联合训练、表征对齐和特权信息退火处理不同的分布落差。",
+        "en": "Training-only information disappears at deployment; distillation, concurrent learning, alignment, and annealing handle the resulting gap."
+      },
+      "focus": {
+        "zh": "学生采样时的误差，能否反馈到教师或共享 actor？",
+        "en": "Can student rollout errors affect the teacher or shared actor?"
+      },
+      "entries": [
+        "sitt-student-informed-teacher-training",
+        "cts-concurrent-teacher-student-locomotion",
+        "dextrah-rgb"
+      ],
+      "parent": "k3"
+    },
+    {
+      "id": "k4",
+      "label": {
+        "zh": "动力学差异与真实部署",
+        "en": "Dynamics gaps & deployment"
+      },
+      "description": {
+        "zh": "面对仿真与现实、形态与工况差异，选择校准模型、训练鲁棒策略，或在执行时根据反馈适应。",
+        "en": "Handle simulation, morphology, and operating-condition gaps through model calibration, robust training, or feedback adaptation."
+      },
+      "focus": {
+        "zh": "改变的是仿真器、策略权重，还是每步推断出的上下文？",
+        "en": "Does the method change the simulator, policy weights, or inferred context?"
+      },
+      "entries": [
+        "spi-active",
+        "unsupervised-actuator-net-uan",
+        "rma-rapid-motor-adaptation-for-legged-robots"
+      ],
+      "code": "K4"
+    },
+    {
+      "id": "k4-identification",
+      "label": {
+        "zh": "辨识与物理模型校准",
+        "en": "Identification & physical model calibration"
+      },
+      "description": {
+        "zh": "参数辨识、执行器模型和残差动力学用真实交互修正仿真；数据是否充分激励系统影响可辨识性。",
+        "en": "System identification, actuator models, and residual dynamics calibrate simulation from real interaction."
+      },
+      "focus": {
+        "zh": "数据、初始状态与激励条件如何影响校准结果？",
+        "en": "How do data, initial states, and excitation affect calibration?"
+      },
+      "entries": [
+        "spi-active",
+        "contact-uan"
+      ],
+      "parent": "k4"
+    },
+    {
+      "id": "k4-robustness",
+      "label": {
+        "zh": "随机化、鲁棒性与形态",
+        "en": "Randomization, robustness & morphology"
+      },
+      "description": {
+        "zh": "通过参数分布、对抗扰动、结构先验或形态共设计覆盖变化；鲁棒范围需要与训练分布和理论假设对应。",
+        "en": "Parameter distributions, adversarial disturbances, structural priors, and morphology design address variation under specific conditions."
+      },
+      "focus": {
+        "zh": "增大训练变化范围，会改善泛化还是加大学习难度？",
+        "en": "When does broader variation help generalization or make learning harder?"
+      },
+      "entries": [
+        "dynamics-randomization-revisited-a-case-study-for-quadru",
+        "learning-h-infinity-locomotion-control",
+        "xhugwbc"
+      ],
+      "parent": "k4"
+    },
+    {
+      "id": "k4-adaptation",
+      "label": {
+        "zh": "在线适应与残差修正",
+        "en": "Online adaptation & residual correction"
+      },
+      "description": {
+        "zh": "历史上下文、残差策略和真实交互微调都能处理变化，但更新的对象与时间尺度不同。",
+        "en": "History context, residual policies, and real-world finetuning address changes at different update timescales."
+      },
+      "focus": {
+        "zh": "固定权重的在线推断与真正更新参数如何区分？",
+        "en": "How does online inference with fixed weights differ from parameter updates?"
+      },
+      "entries": [
+        "rma-rapid-motor-adaptation-for-legged-robots",
+        "resfit-real-robot-rl",
+        "transic-sim-to-real-policy-transfer-by-learning-from-onl"
+      ],
+      "parent": "k4"
+    },
+    {
+      "id": "k5",
+      "label": {
+        "zh": "世界模型与决策计算",
+        "en": "World models & decision computation"
+      },
+      "description": {
+        "zh": "围绕四个问题组织 WM：什么误差重要、模型怎样产生决策、如何处理长时域，以及时间与模式怎样进入动力学。",
+        "en": "Organize world models by accuracy criteria, decision computation, long horizons, and time or mode structure."
+      },
+      "focus": {
+        "zh": "预测得准、价值算得准和梯度方向可靠，是三个不同要求。",
+        "en": "Prediction accuracy, value accuracy, and useful gradients are distinct requirements."
+      },
+      "entries": [
+        "vaml-value-aware-model-learning",
+        "td-mpc-temporal-difference-control",
+        "ddppo-gradient-information-policy-optimization"
+      ],
+      "code": "K5"
+    },
+    {
+      "id": "k5-fidelity",
+      "label": {
+        "zh": "W1 · 模型准确性的标准",
+        "en": "W1 · What must a model get right?"
+      },
+      "description": {
+        "zh": "预测误差、价值期望误差和局部 Jacobian 误差服务不同计算；物理结构与导数监督也施加不同先验。",
+        "en": "Prediction, value-expectation, and Jacobian errors serve different computations; physics and derivative supervision impose different priors."
+      },
+      "focus": {
+        "zh": "模型将被采样规划、价值学习还是梯度优化使用？",
+        "en": "Will the model serve sampling-based planning, value learning, or gradient optimization?"
+      },
+      "entries": [
+        "vaml-value-aware-model-learning",
+        "ddppo-gradient-information-policy-optimization",
+        "sobolev-training-neural-networks"
+      ],
+      "parent": "k5"
+    },
+    {
+      "id": "k5-decision",
+      "label": {
+        "zh": "W2 · 模型怎样变成决策",
+        "en": "W2 · From models to decisions"
+      },
+      "description": {
+        "zh": "在线搜索动作、想象轨迹训练策略、推理时更新策略、优化参考命令，是不同阶段的不同优化问题。",
+        "en": "Online action search, imagined policy training, inference-time policy updates, and command optimization target different variables."
+      },
+      "focus": {
+        "zh": "每次更新谁，冻结谁；实际执行几个动作后读取新观测？",
+        "en": "What is updated or frozen, and how many actions run before observing again?"
+      },
+      "entries": [
+        "td-mpc-temporal-difference-control",
+        "pwm-policy-learning-multi-task-world-models",
+        "itpo-offline-rl-differentiable-world-models"
+      ],
+      "parent": "k5"
+    },
+    {
+      "id": "k5-horizon",
+      "label": {
+        "zh": "W3 · 长时域与优化结构",
+        "en": "W3 · Long horizons & optimization structure"
+      },
+      "description": {
+        "zh": "动作块、直接多步预测、独立轨迹状态与层级子目标分别改变表示或优化结构，不能统称为延长 rollout。",
+        "en": "Action chunks, direct multi-step prediction, independent trajectory states, and hierarchical subgoals alter different parts of planning."
+      },
+      "focus": {
+        "zh": "缩短的是模型递推链、优化依赖链，还是高层决策频率？",
+        "en": "Does the method shorten model recursion, optimization dependencies, or high-level decision frequency?"
+      },
+      "entries": [
+        "cmpo-chunk-wise-model-based-policy-optimization",
+        "grasp-parallel-stochastic-gradient-planning",
+        "id-wm-hierarchical-world-models-implicit-dynamics"
+      ],
+      "parent": "k5"
+    },
+    {
+      "id": "k5-time",
+      "label": {
+        "zh": "W4 · 时间、事件与动力学模式",
+        "en": "W4 · Time, events & dynamics modes"
+      },
+      "description": {
+        "zh": "控制间隔、动作延迟、随机事件时间和模式切换是不同变量。NHA、DHAL、MoRE 的模式划分也服务不同任务。",
+        "en": "Control intervals, action delays, stochastic event times, and mode switches are distinct variables; mode structures serve different tasks."
+      },
+      "focus": {
+        "zh": "事件由零点触发还是概率生成？模式选择会不会更新模型权重？TPP 的控制应用仍是迁移设想。",
+        "en": "Are events triggered by roots or sampled distributions? Does mode selection update weights? TPP control applications remain a transfer idea."
+      },
+      "entries": [
+        "tawm-time-aware-world-model",
+        "nha-neural-hybrid-automata",
+        "neural-event-ode"
+      ],
+      "parent": "k5"
+    },
+    {
+      "id": "k6",
+      "label": {
+        "zh": "经验、语义与任务泛化",
+        "en": "Experience, semantics & task generalization"
+      },
+      "description": {
+        "zh": "从人类示范、真实交互与多任务数据中学习，把任务语义连接到动作，并研究新环境中的泛化与继续学习。",
+        "en": "Learn from demonstrations, interaction, and multitask data to connect semantics to actions and improve transfer."
+      },
+      "focus": {
+        "zh": "数据提供的是动作标签、目标语义、探索起点还是动力学信息？",
+        "en": "Does data supply actions, semantics, exploration starts, or dynamics information?"
+      },
+      "entries": [
+        "mimicgen",
+        "posterior-bc",
+        "pi0"
+      ],
+      "code": "K6"
+    },
+    {
+      "id": "k6-data",
+      "label": {
+        "zh": "数据来源与经验覆盖",
+        "en": "Data sources & experience coverage"
+      },
+      "description": {
+        "zh": "遥操作、人类视频、动作重建、仿真扩增和 benchmark 影响训练覆盖；数据集收录不代表已经掌握。",
+        "en": "Teleoperation, video, reconstruction, simulation augmentation, and benchmarks define experience coverage."
+      },
+      "focus": {
+        "zh": "新数据改变了任务覆盖、状态覆盖还是 embodiment 覆盖？",
+        "en": "Does new data expand task, state, or embodiment coverage?"
+      },
+      "entries": [
+        "anyteleop",
+        "mimicgen",
+        "mocapact"
+      ],
+      "parent": "k6"
+    },
+    {
+      "id": "k6-learning",
+      "label": {
+        "zh": "示范、探索与经验微调",
+        "en": "Demonstrations, exploration & finetuning"
+      },
+      "description": {
+        "zh": "示范可用于初始化、离线训练、残差参照或探索辅助；比较 BC 后继续 RL 时经验怎样被利用。",
+        "en": "Demonstrations can initialize, train offline, anchor residuals, or aid exploration before continued RL."
+      },
+      "focus": {
+        "zh": "少量示范如何影响访问到的状态和后续学习速度？",
+        "en": "How do limited demonstrations affect visited states and subsequent learning?"
+      },
+      "entries": [
+        "posterior-bc",
+        "rainbow-demorl",
+        "resfit-real-robot-rl"
+      ],
+      "parent": "k6"
+    },
+    {
+      "id": "k6-semantics",
+      "label": {
+        "zh": "语义、多任务与动作模型",
+        "en": "Semantics, multitask & action models"
+      },
+      "description": {
+        "zh": "VLA、World Action Model 和分层视觉目标把语义与运动连接；训练时预测未来不意味着执行时一定进行模型规划。",
+        "en": "VLAs, world-action models, and visual subgoals connect semantics and motion; future prediction need not imply online planning."
+      },
+      "focus": {
+        "zh": "视频预测、动作生成和闭环控制怎样分工？",
+        "en": "How are video prediction, action generation, and feedback control divided?"
+      },
+      "entries": [
+        "pi0",
+        "dreamzero",
+        "workhorse-human-data-loco-manipulation"
+      ],
+      "parent": "k6"
+    },
+    {
+      "id": "support-numerics",
+      "label": {
+        "zh": "数值求解与预条件",
+        "en": "Numerical solvers & preconditioning"
+      },
+      "description": {
+        "zh": "NPC 与 NPO 围绕迭代求解效率，保留为方法旁支；与机器人规划的具体接入尚需验证。",
+        "en": "NPC and NPO study iterative solver efficiency; concrete integration into robot planning remains to be established."
+      },
+      "focus": {
+        "zh": "学的是求解调度还是线性系统的预条件？",
+        "en": "Is the learned component solver scheduling or a preconditioner?"
+      },
+      "entries": [
+        "npc-neural-predictor-corrector",
+        "npo-neural-preconditioning-operator"
+      ]
+    },
+    {
+      "id": "support-inference",
+      "label": {
+        "zh": "注意力与推理效率",
+        "en": "Attention & inference efficiency"
+      },
+      "description": {
+        "zh": "LessIsMore 关注大模型推理解码的计算开销，暂不强行归入机器人控制体系。",
+        "en": "LessIsMore studies language-model decoding cost; its connection to robot control remains open."
+      },
+      "focus": {
+        "zh": "哪些计算结构可以迁移，哪些需要重新验证？",
+        "en": "Which computational structures might transfer, and what needs new evidence?"
+      },
+      "entries": [
+        "lessismore-cross-head-sparse-attention"
+      ]
+    }
+  ],
+  "assignments": {
+    "dextrah-rgb": [
+      "k2-constraints",
+      "k3-distillation"
+    ],
+    "resfit-real-robot-rl": [
+      "k4-adaptation",
+      "k6-learning"
+    ],
+    "dexndm": [
+      "k4-identification",
+      "k4-adaptation"
+    ],
+    "diffudepgrasp": [
+      "k4-robustness"
+    ],
+    "pi06-recap": [
+      "k6-learning",
+      "k6-semantics"
+    ],
+    "viral-humanoid": [
+      "k3-distillation"
+    ],
+    "demobot": [
+      "k2-contact",
+      "k6-data"
+    ],
+    "xhugwbc": [
+      "k4-robustness"
+    ],
+    "simtoolreal": [
+      "k6-semantics"
+    ],
+    "mode-vla-imcopilot": [
+      "k1-skills",
+      "k3-perception",
+      "k6-semantics"
+    ],
+    "omnireset": [
+      "k6-data",
+      "k6-learning"
+    ],
+    "rainbow-demorl": [
+      "k6-learning"
+    ],
+    "posterior-bc": [
+      "k6-learning"
+    ],
+    "house-of-dextra": [
+      "k4-robustness"
+    ],
+    "visual-dexterity": [
+      "k3-perception"
+    ],
+    "sim2real-humanoid-dexterous-rl": [
+      "k3-distillation"
+    ],
+    "dual-arm-flat-object-grasp": [
+      "k2-contact"
+    ],
+    "human2sim2robot": [
+      "k2-contact",
+      "k6-data"
+    ],
+    "pi05-open-world-vla": [
+      "k6-semantics"
+    ],
+    "symdex": [
+      "k4-robustness"
+    ],
+    "spi-active": [
+      "k4-identification"
+    ],
+    "multimodal-visual-transformer-rl": [
+      "k3-perception"
+    ],
+    "pace-legged-sim2real": [
+      "k4-identification"
+    ],
+    "anyteleop": [
+      "k6-data"
+    ],
+    "rma-rapid-motor-adaptation-for-legged-robots": [
+      "k3-estimation",
+      "k4-adaptation"
+    ],
+    "pen-spinning": [
+      "k3-distillation",
+      "k6-learning"
+    ],
+    "dual-arm-push-grasp": [
+      "k2-contact",
+      "k3-perception"
+    ],
+    "hora-in-hand-rotation": [
+      "k3-estimation",
+      "k4-adaptation"
+    ],
+    "tacgnn": [
+      "k3-perception"
+    ],
+    "bidexhands": [
+      "k6-data"
+    ],
+    "dextrah-g": [
+      "k2-constraints",
+      "k3-distillation"
+    ],
+    "mimicgen": [
+      "k6-data"
+    ],
+    "pi0": [
+      "k6-semantics"
+    ],
+    "dreamzero": [
+      "k6-semantics"
+    ],
+    "lda-1b": [
+      "k6-semantics"
+    ],
+    "gigaworld-policy": [
+      "k6-semantics"
+    ],
+    "hermes-human-to-robot-embodied-learning-from-multi-sourc": [
+      "k6-data",
+      "k6-semantics"
+    ],
+    "motiontrans-human-vr-data-enable-motion-level-learning-f": [
+      "k1-tracking",
+      "k6-data",
+      "k6-learning"
+    ],
+    "dexman-learning-bimanual-dexterous-manipulation-from-hum": [
+      "k2-contact",
+      "k6-data"
+    ],
+    "dexterous-functional-grasping": [
+      "k2-contact",
+      "k6-semantics"
+    ],
+    "efficient-sim-to-real-transfer-of-contact-rich-manipulat": [
+      "k2-constraints",
+      "k4-adaptation"
+    ],
+    "visuo-tactile-feedback-policies-for-terminal-assembly-fa": [
+      "k2-constraints",
+      "k3-perception"
+    ],
+    "transic-sim-to-real-policy-transfer-by-learning-from-onl": [
+      "k4-adaptation",
+      "k6-learning"
+    ],
+    "cordvip-correspondence-based-visuomotor-policy-for-dexte": [
+      "k3-perception"
+    ],
+    "amp-adversarial-motion-priors": [
+      "k1-style"
+    ],
+    "humanmimic": [
+      "k1-tracking",
+      "k1-style"
+    ],
+    "phc-perpetual-humanoid-control": [
+      "k1-tracking"
+    ],
+    "beyondmimic": [
+      "k1-action"
+    ],
+    "learning-whole-body-humanoid-locomotion-via-motion-gener": [
+      "k1-action"
+    ],
+    "srbtrack-terrain-adaptive-tracking-of-a-single-rigid-bod": [
+      "k2-contact"
+    ],
+    "run-residual-policy-for-natural-humanoid-locomotion": [
+      "k1-action",
+      "k4-adaptation"
+    ],
+    "pmtg-policies-modulating-trajectory-generators": [
+      "k1-action"
+    ],
+    "navigait": [
+      "k1-action"
+    ],
+    "residual-mpc": [
+      "k4-adaptation",
+      "k5-decision"
+    ],
+    "skillblender-towards-versatile-humanoid-whole-body-loco-": [
+      "k1-skills"
+    ],
+    "hugwbc": [
+      "k1-goals"
+    ],
+    "homie": [
+      "k6-data"
+    ],
+    "langwbc": [
+      "k1-goals",
+      "k6-semantics"
+    ],
+    "host-learning-humanoid-standing-up-control-across-divers": [
+      "k1-tracking",
+      "k4-robustness"
+    ],
+    "learning-h-infinity-locomotion-control": [
+      "k4-robustness"
+    ],
+    "lcp-lipschitz-constrained-policies": [
+      "k2-constraints",
+      "k4-robustness"
+    ],
+    "unsupervised-actuator-net-uan": [
+      "k4-identification"
+    ],
+    "learning-torque-control-for-quadrupedal-locomotion": [
+      "k4-robustness"
+    ],
+    "dynamics-randomization-revisited-a-case-study-for-quadru": [
+      "k4-robustness"
+    ],
+    "high-performance-reinforcement-learning-on-spot-optimizi": [
+      "k4-robustness"
+    ],
+    "neuralsim-augmenting-differentiable-simulators-with-neur": [
+      "k4-identification",
+      "k5-fidelity"
+    ],
+    "sitt-student-informed-teacher-training": [
+      "k3-distillation"
+    ],
+    "mocapact": [
+      "k6-data"
+    ],
+    "bfm-behavior-foundation-model-humanoid": [
+      "k1-tracking",
+      "k1-skills"
+    ],
+    "nmr-neural-motion-retargeting": [
+      "k2-retarget"
+    ],
+    "tram-global-trajectory-motion": [
+      "k6-data"
+    ],
+    "asap-aligning-simulation-real-physics": [
+      "k4-identification"
+    ],
+    "sonic-supersizing-motion-tracking": [
+      "k1-tracking",
+      "k1-skills"
+    ],
+    "omniretarget": [
+      "k2-retarget",
+      "k2-contact"
+    ],
+    "hover-versatile-neural-whole-body-controller": [
+      "k1-goals",
+      "k3-distillation"
+    ],
+    "omnih2o": [
+      "k1-goals",
+      "k3-distillation"
+    ],
+    "smp-motion-priors": [
+      "k1-style"
+    ],
+    "omnixtreme": [
+      "k1-tracking",
+      "k4-adaptation"
+    ],
+    "hil-dynamic-athletic-control": [
+      "k1-tracking",
+      "k1-style"
+    ],
+    "pulse-universal-humanoid-motion-representations": [
+      "k1-skills"
+    ],
+    "gpc-generative-pretrained-controller": [
+      "k1-skills"
+    ],
+    "ase-adversarial-skill-embeddings": [
+      "k1-skills"
+    ],
+    "bfm-zero-humanoid-control": [
+      "k1-reward",
+      "k4-adaptation"
+    ],
+    "metamotivo-fb-cpr": [
+      "k1-reward"
+    ],
+    "heracles-general-humanoid-control": [
+      "k1-action"
+    ],
+    "maskedmimic": [
+      "k1-goals"
+    ],
+    "m3imic-multimodal-motion-mimicking": [
+      "k1-goals"
+    ],
+    "dynaretarget": [
+      "k2-retarget"
+    ],
+    "kdmr-kinodynamic-motion-retargeting": [
+      "k2-retarget"
+    ],
+    "motiondisco": [
+      "k2-contact",
+      "k5-horizon"
+    ],
+    "deeploco": [
+      "k3-perception",
+      "k5-horizon"
+    ],
+    "gmr-retargeting-matters": [
+      "k2-retarget"
+    ],
+    "add-motion-imitation": [
+      "k1-style"
+    ],
+    "learning-quadrupedal-locomotion-over-challenging-terrain": [
+      "k3-distillation"
+    ],
+    "dreamwaq": [
+      "k3-estimation"
+    ],
+    "himloco": [
+      "k3-estimation"
+    ],
+    "cts-concurrent-teacher-student-locomotion": [
+      "k3-distillation"
+    ],
+    "cmoe-humanoid-terrain-adaptation": [
+      "k4-adaptation"
+    ],
+    "slr-quadruped-locomotion-without-privileged-information": [
+      "k3-estimation"
+    ],
+    "tar-teacher-aligned-representations": [
+      "k3-estimation",
+      "k3-distillation"
+    ],
+    "sobolev-training-neural-networks": [
+      "k5-fidelity"
+    ],
+    "ahc-adaptive-humanoid-control": [
+      "k1-tracking",
+      "k4-adaptation"
+    ],
+    "wococo-sequential-contacts": [
+      "k2-contact"
+    ],
+    "x-loco-synergetic-policy-distillation": [
+      "k1-tracking",
+      "k3-distillation"
+    ],
+    "tasil-taylor-series-imitation-learning": [
+      "k2-constraints",
+      "k5-fidelity"
+    ],
+    "handoff-task-space-wbc": [
+      "k1-tracking",
+      "k1-goals"
+    ],
+    "npmp-neural-probabilistic-motor-primitives": [
+      "k1-skills"
+    ],
+    "sobolev-diffusion-trajectory-optimization": [
+      "k2-constraints",
+      "k5-fidelity"
+    ],
+    "npc-neural-predictor-corrector": [
+      "support-numerics"
+    ],
+    "vpies-privileged-scaffold-locomotion": [
+      "k3-estimation",
+      "k3-distillation"
+    ],
+    "extreme-parkour": [
+      "k3-perception",
+      "k3-distillation"
+    ],
+    "pi-dropout-rl": [
+      "k3-distillation"
+    ],
+    "mhit-dynamic-policy-learning": [
+      "k4-robustness"
+    ],
+    "contact-aided-inekf-robot-state-estimation": [
+      "k3-estimation"
+    ],
+    "pie-parkour-implicit-explicit": [
+      "k3-perception"
+    ],
+    "architecture-is-all-you-need-lca": [
+      "k3-perception"
+    ],
+    "chip-hindsight-perturbation": [
+      "k2-constraints"
+    ],
+    "wasabi-rough-partial-demonstrations": [
+      "k1-style"
+    ],
+    "fb-learning-one-representation-to-optimize-all-rewards": [
+      "k1-reward"
+    ],
+    "umr-unified-motion-retargeting": [
+      "k2-retarget"
+    ],
+    "scaling-bfm-humanoid-transformer": [
+      "k1-tracking",
+      "k1-goals"
+    ],
+    "belief-fb-zero-shot-unseen-dynamics": [
+      "k1-reward",
+      "k3-estimation",
+      "k4-adaptation"
+    ],
+    "uniphys-unified-planner-controller": [
+      "k1-skills",
+      "k5-horizon"
+    ],
+    "reactor-physics-aware-motion-retargeting": [
+      "k2-retarget"
+    ],
+    "humble-human-motion-driven-locomotion": [
+      "k1-tracking"
+    ],
+    "constrainedmimic": [
+      "k2-constraints"
+    ],
+    "pchc-preference-conditioned-humanoid-control": [
+      "k1-goals",
+      "k1-reward"
+    ],
+    "calm-conditional-adversarial-latent-models": [
+      "k1-skills"
+    ],
+    "amor-adaptive-character-control": [
+      "k1-goals",
+      "k1-reward"
+    ],
+    "workhorse-human-data-loco-manipulation": [
+      "k6-data",
+      "k6-semantics"
+    ],
+    "lpn-action-jacobian-penalty": [
+      "k1-action",
+      "k2-constraints"
+    ],
+    "todorov-jordan-2002-optimal-feedback-control": [
+      "k1-action",
+      "k2-constraints"
+    ],
+    "ttco-humanoid-behavior-foundation-models": [
+      "k1-action",
+      "k5-decision"
+    ],
+    "pwm-policy-learning-multi-task-world-models": [
+      "k5-decision"
+    ],
+    "supermimic-differentiable-world-model": [
+      "k5-decision"
+    ],
+    "str-spatiotemporal-retargeting": [
+      "k2-contact"
+    ],
+    "shooting-for-contact-dsms": [
+      "k2-retarget",
+      "k5-horizon"
+    ],
+    "contact-uan": [
+      "k3-estimation",
+      "k4-identification"
+    ],
+    "blind-dexterity-pure-proprioception": [
+      "k3-estimation",
+      "k3-perception"
+    ],
+    "ddppo-gradient-information-policy-optimization": [
+      "k5-fidelity"
+    ],
+    "nablamimic-differentiable-simulation": [
+      "k5-decision"
+    ],
+    "itpo-offline-rl-differentiable-world-models": [
+      "k5-decision"
+    ],
+    "ame-1-attention-based-map-encoding": [
+      "k3-perception"
+    ],
+    "ame-2-attention-based-neural-map-encoding": [
+      "k3-perception"
+    ],
+    "ode-policy-action-dynamics": [
+      "k1-action"
+    ],
+    "neural-laplace-control": [
+      "k3-estimation",
+      "k5-time"
+    ],
+    "vaml-value-aware-model-learning": [
+      "k5-fidelity"
+    ],
+    "spline-policy": [
+      "k1-action"
+    ],
+    "tawm-time-aware-world-model": [
+      "k5-time"
+    ],
+    "robotmdm-robot-motion-diffusion-model": [
+      "k1-action",
+      "k6-semantics"
+    ],
+    "npo-neural-preconditioning-operator": [
+      "support-numerics"
+    ],
+    "lessismore-cross-head-sparse-attention": [
+      "support-inference"
+    ],
+    "lessmimic-distance-field-interaction": [
+      "k1-style",
+      "k2-contact"
+    ],
+    "cmpo-chunk-wise-model-based-policy-optimization": [
+      "k5-decision",
+      "k5-horizon"
+    ],
+    "grasp-parallel-stochastic-gradient-planning": [
+      "k5-decision",
+      "k5-horizon"
+    ],
+    "nha-neural-hybrid-automata": [
+      "k5-time"
+    ],
+    "dhal-discrete-time-hybrid-automata-learning": [
+      "k3-estimation",
+      "k5-time"
+    ],
+    "neural-event-ode": [
+      "k5-time"
+    ],
+    "td-mpc-temporal-difference-control": [
+      "k5-fidelity",
+      "k5-decision"
+    ],
+    "td-mpc2-scalable-robust-world-models": [
+      "k5-fidelity",
+      "k5-decision"
+    ],
+    "intensity-free-learning-temporal-point-processes": [
+      "k5-time"
+    ],
+    "id-wm-hierarchical-world-models-implicit-dynamics": [
+      "k5-decision",
+      "k5-horizon"
+    ],
+    "contactnets": [
+      "k2-contact",
+      "k4-identification",
+      "k5-fidelity"
+    ],
+    "more-multi-physics-robotic-world-models": [
+      "k3-estimation",
+      "k5-decision",
+      "k5-time"
+    ]
+  },
+  "connections": [
+    {
+      "source": "k6",
+      "target": "k1",
+      "reason": {
+        "zh": "示范与语义提供行为目标；技能接口决定高层可调用的能力。",
+        "en": "Demonstrations and semantics supply goals; skill interfaces determine callable abilities."
+      }
+    },
+    {
+      "source": "k6",
+      "target": "k2",
+      "reason": {
+        "zh": "人类数据先要表达交互并解决形态与可执行性差异。",
+        "en": "Human data requires interaction representations and embodiment or feasibility alignment."
+      }
+    },
+    {
+      "source": "k2",
+      "target": "k1",
+      "reason": {
+        "zh": "可行参考交给反馈跟踪器；几何匹配不能替代执行稳定性。",
+        "en": "Feasible references feed feedback trackers; geometry alone does not establish stable execution."
+      }
+    },
+    {
+      "source": "k3",
+      "target": "k1",
+      "reason": {
+        "zh": "历史与感知决定控制器实际能获得的信息。",
+        "en": "History and perception determine the information available to the controller."
+      }
+    },
+    {
+      "source": "k3",
+      "target": "k4",
+      "reason": {
+        "zh": "隐藏动力学可通过历史推断；在线 latent 更新与参数微调要分开。",
+        "en": "History can reveal hidden dynamics; latent inference differs from weight finetuning."
+      }
+    },
+    {
+      "source": "k4",
+      "target": "k5",
+      "reason": {
+        "zh": "真实数据校准模型，模型的误差标准取决于后续决策计算。",
+        "en": "Real data calibrates models; relevant errors depend on downstream decision computation."
+      }
+    },
+    {
+      "source": "k5",
+      "target": "k2",
+      "reason": {
+        "zh": "轨迹优化和接触模型为参考修正与物理可行性提供工具。",
+        "en": "Trajectory optimization and contact models support reference correction and feasibility."
+      }
+    },
+    {
+      "source": "k5",
+      "target": "k1",
+      "reason": {
+        "zh": "模型可以训练 actor、搜索动作，或优化冻结控制器的输入命令。",
+        "en": "Models can train actors, search actions, or optimize inputs to frozen controllers."
+      }
+    }
+  ],
+  "relations": [
+    {
+      "source": "amp-adversarial-motion-priors",
+      "target": "phc-perpetual-humanoid-control",
+      "type": "component",
+      "reason": {
+        "zh": "PHC 的跟踪训练使用 AMP 风格奖励；跟踪目标与风格奖励分工不同。",
+        "en": "PHC uses AMP-style rewards in tracking; tracking targets and style rewards serve different roles."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "phc-perpetual-humanoid-control",
+      "target": "pulse-universal-humanoid-motion-representations",
+      "type": "component",
+      "reason": {
+        "zh": "PULSE 将 PHC+ 的跟踪能力蒸馏到 latent 解码器，高层可在该动作空间中学习。",
+        "en": "PULSE distills PHC+ tracking into a latent decoder that higher-level policies can use."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "ase-adversarial-skill-embeddings",
+      "target": "pulse-universal-humanoid-motion-representations",
+      "type": "alternative",
+      "reason": {
+        "zh": "都提供可复用低层技能；ASE 通过技能识别等目标发现技能，PULSE 用参考编码与教师动作蒸馏。",
+        "en": "Both offer reusable skills; ASE discovers skills with identification objectives, while PULSE distills teacher actions through reference encoding."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "pulse-universal-humanoid-motion-representations",
+      "target": "maskedmimic",
+      "type": "contrast",
+      "reason": {
+        "zh": "PULSE 的动作 latent 供高层调用；MaskedMimic 的条件先验从部分目标补全动作，二者接口不同。",
+        "en": "PULSE exposes action latents to a higher level; MaskedMimic completes motion from partial goals through a conditional prior."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "fb-learning-one-representation-to-optimize-all-rewards",
+      "target": "metamotivo-fb-cpr",
+      "type": "extension",
+      "reason": {
+        "zh": "FB 提供长期访问表示；Meta Motivo 的 FB-CPR 进一步把 MoCap 行为分布对齐到可调用的潜空间。",
+        "en": "FB supplies occupancy representations; FB-CPR aligns motion-capture behavior with the callable latent space."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "metamotivo-fb-cpr",
+      "target": "bfm-zero-humanoid-control",
+      "type": "extension",
+      "reason": {
+        "zh": "BFM-Zero 把 FB-CPR 路线接到真实 G1，加入历史反馈与部署安全设计。",
+        "en": "BFM-Zero brings the FB-CPR approach to a real G1 with history feedback and deployment safety design."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "rma-rapid-motor-adaptation-for-legged-robots",
+      "target": "hora-in-hand-rotation",
+      "type": "extension",
+      "reason": {
+        "zh": "HORA 将历史推断环境 latent 的快速适应思路用于灵巧手物体旋转。",
+        "en": "HORA applies history-based latent adaptation to dexterous in-hand rotation."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "rma-rapid-motor-adaptation-for-legged-robots",
+      "target": "maskedmimic",
+      "type": "contrast",
+      "reason": {
+        "zh": "都使用 latent，但 RMA 推断环境因素，MaskedMimic 补全未指定的运动目标。",
+        "en": "Both use latents, but RMA infers environment factors while MaskedMimic completes unspecified motion goals."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "sitt-student-informed-teacher-training",
+      "target": "dextrah-rgb",
+      "type": "contrast",
+      "reason": {
+        "zh": "共同面对教师信息多于学生的问题；SITT 改教师训练，DextrAH-RGB 的视觉学生通过 DAgger 蒸馏。",
+        "en": "Both face teacher–student information gaps; SITT changes teacher training, while DextrAH-RGB distills a visual student with DAgger."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "cts-concurrent-teacher-student-locomotion",
+      "target": "sitt-student-informed-teacher-training",
+      "type": "alternative",
+      "reason": {
+        "zh": "CTS 让学生闭环采样影响共享 actor，SITT 将学生信息限制反馈给教师训练。",
+        "en": "CTS exposes a shared actor to student rollouts; SITT feeds student information constraints into teacher training."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "gmr-retargeting-matters",
+      "target": "nmr-neural-motion-retargeting",
+      "type": "component",
+      "reason": {
+        "zh": "NMR 使用 GMR 粗参考，经 RL 修复构造数据，再学习神经重定向器。",
+        "en": "NMR uses coarse GMR references, repairs them with RL, and trains a neural retargeter."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "gmr-retargeting-matters",
+      "target": "dynaretarget",
+      "type": "contrast",
+      "reason": {
+        "zh": "GMR 解决逐帧几何匹配；DynaRetarget 从运动学初值出发，用动力学 rollout 搜索控制参考。",
+        "en": "GMR handles per-frame geometric matching; DynaRetarget refines kinematic initializations through dynamics rollouts."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "omniretarget",
+      "target": "lessmimic-distance-field-interaction",
+      "type": "contrast",
+      "reason": {
+        "zh": "都编码身体—物体交互；前者用于生成重定向参考，后者用距离场交互奖励训练控制策略。",
+        "en": "Both encode body–object interaction: one constructs retargeted references, the other trains control with distance-field interaction rewards."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "shooting-for-contact-dsms",
+      "target": "grasp-parallel-stochastic-gradient-planning",
+      "type": "analogy",
+      "reason": {
+        "zh": "都引入轨迹状态与局部一致性，但 DSMS 的物理轨迹优化和 GRASP 的交替并行规划不能视为同一算法。",
+        "en": "Both introduce trajectory states and local consistency, but physical DSMS optimization and alternating parallel GRASP planning are distinct algorithms."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "unsupervised-actuator-net-uan",
+      "target": "contact-uan",
+      "type": "extension",
+      "reason": {
+        "zh": "Contact-UAN 为执行器残差校准补充接触一致的初始状态重建，改善真实轨迹回放。",
+        "en": "Contact-UAN adds contact-consistent initial-state reconstruction for actuator residual calibration."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "asap-aligning-simulation-real-physics",
+      "target": "contact-uan",
+      "type": "contrast",
+      "reason": {
+        "zh": "都用输入残差校准仿真；真实轨迹的起点重建与数据采集条件影响校准问题。",
+        "en": "Both calibrate simulation with input residuals; initial-state reconstruction and data collection conditions differ."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "resfit-real-robot-rl",
+      "target": "transic-sim-to-real-policy-transfer-by-learning-from-onl",
+      "type": "alternative",
+      "reason": {
+        "zh": "都在已有策略上加残差；ResFiT 用真实在线 RL，TRANSIC 用人类在线纠错训练 gated residual。",
+        "en": "Both add residuals to existing policies; ResFiT uses real online RL, while TRANSIC learns gated residuals from human corrections."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "posterior-bc",
+      "target": "resfit-real-robot-rl",
+      "type": "contrast",
+      "reason": {
+        "zh": "前者改变 BC 预训练以支持探索，后者冻结 BC 基座再学残差；介入学习流程的位置不同。",
+        "en": "Posterior BC changes pretraining to support exploration; ResFiT freezes a BC base and learns residuals."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "vaml-value-aware-model-learning",
+      "target": "ddppo-gradient-information-policy-optimization",
+      "type": "complement",
+      "reason": {
+        "zh": "VAML 约束价值期望误差；DDPPO 学习反传所需的局部导数，价值准确性不自动保证梯度准确。",
+        "en": "VAML targets value-expectation error; DDPPO learns local derivatives for backpropagation. Value accuracy does not imply gradient accuracy."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "vaml-value-aware-model-learning",
+      "target": "td-mpc-temporal-difference-control",
+      "type": "contrast",
+      "reason": {
+        "zh": "都重视对任务有用的模型；TD-MPC 的奖励、TD 与一致性联合损失并非 VAML 的函数类最坏误差目标。",
+        "en": "Both favor task-relevant models, but TD-MPC’s reward, TD, and consistency losses differ from VAML’s worst-case value-class error."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "sobolev-training-neural-networks",
+      "target": "ddppo-gradient-information-policy-optimization",
+      "type": "concept",
+      "reason": {
+        "zh": "导数监督是连接概念；DDPPO 用真实邻居的有限差分训练梯度模型，并非直接获得完整真实 Jacobian。",
+        "en": "Derivative supervision connects them; DDPPO uses neighbor finite differences rather than direct access to complete true Jacobians."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "sobolev-training-neural-networks",
+      "target": "tasil-taylor-series-imitation-learning",
+      "type": "concept",
+      "reason": {
+        "zh": "输出与导数联合匹配在 TaSIL 中连接到闭环 δ-ISS 条件下的轨迹误差界。",
+        "en": "Matching outputs and derivatives connects to trajectory-error bounds under closed-loop δ-ISS conditions in TaSIL."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "td-mpc-temporal-difference-control",
+      "target": "td-mpc2-scalable-robust-world-models",
+      "type": "extension",
+      "reason": {
+        "zh": "TD-MPC2 延续短期潜模型规划加末端价值，并用 SimNorm、离散回归、Q 集成和随机先验稳定扩展。",
+        "en": "TD-MPC2 retains short-horizon latent planning and terminal value, adding SimNorm, discrete regression, Q ensembles, and a stochastic prior."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "td-mpc2-scalable-robust-world-models",
+      "target": "tawm-time-aware-world-model",
+      "type": "extension",
+      "reason": {
+        "zh": "TAWM 将控制间隔作为条件输入，混合不同时间步的数据训练，改变的是时间条件化。",
+        "en": "TAWM conditions on control intervals and trains across time steps, adding explicit time conditioning."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "td-mpc2-scalable-robust-world-models",
+      "target": "cmpo-chunk-wise-model-based-policy-optimization",
+      "type": "contrast",
+      "reason": {
+        "zh": "CMPO 使用直接多步模型与动作块回报梯度训练 actor；主部署每步直接出动作，与在线规划路线不同。",
+        "en": "CMPO trains an actor through direct multi-step models and chunk-return gradients, then acts directly instead of relying on online planning."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "pwm-policy-learning-multi-task-world-models",
+      "target": "supermimic-differentiable-world-model",
+      "type": "contrast",
+      "reason": {
+        "zh": "都沿可微想象轨迹训练 actor；PWM 固定离线多任务模型，SuperMimic 在线学习共享身体动力学。",
+        "en": "Both train actors through differentiable imagined trajectories; PWM freezes an offline multitask model, while SuperMimic learns body dynamics online."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "supermimic-differentiable-world-model",
+      "target": "itpo-offline-rl-differentiable-world-models",
+      "type": "contrast",
+      "reason": {
+        "zh": "都能对模型回报反传；前者主要用于训练策略，ITPO 在每个执行步临时更新策略参数。",
+        "en": "Both differentiate model returns; SuperMimic uses this for training, while ITPO updates policy parameters at execution time."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "supermimic-differentiable-world-model",
+      "target": "nablamimic-differentiable-simulation",
+      "type": "alternative",
+      "reason": {
+        "zh": "动力学梯度分别来自学习世界模型与解析可微物理仿真，模型误差与仿真假设需要分别判断。",
+        "en": "Dynamics gradients come from learned models versus analytically differentiable simulation, with different error sources and assumptions."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "ddppo-gradient-information-policy-optimization",
+      "target": "grasp-parallel-stochastic-gradient-planning",
+      "type": "contrast",
+      "reason": {
+        "zh": "DDPPO 改善梯度模型；GRASP 改规划优化结构，部分截断状态输入梯度并周期性全链校准。",
+        "en": "DDPPO improves derivative models; GRASP changes planning structure with partial state-gradient stops and periodic full-chain calibration."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "cmpo-chunk-wise-model-based-policy-optimization",
+      "target": "grasp-parallel-stochastic-gradient-planning",
+      "type": "contrast",
+      "reason": {
+        "zh": "CMPO 改模型的多步预测与 actor 训练；GRASP 在固定模型中联合优化虚拟状态与动作。",
+        "en": "CMPO changes multi-step prediction and actor training; GRASP optimizes virtual states and actions in a fixed model."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "grasp-parallel-stochastic-gradient-planning",
+      "target": "id-wm-hierarchical-world-models-implicit-dynamics",
+      "type": "alternative",
+      "reason": {
+        "zh": "一个优化轨迹状态与动作，另一个分层搜索子目标和动作；长时域计算被拆分的方式不同。",
+        "en": "One optimizes states and actions, while the other searches subgoals and actions hierarchically."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "neural-laplace-control",
+      "target": "tawm-time-aware-world-model",
+      "type": "contrast",
+      "reason": {
+        "zh": "NLC 用带时间戳的历史处理动作延迟；TAWM 显式条件化动作持续时间，两种时间变量不可混用。",
+        "en": "NLC uses timestamped history for action delay; TAWM conditions on action duration. These are distinct time variables."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "nha-neural-hybrid-automata",
+      "target": "neural-event-ode",
+      "type": "alternative",
+      "reason": {
+        "zh": "NHA 从条件分布采样等待时间并切换/重置；Neural Event ODE 通过事件函数零点确定触发时刻。",
+        "en": "NHA samples conditional waiting times before switching or resetting; Neural Event ODE triggers at event-function roots."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "nha-neural-hybrid-automata",
+      "target": "dhal-discrete-time-hybrid-automata-learning",
+      "type": "contrast",
+      "reason": {
+        "zh": "NHA 生成连续轨迹、事件时间与跳变；DHAL 根据离散历史选择动力学编码器辅助策略，不预测连续等待时间。",
+        "en": "NHA generates trajectories, event times, and jumps; DHAL selects dynamics encoders from discrete history to support control."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "intensity-free-learning-temporal-point-processes",
+      "target": "nha-neural-hybrid-automata",
+      "type": "concept",
+      "reason": {
+        "zh": "条件等待时间密度帮助理解随机事件生成；完整混杂模型还要连接连续动力学、竞争事件与重置。",
+        "en": "Conditional waiting-time densities help explain stochastic events; hybrid models also require dynamics, competing events, and resets."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "dhal-discrete-time-hybrid-automata-learning",
+      "target": "more-multi-physics-robotic-world-models",
+      "type": "contrast",
+      "reason": {
+        "zh": "都从历史选择模式；DHAL 的 latent 输入 actor，MoRE 的专家直接预测不同物理类别的点云运动供 MPC 使用。",
+        "en": "Both route from history; DHAL supplies actor latents, while MoRE predicts physics-specific point-cloud motion for MPC."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "contactnets",
+      "target": "neural-event-ode",
+      "type": "contrast",
+      "reason": {
+        "zh": "都处理接触不连续；ContactNets 学光滑几何并调用冲量求解器，Event ODE 学事件触发与瞬时状态更新。",
+        "en": "Both handle discontinuities: ContactNets learns geometry for an impulse solver, while Event ODE learns triggers and instantaneous updates."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "robotmdm-robot-motion-diffusion-model",
+      "target": "ttco-humanoid-behavior-foundation-models",
+      "type": "contrast",
+      "reason": {
+        "zh": "都利用控制器的执行表现改参考；RobotMDM 离线微调生成器，TTCO 在线优化冻结控制器的命令副本。",
+        "en": "Both improve references using execution performance; RobotMDM finetunes a generator offline, while TTCO optimizes command copies online."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "ode-policy-action-dynamics",
+      "target": "spline-policy",
+      "type": "alternative",
+      "reason": {
+        "zh": "ODE Policy 积分动作目标的变化率；Spline Policy 的 Flow 模式用位置反馈生成沿曲线运动的速度。",
+        "en": "ODE Policy integrates action-target derivatives; Spline Policy’s Flow mode uses position feedback to generate curve-following velocity."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "pi0",
+      "target": "dreamzero",
+      "type": "contrast",
+      "reason": {
+        "zh": "都把语义与动作生成相连；π0 用 VLM 与 flow action expert，DreamZero 以视频生成先验联合建模未来视频和动作。",
+        "en": "Both connect semantics and actions; π0 uses a VLM and flow action expert, while DreamZero jointly models video and actions from a video-generation prior."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    },
+    {
+      "source": "mimicgen",
+      "target": "omnireset",
+      "type": "contrast",
+      "reason": {
+        "zh": "都扩大可利用经验；MimicGen 生成示范轨迹，OmniReset 生成 RL 的多样初始交互状态。",
+        "en": "Both expand useful experience: MimicGen generates demonstrations, while OmniReset generates diverse RL initial interaction states."
+      },
+      "basis": {
+        "zh": "依据库内卡片与已有阅读笔记整理；关系说明是跨论文综合。",
+        "en": "Synthesized from library cards and existing reading notes."
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "locomotion",
+      "label": {
+        "zh": "运动控制",
+        "en": "Locomotion"
+      }
+    },
+    {
+      "id": "parkour-terrain",
+      "label": {
+        "zh": "跑酷 / 多地形",
+        "en": "Parkour / terrain"
+      }
+    },
+    {
+      "id": "manipulation",
+      "label": {
+        "zh": "操作",
+        "en": "Manipulation"
+      }
+    },
+    {
+      "id": "loco-manipulation",
+      "label": {
+        "zh": "移动操作",
+        "en": "Loco-manipulation"
+      }
+    },
+    {
+      "id": "sim2real",
+      "label": {
+        "zh": "Sim2Real",
+        "en": "Sim2Real"
+      }
+    },
+    {
+      "id": "real-robot-rl",
+      "label": {
+        "zh": "真机 RL",
+        "en": "Real-robot RL"
+      }
+    },
+    {
+      "id": "imitation-teleop",
+      "label": {
+        "zh": "模仿 / 遥操作",
+        "en": "Imitation / teleoperation"
+      }
+    },
+    {
+      "id": "vla-world-model",
+      "label": {
+        "zh": "VLA / 世界模型",
+        "en": "VLA / world models"
+      }
+    },
+    {
+      "id": "benchmark-dataset",
+      "label": {
+        "zh": "数据集 / 基准",
+        "en": "Datasets / benchmarks"
+      }
+    }
+  ]
+}
