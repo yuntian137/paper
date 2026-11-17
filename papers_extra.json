@@ -8220,6 +8220,90 @@
           "12. Data, capabilities, and research use | Approximately 4.78 hours of retargeted motion supply goals and priors, and 4,096 parallel environments supply interaction transitions; the shared latent has dimension 256. Physical G1 uses LiDAR/FAST-LIO world-pose estimates and demonstrates goal switching, ground recovery, and disturbance return. The PDF does not explicitly validate independent velocity-command or live-teleoperation interfaces. Useful research ideas are physical supervision of control representations and connecting actors to long-term value through one dynamics step; consider data coverage, localization, policy distribution shift, and online MPC compute. (pp. 9–10; Appendix C)"
         ]
       }
+    },
+    {
+      "id": "hypgcrl-hyperbolic-goal-conditioned-rl",
+      "aliases": [
+        "Hyperbolic CRL",
+        "HypGCRL"
+      ],
+      "categories": [
+        "k1-goals",
+        "k5-horizon"
+      ],
+      "contexts": [
+        "locomotion",
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.20009v1",
+      "project": "https://github.com/Probabilistic-and-Interactive-ML/HypGCRL",
+      "arxiv": "https://arxiv.org/abs/2610.20009",
+      "year": "2026",
+      "venue": "arXiv:2610.20009v1",
+      "zh": {
+        "title": "Outperforming 1000 Euclidean Layers With Hyperbolic Goal-Conditioned RL",
+        "authors": "Timo Klein, Thomas Lang, Andrii Shkabrii, Lukas Miklautz, Yllka Velaj, Sebastian Tschiatschek",
+        "institutions": "维也纳大学；马克斯·普朗克生物化学研究所",
+        "status": "部分已读：正文、方法与关键实验附录已核对（arXiv v1）；未复现",
+        "takeaway": "把 CRL critic 的表示映射到双曲空间，用负测地距离评价目标的未来访问关系，为长程迷宫提供与路线结构匹配的归纳偏置。",
+        "tags": [
+          "CRL",
+          "Hyperbolic Geometry",
+          "Goal-Conditioned RL",
+          "InfoNCE",
+          "Occupancy Measure",
+          "Representation Learning"
+        ],
+        "mainContent": "迷宫中隔墙位置的直线邻近与实际路线邻近不一致，CRL 的表示几何可能影响长程目标到达。本文保留对比学习与 actor-critic 框架，将表示映射到双曲空间并以负测地距离打分，使 critic 更准确地区分直线距离相近、绕行距离不同的目标。arXiv v1 报告 64 层双曲模型在 Humanoid U-Maze 上超过前作的 1024 层 critic 基线，估算训练吞吐优势约 12 倍，参数量约为基线的 1/13。",
+        "innovations": [
+          "在 CRL 的两端编码器后加入双曲映射与轻量变换，用双曲测地距离组织未来访问关系；主要改动落在表示和打分几何。（§2、§5、附录 D.1）",
+          "从环境路线的相对 delta-hyperbolicity、目标距离排序和 critic 位置梯度分析几何匹配，提供超出任务性能曲线的机制诊断。（§4，图 2–3）",
+          "在固定深度、短轨迹拼接、曲率与深度消融及离线导航中验证表示几何的作用，展示困难迷宫上的性能与计算成本权衡。（§5，图 1、4、6–9）"
+        ],
+        "implementation": [
+          "任务与数据｜策略输入当前机器人状态和目标，输出控制动作；目标由状态中的相关部分提取，如机器人或球的位置。critic 的正样本是同一轨迹按几何分布抽取的未来已实现目标，负样本来自 minibatch 中其他轨迹；目标访问关系由真实经历提供。（§2）",
+          "在线网络与训练｜欧氏 ResNet 主干后接原点指数映射和一个 HTC 双曲层，使用 Lorentz/hyperboloid 模型与负测地距离 energy；critic 采用 symmetric InfoNCE，actor 最大化 critic 分数。主实验深度 16、宽度 256、表示维度 64，所有在线任务固定曲率幅值为 0.5；深度 16 的额外参数约 0.26%。（§5、附录 D.1，图 12、表 1）",
+          "机制核对｜Ant U5-Maze 上，对直线距离相近但路线距离不同的目标，欧氏／双曲 critic 的正确排序比例为 59.4%／82.5%；与路线距离的 Spearman 相关系数为 0.41／0.69。位置梯度用于诊断价值景观，与 actor 实际使用的动作梯度需要区分。（§4，图 2–3）",
+          "深度比较与成本｜v1 图 1 的深层欧氏性能取自 Wang et al. (2025)。Humanoid U-Maze 的双曲 actor/critic 均为 64 层，成本表中的欧氏 actor/critic 为 512/1024 层；参数为 12.9M 对 169.9M，吞吐为 3722 对 303 SPS。约 12 倍耗时优势按训练吞吐估算，不含编译、预填充和评估；Big Maze 比较的是 512 层基线，吞吐优势约 7 倍。（图 1、附录 F，表 4）",
+          "实验范围与指标｜固定深度的在线主实验覆盖 10 个仿真任务，使用 10 个 seeds 和 95% bootstrap 置信区间；主要指标 steps at goal 同时反映到达和停留能力。短程经历拼接实验要求把训练中分开出现的局部轨迹推广到远目标。（§5.1–5.3，图 4、6）",
+          "离线版本｜OGBench 上的完整模型在 8 个导航／拼接任务上均提高平均成功率；它使用 Minkowski 内积 energy，并增加双曲 actor 与 Hyper++ 正则化。仅替换双曲 critic、保留欧氏 actor 的对照在 7/8 任务上提高均值，完整模型的增益包含 actor 改动。（§5.5、附录 D.2、E.3，表 2–3）",
+          "几何与深度的理解｜欧氏距离计算于学到的特征，编码器可以把绕行关系展开为欧氏距离；浅网络也可能学会简单走廊。论文观察到改换几何减少了部分任务所需的深度；“深网络容量用于补偿几何不匹配”是机制假说，实验没有证明必须使用深网络。（§1、§4、§5.4）",
+          "与 successor／FB 的阅读对照｜原始点积 CRL 的状态—动作编码器对应 F 端的角色，目标编码器对应 B 端的角色。FB 的 F 还输入任务向量以指定后续策略，可独立区分执行的策略目标与查询的未来目标；标准 NCE-CRL 学习未来访问密度比的对数，FB 内积拟合相对参考分布的 successor 密度，两套表示不能直接等同。此项是结合 CRL §4.2（arXiv:2206.07568）与 FB §4／附录 K.1（arXiv:2209.14935）的跨论文理解。",
+          "适用边界与版本｜默认曲率在开放场地 Humanoid 上降低表现，接近平坦的较小曲率可恢复性能，几何选择依赖任务结构。本卡依据 2026-10-14 的 arXiv v1 与本次讨论；OpenReview 后续修订未核实。（§5.4、§6）"
+        ]
+      },
+      "en": {
+        "title": "Outperforming 1000 Euclidean Layers With Hyperbolic Goal-Conditioned RL",
+        "authors": "Timo Klein, Thomas Lang, Andrii Shkabrii, Lukas Miklautz, Yllka Velaj, Sebastian Tschiatschek",
+        "institutions": "University of Vienna; Max Planck Institute of Biochemistry",
+        "status": "Partially read: main text, method, and key experimental appendices checked (arXiv v1); not reproduced",
+        "takeaway": "Map CRL critic representations into hyperbolic space and score future goal occupancy with negative geodesic distance, providing an inductive bias aligned with long-range maze routes.",
+        "tags": [
+          "CRL",
+          "Hyperbolic Geometry",
+          "Goal-Conditioned RL",
+          "InfoNCE",
+          "Occupancy Measure",
+          "Representation Learning"
+        ],
+        "mainContent": "In mazes, straight-line proximity across walls differs from route proximity, making representation geometry relevant to long-horizon goal reaching in CRL. The method retains contrastive learning and the actor-critic framework, maps representations into hyperbolic space, and scores them with negative geodesic distance to better distinguish goals with similar straight-line but different route distances. arXiv v1 reports that a depth-64 hyperbolic agent exceeds the prior 1024-layer-critic baseline on Humanoid U-Maze, with approximately 12 times the estimated training throughput and 1/13 the parameter count.",
+        "innovations": [
+          "Add hyperbolic mappings and lightweight transformations after both CRL encoders, organizing future occupancy with geodesic distance; the main change concerns representation and scoring geometry. (§2, §5, Appendix D.1)",
+          "Diagnose geometry matching through route-based relative delta-hyperbolicity, goal-distance ordering, and critic position gradients, providing mechanistic evidence beyond task-performance curves. (§4, Figs. 2–3)",
+          "Evaluate geometry at matched depth, experience stitching, curvature/depth ablations, and offline navigation, demonstrating performance–compute tradeoffs on difficult mazes. (§5, Figs. 1, 4, 6–9)"
+        ],
+        "implementation": [
+          "Task and data | The actor takes robot state and a goal and outputs control actions; goals extract relevant state components such as robot or ball position. Critic positives are achieved future goals sampled geometrically from the same trajectory, and negatives come from other trajectories in the minibatch. Observed experience supplies future-occupancy relationships. (§2)",
+          "Online architecture and training | A Euclidean ResNet is followed by an origin exponential map and one HTC hyperbolic layer, using the Lorentz/hyperboloid model and negative geodesic-distance energy. The critic uses symmetric InfoNCE and the actor maximizes its score. Main experiments use depth 16, width 256, representation dimension 64, and fixed curvature magnitude 0.5 across online tasks; parameter overhead at depth 16 is about 0.26%. (§5, Appendix D.1, Fig. 12, Table 1)",
+          "Mechanistic checks | On Ant U5-Maze, correct ordering of goals with similar straight-line but different route distances is 59.4%/82.5% for Euclidean/hyperbolic critics; Spearman correlation with route distance is 0.41/0.69. Position gradients diagnose the value landscape and should be distinguished from action gradients used by the actor. (§4, Figs. 2–3)",
+          "Depth comparison and cost | Deep Euclidean performance in v1 Fig. 1 is taken from Wang et al. (2025). On Humanoid U-Maze the hyperbolic actor/critic both have depth 64, whereas the cost-table Euclidean actor/critic have depths 512/1024. Parameter counts are 12.9M versus 169.9M and throughput is 3722 versus 303 SPS. The approximately 12-fold time advantage is estimated from training throughput, excluding compilation, prefill, and evaluation. Big Maze uses a depth-512 baseline with approximately 7-fold throughput advantage. (Fig. 1, Appendix F, Table 4)",
+          "Experimental scope and metrics | Matched-depth online main experiments cover 10 simulated tasks with 10 seeds and 95% bootstrap confidence intervals. The main metric, steps at goal, combines reaching and remaining at the goal. Experience-stitching evaluation requires generalizing separately observed short trajectories to distant goals. (§§5.1–5.3, Figs. 4, 6)",
+          "Offline variant | The full OGBench model improves mean success on all 8 navigation/stitching tasks. It uses Minkowski-inner-product energy and adds a hyperbolic actor with Hyper++ regularization. Replacing only the critic while retaining a Euclidean actor improves means on 7/8 tasks, so full-model gains also include actor changes. (§5.5, Appendices D.2, E.3, Tables 2–3)",
+          "Interpreting geometry and depth | Euclidean distances operate on learned features, so an encoder can unfold route relationships into Euclidean distances; a shallow network may suffice for a simple corridor. Experiments show that changing geometry reduces depth needed on some tasks. The idea that deep networks spend capacity compensating for geometry mismatch is a mechanistic hypothesis, without proving that depth is necessary. (§1, §4, §5.4)",
+          "Reading connection to successor/FB | In original dot-product CRL, the state-action encoder plays a role analogous to F and the goal encoder to B. FB additionally conditions F on a task vector specifying the continuation policy, separating the policy goal from the queried future goal. Standard NCE-CRL learns a log future-occupancy density ratio, whereas the FB inner product approximates successor density relative to a reference distribution, so the representations are not directly equal. This is a cross-paper interpretation based on CRL §4.2 (arXiv:2206.07568) and FB §4 / Appendix K.1 (arXiv:2209.14935).",
+          "Scope and version | Default curvature hurts performance on open-arena Humanoid; smaller, nearly flat curvature can recover performance, making geometry task-dependent. This card follows arXiv v1 dated 2026-10-14 and this discussion; subsequent OpenReview revisions have not been verified. (§5.4, §6)"
+        ]
+      }
     }
   ]
 }
