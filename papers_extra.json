@@ -8124,6 +8124,102 @@
           "Scope and cost | The model focuses on one manipulated object and does not handle simultaneous coupled multi-object interactions or explicitly estimate fine-grained mass, friction, or elasticity. Real-world point clouds use four fused D455 cameras with SAM3 segmentation; 20 FPS refers to model inference. (§5, Appendix A.3)"
         ]
       }
+    },
+    {
+      "id": "bejepa-goal-conditioned-behavior-world-model",
+      "aliases": [
+        "BeJEPA"
+      ],
+      "categories": [
+        "k1-goals",
+        "k1-tracking",
+        "k5-horizon",
+        "k5-decision"
+      ],
+      "contexts": [
+        "locomotion",
+        "sim2real",
+        "vla-world-model"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.23127v1",
+      "project": "https://ylyem9x.github.io/BeJEPA-project/",
+      "arxiv": "https://arxiv.org/abs/2610.23127",
+      "year": "2026",
+      "venue": "arXiv:2610.23127v1",
+      "zh": {
+        "title": "BeJEPA: A Goal-Conditioned Humanoid Behavior World Model via Unsupervised RL",
+        "authors": "Liyun Yan, Haoyang Li, Yang Zhang, Jialing Zhu, Zhanxiang Cao, Zihao Zhou, Keqi Zhu, Yizhi Chen, Huang Chuxuan, Shengcheng Fu, Zhong Jiangwei, Qiao Sun, Chen Zhang, Yue Gao",
+        "institutions": "上海交通大学 RL2 Lab；上海创智学院；浙江大学；同济大学；复旦大学；联想研究院 Robotics Lab",
+        "status": "部分已读：核心方法、关键推导、主要实验与相关附录已核对；未复现",
+        "takeaway": "用一步隐空间动力学连接动作与后继特征的长期价值，通过两个预测器的梯度训练目标条件策略；部署可直接执行策略或增加短时域 MPC。",
+        "tags": [
+          "JEPA",
+          "Successor Features",
+          "Occupancy Measure",
+          "Unsupervised RL",
+          "Latent Dynamics",
+          "Goal-Conditioned Policy",
+          "MPC",
+          "Unitree G1"
+        ],
+        "mainContent": "人形机器人需要同时达到目标身体姿态、世界位置和朝向，纠正位置的中间动作又可能暂时降低姿态匹配。BeJEPA 在共享表示中学习动作条件的 Dynamic 和目标条件的 Successor，以一步物理预测加长期特征摘要指导策略更新，无需长时间想象 rollout。AMASS 的全球 MPJPE 从 world-input BFM-Zero 的 573.4 mm 降至 278.0 mm，加入在线 MPC 后为 219.5 mm；真机展示目标切换、倒地起身与受扰后返回。",
+        "innovations": [
+          "世界锚定的行为目标｜共同编码身体配置、世界位置与朝向，以固定目标支持 goal reaching、以时变参考支持 motion tracking；统一目标到达与跟踪是已有路线的能力，本文强调世界位姿与姿态的联合控制。（第 2–3 页，§3.1–3.2）",
+          "Dynamic–Successor 分解｜单步动作后果由不依赖目标的动力学预测器学习，后续策略行为由状态—目标条件的后继特征预测器学习；物理转移跨目标复用，到达同一潜在状态的不同动作共享后续预测。（第 5 页，§3.3；附录 A.4）",
+          "物理监督与长期行为共同学习表示｜JEPA 式下一特征预测提供直接物理监督，Successor TD 组织长期访问结构；相同 Dynamic 还支持冻结模型上的短时域动作优化。（式 8–13，图 2）"
+        ],
+        "implementation": [
+          "1. 指令、观测与动作｜目标特征为 \\(z_g=E_\\phi(s_g)\\)，同一策略 \\(a_t=\\pi_\\theta(\\widetilde z_t,h_t,z_g)\\) 以目标为条件；固定目标与时变参考分别用于到达和跟踪。当前／目标 root pose 相对同一固定锚点表示为 \\((x,y,\\sin\\psi,\\cos\\psi)\\)。训练状态含仿真 body kinematics，部署用本体感知、估计 root pose 和历史；动作是 29 个关节的 PD 目标值。（第 3 页 §3.1；第 5 页；附录 C.2）",
+          "2. 奖励与表示几何｜\\(z=E_\\phi(s),\\ \\|z\\|^2=\\|z_g\\|^2=d\\)。由 \\(\\|z-z_g\\|^2=2d-2z^\\top z_g\\) 得 \\(r_g(s)=z^\\top z_g=d-\\tfrac12\\|z-z_g\\|^2\\)，即最大化相似度等价于最小化学习到的特征距离。编码器更新也会改变该奖励几何。（第 3 页，式 1）",
+          "3. 占据测度与 Successor｜\\(M^{\\pi_g}(X\\mid s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^k\\mathbf1\\{s_{t+k}\\in X\\}\\mid s_t=s]\\) 是包括当前状态的归一化折扣状态占据测度。网络预测 \\(S^{\\pi_g}(s)=\\int E_\\phi(s')M^{\\pi_g}(ds'\\mid s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^kz_{t+k}\\mid s_t=s]\\)，输出期望特征向量，通常无法由它还原完整状态分布。（第 4 页，式 2–3）",
+          "4. 从长期特征到价值的推导｜线性奖励使 \\(V_g(s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^k\\langle z_{t+k},z_g\\rangle\\mid s_t=s]=\\langle(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^kz_{t+k}\\mid s_t=s],z_g\\rangle=\\langle S^{\\pi_g}(s),z_g\\rangle\\)。因此 Successor 是向量形式的长期价值预测器；目标特征同时规定策略条件和奖励读出。（式 4；附录 A.3，式 22–23）",
+          "5. 两种预测怎样学习｜\\(\\mathcal L_D=\\mathbb E_{\\mathcal B}\\|D_\\nu(z_t,a_t)-\\operatorname{sg}[z_{t+1}]\\|^2\\)。将式 3 的当前项分离，得到 \\(S^{\\pi_g}(s_t)=(1-\\gamma)z_t+\\gamma\\mathbb E[S^{\\pi_g}(s_{t+1})]\\)，据此构造 \\(y_t^S=\\operatorname{sg}[(1-\\gamma_t)z_t+\\gamma_tS_{\\bar\\xi}(z_{t+1},z_b)]\\) 并以 MSE 拟合。这里 \\(\\gamma_t=\\gamma(1-d_t)\\)，目标网络为 Successor 的 EMA；TD 使用真实下一状态和采集目标 \\(z_b\\)，不经 Dynamic 生成目标。（式 5、8–9）",
+          "6. 组合动作价值｜由 \\(Q_g(s,a)=(1-\\gamma)r_g(s)+\\gamma\\mathbb E[V_g(s')\\mid s,a]\\)，采用 \\(\\mathbb E[S_\\xi(z',z_g)\\mid s,a]\\approx S_\\xi(D_\\nu(z,a),z_g)\\)，得到 \\(\\widehat Q_g(z,a)=\\langle(1-\\gamma)z+\\gamma S_\\xi(D_\\nu(z,a),z_g),z_g\\rangle\\)。Dynamic 预测动作后果，Successor 评价此后遵循目标策略的长期结果，支持暂时偏离目标姿态的中间动作。（第 5 页，式 6–7）",
+          "7. 策略梯度与更新范围｜将 \\(a=\\pi_\\theta(\\cdot)\\) 代入组合价值，动作相关梯度为 \\(\\nabla_\\theta\\widehat Q_g=\\gamma J_{\\pi,\\theta}^{\\top}J_{D,a}^{\\top}J_{S,z'}^{\\top}z_g\\)。Successor 给出下一特征的改进方向，Dynamic 将其转为动作改进方向。世界模型更新共同训练编码器与预测器，策略更新固定这些网络、仅更新 actor；固定参数仍允许对输入求导。完整 actor 目标另含 CPR 运动先验和 AUX 物理执行奖励。（式 10–11；附录 A.3 式 24、C.3 式 33）",
+          "8. 理论依据及条件｜固定策略与编码器时，向量 Bellman 算子在有界函数上满足 \\(\\|\\mathcal T_gF-\\mathcal T_gG\\|_\\infty\\le\\gamma\\|F-G\\|_\\infty\\)，后继特征是唯一固定点。附录 A.4 进一步假设表示保留奖励／决策信息、具有 Markov 性且 \\(z'=D^\\star(z,a)\\) 确定，才有 \\(F_g^+(z,a)=\\mathbb E[S_g(z')\\mid z,a]=S_g(D^\\star(z,a))\\)，准确分解保持动作价值和最大化动作。该理想论证不保证变化编码器、策略及神经网络联合训练收敛，也不直接保证 critic 预测误差下降。（附录 A.2、A.4，式 19、25）",
+          "9. 部署与 MPC｜直接运行观测历史编码器和 actor，无需 Dynamic／Successor 在线参与决策。可选 BeJEPA-MPC 用 Dynamic 展开短期轨迹，在 actor 动作上优化有界残差，与对应时刻的潜在／几何参考误差比较，只执行第一步并重新规划；网络参数固定，Successor 不参与 MPC。（第 6 页 §3.4，式 12–13；附录 B）",
+          "10. 性能与组件证据｜20 秒 AMASS／LAFAN 片段在 MuJoCo 以 50 Hz 评估。表 1 的 AMASS 全球 MPJPE 为 BFM-Zero（world）573.4、BeJEPA 278.0、BeJEPA-MPC 219.5 mm；BeJEPA 相对 SONIC 改善世界位置，但局部姿态误差更高。表 2 的固定目标平均位置误差：合并预测器 1.348 m、阻断 Dynamic 编码器梯度 1.231 m、阻断 Successor 编码器梯度 0.885 m、完整模型 0.642 m。消融支持拆分与联合表示学习，表 1–2 未给多训练 seed 波动。（第 7–8 页）",
+          "11. 机制证据与归因｜图 5 的线性读出显示速度和 root height 更易访问，位置／朝向与基线相近。附录 D 的图 7–8 测量训练曲线、两种编码器梯度的大小与余弦及预测损失：早期 Dynamic 权重梯度较强，后期 Successor 主导；Dynamic 权重本身也随训练衰减。它们支持物理与行为监督协同的解释，未将控制收益完全归因为标量价值预测更准确，也未直接验证随机转移下组合近似的误差。（第 9 页；附录 C.2、D）",
+          "12. 数据、功能与研究用途｜约 4.78 小时重定向运动提供目标和运动先验，4,096 并行仿真环境提供转移；共享特征维度 256。真机 G1 利用 LiDAR／FAST-LIO 估计世界位姿，展示目标切换、倒地起身和受扰返回；PDF 未明确验证独立速度 command 或实时遥操。研究上可借鉴用物理监督学习控制表示、用一步动力学连接 actor 与长期价值；使用时需考虑数据覆盖、定位误差、策略分布变化与 MPC 在线计算。（第 9–10 页；附录 C）"
+        ]
+      },
+      "en": {
+        "title": "BeJEPA: A Goal-Conditioned Humanoid Behavior World Model via Unsupervised RL",
+        "authors": "Liyun Yan, Haoyang Li, Yang Zhang, Jialing Zhu, Zhanxiang Cao, Zihao Zhou, Keqi Zhu, Yizhi Chen, Huang Chuxuan, Shengcheng Fu, Zhong Jiangwei, Qiao Sun, Chen Zhang, Yue Gao",
+        "institutions": "RL2 Lab, Shanghai Jiao Tong University; Shanghai Innovation Institute; Zhejiang University; Tongji University; Fudan University; Robotics Lab, Lenovo Research, Lenovo Group Limited",
+        "status": "Partially read: core method, key derivations, main experiments, and relevant appendices checked; not reproduced",
+        "takeaway": "Connect actions to successor-feature values through one latent-dynamics step, train the goal-conditioned actor through both predictors, and deploy the actor directly or add short-horizon MPC.",
+        "tags": [
+          "JEPA",
+          "Successor Features",
+          "Occupancy Measure",
+          "Unsupervised RL",
+          "Latent Dynamics",
+          "Goal-Conditioned Policy",
+          "MPC",
+          "Unitree G1"
+        ],
+        "mainContent": "Humanoid control must attain body posture, world position, and heading together, although intermediate steps correcting placement can temporarily worsen posture matching. BeJEPA jointly learns action-conditioned Dynamic and goal-conditioned Successor predictors in a shared representation, improving the actor through one physical prediction and a long-term feature summary without extended imagined rollouts. AMASS global MPJPE falls from 573.4 mm for world-input BFM-Zero to 278.0 mm for BeJEPA and 219.5 mm with online MPC; hardware demonstrations include goal switching, ground recovery, and return after disturbances.",
+        "innovations": [
+          "World-anchored behavior goals | Encode body configuration, world position, and heading together; fixed goals support reaching and time-indexed references support tracking. Goal reaching and tracking are existing capabilities in this research line; this paper emphasizes their joint world-pose and posture formulation. (pp. 2–3, §§3.1–3.2)",
+          "Dynamic–Successor decomposition | A goal-independent transition predictor models immediate action consequences, while a state–goal predictor models policy continuation. Physical transitions are reused across goals, and different actions reaching the same latent share continuation predictions. (p. 5, §3.3; Appendix A.4)",
+          "Joint physical and behavioral representation learning | JEPA-style next-feature prediction provides direct physical supervision, and Successor TD organizes long-term occupancy structure. The same Dynamic also supports short-horizon action optimization with frozen weights. (Eqs. 8–13, Fig. 2)"
+        ],
+        "implementation": [
+          "1. Goals, observations, and actions | Encode the target as \\(z_g=E_\\phi(s_g)\\) and condition one actor \\(a_t=\\pi_\\theta(\\widetilde z_t,h_t,z_g)\\) on it. Fixed targets and time-indexed references specify reaching and tracking. Current/target root pose \\((x,y,\\sin\\psi,\\cos\\psi)\\) shares a fixed anchor. Training states expose simulated body kinematics; deployment uses proprioception, estimated root pose, and history. Actions specify 29 joint targets for a low-level PD controller. (p. 3 §3.1; p. 5; Appendix C.2)",
+          "2. Reward geometry | With \\(z=E_\\phi(s),\\ \\|z\\|^2=\\|z_g\\|^2=d\\), expand \\(\\|z-z_g\\|^2=2d-2z^\\top z_g\\) to obtain \\(r_g(s)=z^\\top z_g=d-\\tfrac12\\|z-z_g\\|^2\\). Maximizing similarity minimizes distance in the learned representation; encoder updates also change this reward geometry. (p. 3, Eq. 1)",
+          "3. Occupancy and successor features | \\(M^{\\pi_g}(X\\mid s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^k\\mathbf1\\{s_{t+k}\\in X\\}\\mid s_t=s]\\) is normalized discounted state occupancy including the current state. Predict \\(S^{\\pi_g}(s)=\\int E_\\phi(s')M^{\\pi_g}(ds'\\mid s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^kz_{t+k}\\mid s_t=s]\\). This expected feature vector generally does not identify the full state distribution. (p. 4, Eqs. 2–3)",
+          "4. Deriving value from features | Linearity gives \\(V_g(s)=(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^k\\langle z_{t+k},z_g\\rangle\\mid s_t=s]=\\langle(1-\\gamma)\\mathbb E_{\\pi_g}[\\sum_{k\\ge0}\\gamma^kz_{t+k}\\mid s_t=s],z_g\\rangle=\\langle S^{\\pi_g}(s),z_g\\rangle\\). Successor therefore acts as a vector-valued long-term critic; the goal specifies both policy conditioning and reward readout. (Eq. 4; Appendix A.3, Eqs. 22–23)",
+          "5. Predictor learning | \\(\\mathcal L_D=\\mathbb E_{\\mathcal B}\\|D_\\nu(z_t,a_t)-\\operatorname{sg}[z_{t+1}]\\|^2\\). Separating the current feature yields \\(S^{\\pi_g}(s_t)=(1-\\gamma)z_t+\\gamma\\mathbb E[S^{\\pi_g}(s_{t+1})]\\), giving the MSE target \\(y_t^S=\\operatorname{sg}[(1-\\gamma_t)z_t+\\gamma_tS_{\\bar\\xi}(z_{t+1},z_b)]\\). Here \\(\\gamma_t=\\gamma(1-d_t)\\), the EMA target network belongs to Successor, and TD uses the observed next state and collection goal \\(z_b\\), without a Dynamic-generated target. (Eqs. 5, 8–9)",
+          "6. Composed action value | Start from \\(Q_g(s,a)=(1-\\gamma)r_g(s)+\\gamma\\mathbb E[V_g(s')\\mid s,a]\\). Approximate \\(\\mathbb E[S_\\xi(z',z_g)\\mid s,a]\\approx S_\\xi(D_\\nu(z,a),z_g)\\) to obtain \\(\\widehat Q_g(z,a)=\\langle(1-\\gamma)z+\\gamma S_\\xi(D_\\nu(z,a),z_g),z_g\\rangle\\). Dynamic predicts action consequences and Successor evaluates subsequent goal-policy behavior, allowing useful intermediate departures from target posture. (p. 5, Eqs. 6–7)",
+          "7. Actor gradients and updates | Substituting \\(a=\\pi_\\theta(\\cdot)\\) gives \\(\\nabla_\\theta\\widehat Q_g=\\gamma J_{\\pi,\\theta}^{\\top}J_{D,a}^{\\top}J_{S,z'}^{\\top}z_g\\). Successor supplies a next-feature improvement direction and Dynamic maps it to action changes. World-model updates jointly train the encoder/predictors; actor updates freeze them and update only the actor, retaining input derivatives through fixed networks. The full objective also includes CPR motion-prior and AUX physical-execution guidance. (Eqs. 10–11; Appendix A.3 Eq. 24, C.3 Eq. 33)",
+          "8. Theory and assumptions | For fixed policy/encoder and bounded functions, \\(\\|\\mathcal T_gF-\\mathcal T_gG\\|_\\infty\\le\\gamma\\|F-G\\|_\\infty\\), so successor features form the unique Bellman fixed point. Appendix A.4 further assumes a decision/reward-sufficient Markov latent with deterministic \\(z'=D^\\star(z,a)\\), yielding \\(F_g^+(z,a)=\\mathbb E[S_g(z')\\mid z,a]=S_g(D^\\star(z,a))\\). Exact predictors then preserve action values and maximizing actions. This ideal argument does not establish convergence with jointly changing neural encoders/policies or directly guarantee lower critic prediction error. (Appendices A.2, A.4, Eqs. 19, 25)",
+          "9. Deployment and MPC | Direct deployment runs the History Encoder and actor without Dynamic or Successor in online decisions. Optional BeJEPA-MPC rolls out Dynamic, optimizes bounded residuals around actor actions against time-indexed latent/geometric reference errors, executes the first action, and replans. All network weights remain fixed; Successor is absent from MPC. (p. 6 §3.4, Eqs. 12–13; Appendix B)",
+          "10. Performance and component evidence | Evaluate 20-second AMASS/LAFAN clips in MuJoCo at 50 Hz. AMASS global MPJPE is 573.4 mm for BFM-Zero (world), 278.0 for BeJEPA, and 219.5 with MPC; world placement improves over SONIC while local posture error is higher. Fixed-goal mean position errors are 1.348 m for the merged predictor, 1.231 without Dynamic encoder gradients, 0.885 without Successor encoder gradients, and 0.642 for full BeJEPA. Ablations support the split and joint representation learning; Tables 1–2 do not report across-training-seed uncertainty. (pp. 7–8)",
+          "11. Mechanistic evidence and attribution | Figure 5 shows more linearly accessible velocity/root height, with position/orientation comparable to the baseline. Appendix D, Figs. 7–8, measures learning curves, encoder-gradient magnitudes/cosines, and prediction losses: Dynamic dominates early weighted prediction gradients and Successor later, while the Dynamic coefficient is also scheduled to decay. This supports coordinated physical/behavioral supervision without isolating scalar-value accuracy as the entire source of control gains or directly measuring the composition approximation under stochastic transitions. (p. 9; Appendices C.2, D)",
+          "12. Data, capabilities, and research use | Approximately 4.78 hours of retargeted motion supply goals and priors, and 4,096 parallel environments supply interaction transitions; the shared latent has dimension 256. Physical G1 uses LiDAR/FAST-LIO world-pose estimates and demonstrates goal switching, ground recovery, and disturbance return. The PDF does not explicitly validate independent velocity-command or live-teleoperation interfaces. Useful research ideas are physical supervision of control representations and connecting actors to long-term value through one dynamics step; consider data coverage, localization, policy distribution shift, and online MPC compute. (pp. 9–10; Appendix C)"
+        ]
+      }
     }
   ]
 }
