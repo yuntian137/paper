@@ -8304,6 +8304,103 @@
           "Scope and version | Default curvature hurts performance on open-arena Humanoid; smaller, nearly flat curvature can recover performance, making geometry task-dependent. This card follows arXiv v1 dated 2026-10-14 and this discussion; subsequent OpenReview revisions have not been verified. (§5.4, §6)"
         ]
       }
+    },
+    {
+      "id": "ufo-unsupervised-humanoid-control",
+      "aliases": [
+        "UFO",
+        "UFO-FB",
+        "UFO-TeCH",
+        "TeCH"
+      ],
+      "categories": [
+        "k1-skills",
+        "k1-goals",
+        "k1-reward",
+        "k4-robustness"
+      ],
+      "contexts": [
+        "locomotion",
+        "sim2real",
+        "imitation-teleop"
+      ],
+      "pdf": "https://roboparty.github.io/UFO/assets/UFO.pdf",
+      "project": "https://roboparty.github.io/UFO/",
+      "arxiv": "",
+      "year": "2026",
+      "venue": "Technical report (2026-07-14)",
+      "zh": {
+        "title": "UFO: A General Unsupervised Reinforcement Learning Framework for Humanoid COntrol",
+        "authors": "RoboParty Lab Team",
+        "institutions": "RoboParty Lab",
+        "status": "部分已读：训练、TeCH 方法、关键实验与相关实现已核对；未复现",
+        "takeaway": "加速 BFM-Zero 的 FB 训练，并用 TeCH 的表示距离进展奖励驱动控制；跟踪条件由未来参考窗口的编码加权聚合。",
+        "tags": [
+          "Unsupervised RL",
+          "Forward-Backward Representation",
+          "TeCH",
+          "Temporal Distance",
+          "Goal-Conditioned Policy",
+          "Motion Tracking",
+          "mjlab",
+          "Unitree G1"
+        ],
+        "mainContent": "UFO 针对人形无监督 RL 训练缓慢、算法与机器人适配耦合的问题，提供多 GPU 训练和部署框架。UFO-FB 沿用 BFM-Zero 的核心 FB 路线优化仿真与训练，UFO-TeCH 则借鉴 TLDR 学习受真实状态转移约束的表示距离，用接近目标的进展奖励训练条件策略。论文报告更短的训练时间与更低的跟踪误差，并展示多机器人适配、技能注入和受扰遥操作；TeCH 支持姿态到达与轨迹跟踪，奖励提示接口由 FB 路线提供。",
+        "innovations": [
+          "训练与性能改进｜采用 mjlab、每 GPU 独立环境与 replay buffer、同步梯度和规模化训练配置，提升 BFM-Zero 路线的训练吞吐与控制性能。（§4，表 1–2）",
+          "TeCH 控制路线｜将时间距离表示与目标进展奖励引入人形全身控制，并结合人体动作先验、历史反馈和部署辅助目标；其理论动机来自 TLDR。（§5，图 5）",
+          "机器人与技能扩展｜分离机器人配置、动作数据和算法接口；固定数据集间采样比例，再在各数据集内部优先采样，稳定加入侧手翻等动作。（§6）"
+        ],
+        "implementation": [
+          "数据与控制｜主要实验使用重定向到 29 DoF G1 的 40 条 LAFAN1 连续 mocap 动作，约 2–3 小时；仿真交互提供状态转移。策略读取本体观测历史和任务向量，输出关节 PD 目标。示范提供动作先验和目标条件，TeCH 的主要任务奖励来自表示距离进展。（§3、§5.4–5.6）",
+          "表示怎样学习｜状态经编码器映射到共享空间，拉开对比状态的表示，同时限制真实相邻转移的表示变化，避免坍缩并注入局部动力学关系。正文以 \\(\\mathcal L_{\\mathrm{TE}}=-\\mathcal L_{\\mathrm{dist}}+\\lambda\\mathcal L_{\\mathrm{step}}\\) 概括目标。当前代码用 batch 维度 roll 构造对比目标，以平均平方邻接距离作软约束并调节对偶变量；这一步未显式保证对比目标来自同一轨迹未来。（§5.2，式 3–5；官方 agent.py:update_tech_te，核对提交 4f1a6f6d31a8e62fb0baef6c7ad0b110d7c3fb82）",
+          "距离进展与策略学习｜令 \\(d_t=\\|z-\\bar z(s_t)\\|_2\\)，奖励为 \\(r_t^{\\mathrm{TeCH}}=d_t-d_{t+1}\\)，一次计算固定同一编码器与目标条件，比较动作前后状态。正文的 actor 目标结合表示、人体风格和辅助价值；当前代码将进展与判别奖励合入主 critic，另设辅助 critic。（§5.3–5.4，式 6–7；官方 agent.py:update、update_actor）",
+          "固定目标与参考窗口｜姿态到达用 \\(z_g=\\phi(s_g)\\)；轨迹跟踪用 \\(z_t=\\sum_{i=0}^{H}w_i\\phi(s^{\\mathrm{ref}}_{t+i})\\)，其中 \\(w_i\\ge0,\\ \\sum_iw_i=1\\)。当前时刻的任务条件编码一段未来参考窗口，窗口随时间前移；它不等同于当前单帧或整条轨迹的末端姿态。参考轨迹、聚合任务向量与策略输出动作是三个不同对象。（§5.5，第 14 页，式 8–9）",
+          "权重组合的含义｜权重对窗口内各参考状态的编码做凸组合，决定各帧对当前条件的贡献；正文仅给出非负与归一化条件，未说明该权重由 attention 学习。聚合向量一般不对应某一帧真实姿态，因此到它的表示距离不能直接称为到某个参考姿态的物理距离。（式 9；后一句为表示聚合的数学解释）",
+          "理论机制及条件｜在每条可行一步转移均满足 \\(\\|\\phi(s')-\\phi(s)\\|\\le c\\) 的理想条件下，由三角不等式得到 \\(\\|\\phi(s)-\\phi(g)\\|/c\\le T^*(s,g)\\)，即最短到达步数的下界。拉大状态对距离希望将下界拉紧；实际平均软约束不直接给出逐路径保证。欧氏距离对称，而倒地与站起等动力学可能不对称，故应把它理解为可达性的表示近似。此项为结合 TLDR §3.2 与本次讨论的机制推导，非 UFO 已证明定理。",
+          "进展奖励为何偏好更早接近｜固定编码器和目标，且距离有界时，\\(\\sum_{t\\ge0}\\gamma^t(d_t-d_{t+1})=d_0-(1-\\gamma)\\sum_{t\\ge1}\\gamma^{t-1}d_t\\)。因此折扣优化降低未来累计剩余距离；\\(\\gamma=1\\) 的有限时域仅剩 \\(d_0-d_T\\)，相同终点不区分快慢。该推导不直接适用于移动目标，也不构成全局最短时间或稳定性证明。当前代码默认 \\(\\gamma=0.98\\)。（式 6 的代数解释；官方 config.py）",
+          "训练变化与部署｜当前配置先做表示预训练，之后默认仍联合更新编码器和 RL，编码器采用较小学习率，并对部分采样目标重新标记；奖励几何随编码器变化，仍有非平稳性。部署冻结编码器与策略，根据观测和目标条件直接输出动作；滑动窗口用于生成跟踪条件，距离进展奖励用于训练。（§5.4–5.5；官方 config.py、agent.py）",
+          "相对 BFM-Zero 的量化收益｜按 UFO 表 1–2 的作者比较口径，同为 1×H200／1024 环境时，训练时间 45→21 小时，跟踪 EMD 0.731→0.668，关节误差 0.1510→0.1266；8×H200 为 6 小时、0.639、0.1178。8×6=48 H200·小时，需区分并行等待时间与总 GPU 用量。8×4090 在表 1 中为 14 小时；此处采用 2026-07-14 报告结果。（表 1–2）",
+          "TeCH 的能力取舍与证据｜LAFAN1／100-Style 跟踪误差：BFM-Zero 为 0.1510／0.1674，UFO-FB 为 0.1178／0.1278，UFO-TeCH 为 0.1272／0.1385；表中标准差来自动作片段。TeCH 的更快到达和恢复主要通过演示与文字报告，跟踪精度仍由 UFO-FB 领先。TeCH 没有 FB 的统一奖励推理接口；BFM-Zero 原本已有历史策略、三类提示及真机扰动恢复。（表 3、§5.5–5.7；BFM-Zero §2–3）",
+          "扩展与使用成本｜新机器人需要对应配置、重定向数据和训练，单个 checkpoint 绑定机器人维度。侧手翻实验以 95% 基础数据／5% 新技能数据固定混合，在选定数据集内优先采样。遥操作仍受编码延迟、数据覆盖和全局漂移影响，后退与侧移稳定性有提升空间。（§6–7；官方训练与推理文档）"
+        ]
+      },
+      "en": {
+        "title": "UFO: A General Unsupervised Reinforcement Learning Framework for Humanoid COntrol",
+        "authors": "RoboParty Lab Team",
+        "institutions": "RoboParty Lab",
+        "status": "Partially read: training, TeCH method, key experiments, and relevant implementation checked; not reproduced",
+        "takeaway": "Accelerate BFM-Zero-style FB training and control with TeCH representation-progress rewards; tracking conditions aggregate encoded future reference windows with weights.",
+        "tags": [
+          "Unsupervised RL",
+          "Forward-Backward Representation",
+          "TeCH",
+          "Temporal Distance",
+          "Goal-Conditioned Policy",
+          "Motion Tracking",
+          "mjlab",
+          "Unitree G1"
+        ],
+        "mainContent": "UFO addresses slow humanoid unsupervised RL training and tightly coupled algorithm, robot, and deployment implementations. UFO-FB improves simulation and training around the BFM-Zero FB approach, while UFO-TeCH adapts TLDR-inspired representations constrained by observed transitions and trains a conditioned policy with goal-progress rewards. The report presents shorter training times, lower tracking errors, multiple robot adaptations, skill injection, and disturbed teleoperation; TeCH supports reaching and tracking, while reward prompting remains an FB capability.",
+        "innovations": [
+          "Training and performance | Combine mjlab, per-GPU environments and replay buffers, synchronized gradients, and scaled training configurations to improve throughput and control performance over the BFM-Zero implementation. (§4, Tables 1–2)",
+          "TeCH control approach | Adapt temporal-distance representations and goal-progress rewards to humanoid whole-body control, combining motion priors, observation history, and auxiliary deployment objectives. The representation-learning motivation comes from TLDR. (§5, Fig. 5)",
+          "Robot and skill extensibility | Separate robot configuration, motion data, and algorithm interfaces. Fix inter-dataset sampling probabilities and prioritize within each selected dataset to stabilize agile skill injection. (§6)"
+        ],
+        "implementation": [
+          "Data and control | Main experiments use 40 continuous LAFAN1 mocap sequences retargeted to the 29-DoF G1, totaling approximately 2–3 hours, with state transitions collected through simulation. The policy takes proprioceptive history and a task vector and outputs joint PD targets. Demonstrations supply motion priors and goal conditions; the main TeCH task reward measures representation-distance progress. (§3, §§5.4–5.6)",
+          "Representation learning | Separate contrastive state pairs while constraining representation changes along observed adjacent transitions. The report summarizes \\(\\mathcal L_{\\mathrm{TE}}=-\\mathcal L_{\\mathrm{dist}}+\\lambda\\mathcal L_{\\mathrm{step}}\\). Current code constructs contrastive goals by rolling the batch dimension, uses a soft mean-squared adjacency constraint, and adjusts a dual variable; this operation does not explicitly enforce same-trajectory future goals. (§5.2, Eqs. 3–5; official agent.py:update_tech_te at checked commit 4f1a6f6d31a8e62fb0baef6c7ad0b110d7c3fb82)",
+          "Progress and policy learning | With \\(d_t=\\|z-\\bar z(s_t)\\|_2\\), use \\(r_t^{\\mathrm{TeCH}}=d_t-d_{t+1}\\), comparing pre/post-action states under the same encoder and goal condition within one reward calculation. The paper combines representation, style, and auxiliary values in the actor objective. Current code combines progress and discriminator rewards in the main critic and trains a separate auxiliary critic. (§§5.3–5.4, Eqs. 6–7; official agent.py:update, update_actor)",
+          "Fixed goals and reference windows | Reaching uses \\(z_g=\\phi(s_g)\\); tracking uses \\(z_t=\\sum_{i=0}^{H}w_i\\phi(s^{\\mathrm{ref}}_{t+i})\\), with \\(w_i\\ge0,\\ \\sum_iw_i=1\\). The condition used at time t encodes a future reference window that advances over time. It is distinct from the current single frame and the whole trajectory endpoint. Reference motions, aggregated task vectors, and output control actions are different objects. (§5.5, p. 14, Eqs. 8–9)",
+          "Meaning of the weights | A convex combination controls each encoded reference state's contribution to the condition. The report specifies nonnegative normalized weights without describing learned attention. The aggregate generally need not encode any actual pose, so distance to it should not be identified with physical distance to a particular reference posture. (Eq. 9; the final statement is a mathematical interpretation of aggregation)",
+          "Theoretical mechanism and conditions | If every feasible one-step transition obeys \\(\\|\\phi(s')-\\phi(s)\\|\\le c\\), the triangle inequality gives \\(\\|\\phi(s)-\\phi(g)\\|/c\\le T^*(s,g)\\), a lower bound on shortest hitting steps. State-pair separation aims to tighten it; average soft constraints do not establish pathwise bounds. Euclidean distance is symmetric, whereas falling and standing up may have asymmetric dynamics. This is a discussion-based derivation connected to TLDR §3.2, not a theorem established by UFO.",
+          "Why progress favors earlier approach | With a fixed encoder and goal and bounded distances, \\(\\sum_{t\\ge0}\\gamma^t(d_t-d_{t+1})=d_0-(1-\\gamma)\\sum_{t\\ge1}\\gamma^{t-1}d_t\\). Discounted optimization reduces cumulative remaining distance. For finite-horizon \\(\\gamma=1\\), only \\(d_0-d_T\\) remains, so equal endpoints do not distinguish speed. This derivation does not directly apply to moving goals or establish globally shortest-time control or stability. Current code defaults to \\(\\gamma=0.98\\). (Algebraic interpretation of Eq. 6; official config.py)",
+          "Training changes and deployment | Current defaults pretrain the representation, then continue joint encoder/RL updates with a small encoder learning rate and partial goal relabeling. Reward geometry remains nonstationary as the encoder changes. Deployment freezes encoder and policy weights and directly maps observations and goal conditions to actions; sliding windows construct tracking conditions, while progress rewards train the policy. (§§5.4–5.5; official config.py, agent.py)",
+          "Measured improvement over BFM-Zero | Under the UFO authors' comparison in Tables 1–2, matching 1×H200 and 1,024 environments reduces training time from 45 to 21 hours, EMD from 0.731 to 0.668, and joint error from 0.1510 to 0.1266. The 8×H200 run takes 6 hours and reaches 0.639 EMD and 0.1178 joint error. Its 48 H200-hours distinguish wall time from aggregate GPU use. Table 1 reports 14 hours for 8×4090. These figures follow the 2026-07-14 report. (Tables 1–2)",
+          "TeCH tradeoffs and evidence | LAFAN1/100-Style tracking errors are 0.1510/0.1674 for BFM-Zero, 0.1178/0.1278 for UFO-FB, and 0.1272/0.1385 for UFO-TeCH; table standard deviations are across motion clips. Faster reaching/recovery is mainly supported by demonstrations and qualitative reporting; UFO-FB has better tracking accuracy. TeCH lacks FB's unified reward-inference interface. BFM-Zero already includes history-conditioned control, three prompt types, and real-robot disturbance recovery. (Table 3, §§5.5–5.7; BFM-Zero §§2–3)",
+          "Adaptation and costs | New robots need matching configurations, retargeted data, and training; a checkpoint is tied to its robot dimensions. Cartwheel injection fixes a 95% foundation/5% skill dataset mixture and prioritizes within the selected dataset. Teleoperation retains limitations from encoding latency, data coverage, and global drift, including backward and sideways locomotion stability. (§§6–7; official training/inference documentation)"
+        ]
+      }
     }
   ]
 }
