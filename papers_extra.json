@@ -8405,6 +8405,89 @@
           "Adaptation and costs | New robots need matching configurations, retargeted data, and training; a checkpoint is tied to its robot dimensions. Cartwheel injection fixes a 95% foundation/5% skill dataset mixture and prioritizes within the selected dataset. Teleoperation retains limitations from encoding latency, data coverage, and global drift, including backward and sideways locomotion stability. (§§6–7; official training/inference documentation)"
         ]
       }
+    },
+    {
+      "id": "pl-mpc-planning-learning-loop",
+      "aliases": [
+        "PL-MPC"
+      ],
+      "categories": [
+        "k5-decision"
+      ],
+      "contexts": [
+        "locomotion",
+        "manipulation",
+        "sim2real"
+      ],
+      "pdf": "https://arxiv.org/pdf/2609.39751v1",
+      "project": "https://pl-mpc-humanoid.github.io/",
+      "arxiv": "https://arxiv.org/abs/2609.39751",
+      "year": "2026",
+      "venue": "arXiv:2609.39751v1",
+      "zh": {
+        "title": "Beyond Policy Alignment: Closing the Planning–Learning Loop for Robot Control with Learned World Models",
+        "authors": "Kowndinya Boyalakuntla, Yuhan Liu, Abdeslam Boularias",
+        "institutions": "Rutgers University",
+        "status": "部分已读（已核对三项机制、关键消融和相关公开代码）",
+        "takeaway": "沿用 TD-M(PC)² 的规划与学习循环，用三步奖励训练 critic、按 Q 头分歧降低规划终端分，并按实测回合回报加权模仿 MPPI 执行动作。",
+        "tags": [
+          "TD-M(PC)²",
+          "TD-MPC2",
+          "Model-Based RL",
+          "MPPI",
+          "Multi-Step TD",
+          "Q Ensemble",
+          "Actor Distillation",
+          "HumanoidBench"
+        ],
+        "mainContent": "TD-M(PC)² 用策略约束让 actor 贴近 MPPI，而 critic 的监督信号、规划的终端估值和回放经验的质量也会影响下一轮数据收集。PL-MPC 在这三个环节分别加入 MTD、ATE 和 RAD。HumanoidBench 上相对直接基线的平均回报在 13 项中有 8 项提高、5 项下降，最大增幅出现在 balance-hard 和 hurdle。作者也在 KUKA 扳手套螺母任务上做了零样本 sim-to-real 实验。",
+        "innovations": [
+          "MTD｜用实测奖励优先构造多步 TD 标签，采样片段末端由当前 actor 和世界模型补齐，再用目标 Q 自举，让较晚的奖励直接进入较早动作的训练标签。（§IV-A，式 3）",
+          "ATE｜对同一个预测终点和 actor 动作查询 Q 集成，按估值分歧扣减 MPPI 的终端分，再用总分选取精英序列。（§IV-B，式 4）",
+          "RAD｜保留已有的策略分布约束，额外按实际回合总回报给模仿损失加权，提高 actor 对高回报回合中已执行动作的概率密度。（§III-C、§IV-C，式 2、5–6）"
+        ],
+        "implementation": [
+          "1. MPPI 与回放｜每次规划开始时生成 actor 候选序列，规划内固定这些候选，每轮重新采样高斯序列。两类候选统一在潜模型中评分，所有精英共同更新逐时的均值和标准差。执行首个动作后从新观测重规划。公开代码将实际执行动作与首步分布参数分别存入 replay，两者分别供 RAD 和基线分布约束使用。（§III-B，图 2，算法 1，官方 plan、online_trainer）",
+          "2. MTD 标签与梯度｜默认回放窗口和 TD 目标各为 3 步，因此片段内三个起点分别使用 3+0、2+1、1+2 步实测与预测奖励。实测段沿历史 MPPI 动作，模型补齐段沿当前 actor，第三步后用目标 Q 自举。标签停止梯度，各在线 Q 头用同一份标签做分类交叉熵。（§IV-A，图 2，式 3，官方 _td_target、update）",
+          "3. ATE 与代码差异｜论文用目标 Q 头对同一终点与动作的标准差 \\(u_H\\)，从随机两个在线 Q 头的均值扣除 \\(\\eta(u_H)u_H\\)。扣分系数依据近期分歧统计经 sigmoid 调节。公开代码的规划路径取全部在线 Q 头的均值和标准差来算终端分。实现默认有 5 个结构相同、参数独立的 Q 头，目标头分别滑动跟踪对应在线头。（§IV-B，式 4，官方 _estimate_value_adaptive、WorldModel，提交 6969f7b）",
+          "4. RAD 与策略约束｜基线从当前 actor 采样动作并用 replay 保存的 MPPI 分布算负对数密度。RAD 从 replay 取实际执行动作，并用当前 actor 算 \\(-\\log\\pi_\\theta(a_t\\mid z_t)\\)。动作权重由所属回合的未折扣总回报与近期回报中位数之差决定，以标准差归一化、取指数并截断。同一回合共用一个权重。主实验在 20 万环境步后加上该损失，系数 0.5，统计队列 256 项，权重上限 10。（§III-C、§IV-C、§V-A，式 2、5–6）",
+          "5. 消融怎样读｜固定 ATE 和 RAD，在 balance-hard 加 MTD 将回报从 186±51 提升到 387±255。hurdle 上，仅给基线加 MTD 为 199±13→288±116，而在 ATE 和 RAD 均开启时加 MTD 为 530±275→466±200，成功率从 47% 到 19%。三种子结果显示模块的条件效应，训练诊断中的 Q 均值和 TD 标签标准差用于描述学习过程。（§V-C–D，图 4–6）",
+          "6. 等跨度对照｜论文的一步 TD 对混合三步 TD 消融同时改变奖励窗口与标签构造。公开代码的 buffer_only 在默认片段内按位置使用 3、2、1 步实测奖励后自举。若要单独检验模型补齐，可从同一批 5 步连续转移的前 3 个位置训练，每个位置固定三步 TD 目标，再比较用额外实测转移与用模型补齐。（§IV-A、§V-D，官方 _td_target，等跨度设计来自本次讨论）",
+          "7. 真机证据｜Isaac Gym 训练后，各方法选一份仿真检查点，部署到 7-DoF KUKA IIWA14 做扳手套螺母，无真机微调。训练尺寸成功 23/31 对基线 19/31，两种未见尺寸合计 17/30 对 14/30。（§VI，图 1、8）"
+        ]
+      },
+      "en": {
+        "title": "Beyond Policy Alignment: Closing the Planning–Learning Loop for Robot Control with Learned World Models",
+        "authors": "Kowndinya Boyalakuntla, Yuhan Liu, Abdeslam Boularias",
+        "institutions": "Rutgers University",
+        "status": "Partially read (three mechanisms, key ablations, and relevant public code checked)",
+        "takeaway": "Extend the TD-M(PC)² loop with three-step critic targets, a terminal-value penalty based on Q-head disagreement, and return-weighted imitation of actions executed by MPPI.",
+        "tags": [
+          "TD-M(PC)²",
+          "TD-MPC2",
+          "Model-Based RL",
+          "MPPI",
+          "Multi-Step TD",
+          "Q Ensemble",
+          "Actor Distillation",
+          "HumanoidBench"
+        ],
+        "mainContent": "TD-M(PC)² aligns actor proposals with MPPI, while critic supervision, terminal scoring, and the quality of replay also shape future data collection. PL-MPC adds MTD, ATE, and RAD at these three points. Mean returns improve on 8 of 13 HumanoidBench tasks and fall on 5 relative to the direct baseline, with the largest gains on balance-hard and hurdle. The authors also evaluate zero-shot sim-to-real transfer on a KUKA wrench–nut task.",
+        "innovations": [
+          "MTD | Build multi-step TD targets from observed rewards first. Use the current actor and world model past the sampled slice and bootstrap with target Q, so later rewards enter the training label for earlier actions directly. (§IV-A, Eq. 3)",
+          "ATE | Query the Q ensemble at a common predicted endpoint and actor action. Penalize the MPPI terminal score according to disagreement, then select elites by total score. (§IV-B, Eq. 4)",
+          "RAD | Keep the planner-distribution constraint and add imitation weighted by observed episode return, raising the actor's density on executed actions from higher-return episodes. (§III-C, §IV-C, Eqs. 2, 5–6)"
+        ],
+        "implementation": [
+          "1. MPPI and replay | Generate actor sequences at the start of each planning call and reuse them across iterations. Resample Gaussian sequences each iteration. Both sources are scored in the latent model, and elites from either source update the time-indexed mean and standard deviation. Execute the first action and replan from a new observation. The public code stores the executed action and first-step distribution parameters separately for RAD and the baseline constraint, respectively. (§III-B, Fig. 2, Algorithm 1, public plan and online_trainer)",
+          "2. MTD targets and gradients | The default replay slice and TD target both span three steps. The three slice positions use 3+0, 2+1, and 1+2 observed and predicted rewards, respectively. The observed prefix follows historical MPPI actions, the model tail follows the current actor, and target Q bootstraps after the third step. Each online head uses the same stop-gradient label for categorical cross-entropy. (§IV-A, Fig. 2, Eq. 3, public _td_target and update)",
+          "3. ATE and release-code detail | The paper subtracts \\(\\eta(u_H)u_H\\) from a random-two online-head mean, with \\(u_H\\) the standard deviation of target heads at the same endpoint and action. A sigmoid sets the penalty coefficient relative to recent disagreement. The released planner uses the mean and standard deviation of all online Q heads for its terminal score. The default five Q heads have separate parameters, and each target head tracks its online counterpart by exponential averaging. (§IV-B, Eq. 4, public _estimate_value_adaptive and WorldModel at commit 6969f7b)",
+          "4. RAD and policy constraint | The baseline samples a current actor action and evaluates its negative log density under the replayed MPPI distribution. RAD takes an executed replay action and evaluates \\(-\\log\\pi_\\theta(a_t\\mid z_t)\\) under the current actor. The episode weight exponentiates the deviation of undiscounted return from the recent median after standard-deviation scaling, then clips it. All actions in an episode share the weight. The main setup activates the additional loss after 200K environment steps with coefficient 0.5, a 256-entry queue, and a weight cap of 10. (§III-C, §IV-C, §V-A, Eqs. 2, 5–6)",
+          "5. Ablation results | With ATE and RAD enabled, adding MTD on balance-hard raises return from 186±51 to 387±255. On hurdle, adding MTD alone to the backbone yields 199±13→288±116. Adding MTD with ATE and RAD both enabled yields 530±275→466±200 and success of 47%→19%. These three-seed comparisons measure conditional effects. The mean Q and TD-target spread diagnostics describe learning dynamics. (§V-C–D, Figs. 4–6)",
+          "6. Matched-horizon comparison | The one-step versus hybrid three-step ablation changes both the reward horizon and target construction. With the default slices, the release's buffer_only mode bootstraps after 3, 2, or 1 observed rewards. A direct comparison would train on the first three positions of the same five-transition slices, fixing the three-step horizon and varying the use of further observed transitions or a model tail. (§IV-A, §V-D, public _td_target. The matched-horizon design comes from this reading discussion.)",
+          "7. Hardware evidence | Each method deploys one simulation-selected checkpoint trained in Isaac Gym without real-world fine-tuning. On a 7-DoF KUKA IIWA14, wrench–nut success is 23/31 versus 19/31 for the training size and 17/30 versus 14/30 pooled across two unseen sizes. (§VI, Figs. 1, 8)"
+        ]
+      }
     }
   ]
 }
