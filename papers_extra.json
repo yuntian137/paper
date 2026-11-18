@@ -8488,6 +8488,84 @@
           "7. Hardware evidence | Each method deploys one simulation-selected checkpoint trained in Isaac Gym without real-world fine-tuning. On a 7-DoF KUKA IIWA14, wrench–nut success is 23/31 versus 19/31 for the training size and 17/30 versus 14/30 pooled across two unseen sizes. (§VI, Figs. 1, 8)"
         ]
       }
+    },
+    {
+      "id": "movens-zero",
+      "aliases": [
+        "Movens-Zero"
+      ],
+      "categories": [
+        "k6-data",
+        "k6-semantics",
+        "k2-retarget"
+      ],
+      "contexts": [
+        "locomotion",
+        "sim2real",
+        "imitation-teleop",
+        "benchmark-dataset"
+      ],
+      "pdf": "https://arxiv.org/pdf/2610.41877v1",
+      "project": "https://movens-zero.github.io/",
+      "arxiv": "https://arxiv.org/abs/2610.41877",
+      "year": "2026",
+      "venue": "arXiv:2610.41877v1",
+      "zh": {
+        "title": "Movens-Zero: Scaling Humanoid Motion Foundation Models with Large-Scale Human Videos",
+        "authors": "Wendong Bu, Tinghong Ye, Qizhou Wang, Jiacheng Li, Zhiqi Ge, Yuze Lin, Zhongqi Yue, Yi Su, Jingyu Wang, Kai Shen, Jingdong Liu, Chengyuan Deng, Xiaoxuan Chen, Xin Tan, Jiaming Ji, Wenqiao Zhang, Chenghong Jiang, Tuoyu Li, Siliang Tang, Jun Xiao, Tat-Seng Chua, Yueting Zhuang, Xingxing Wang, Juncheng Li",
+        "institutions": "Zhejiang University, Unitree Robotics, Joint Laboratory of Embodied Intelligence (ZJU & Unitree Robotics), Bit Oasis, HiThink Research, Microsoft Research, East China Normal University, Peking University, National University of Singapore",
+        "status": "正文与方法附录已精读（arXiv v1）",
+        "takeaway": "先用仿真跟踪筛出 G1 能执行的动作监督，再用共享流匹配模型生成重叠参考轨迹，让全身控制器执行并回传实测状态。",
+        "tags": [
+          "Movens-5M",
+          "Movens-Intent",
+          "Unitree G1",
+          "Motion Retargeting",
+          "Multimodal Motion Generation",
+          "Flow Matching",
+          "MM-RTC"
+        ],
+        "mainContent": "互联网视频提供丰富的人体行为，但单目恢复误差和人机形态差异会影响 G1 对参考轨迹的跟踪。Movens-5M 通过动作修复、重定向和仿真跟踪验证构建多模态监督，Movens-Zero 用单一动作专家从文字、语音、音乐或视频生成 G1 参考轨迹，并通过 MM-RTC 滚动执行。在来源隔离的 Movens-Intent 上，文字和语音条件的 R@3 分别为 62.57% 和 74.30%，数据覆盖和动作专家容量扩大时，各模态指标均得到改善。",
+        "innovations": [
+          "Movens-5M 将互联网视频、精确到动作片段的条件、人体重建、G1 参考及仿真跟踪记录对齐，得到约 1,500 万条人体动作和 500 万条经验证的 G1 动作。（§3，图 2）",
+          "七种条件任务共用一个 G1 动作专家，训练时随机保留干净前缀，让模型学会在给定条件下续接已有动作。（§5.3，表 13）",
+          "MM-RTC 在每轮用机器人最新状态重编码旧轨迹尾段，并以它为固定前缀更新后续参考，底层控制器持续跟踪。（§5.1–5.2，图 7）"
+        ],
+        "implementation": [
+          "1. 视频到人体动作｜按原始视频划分数据后，用 AutoShot 切片并跨集合去重。以 Qwen3-VL、RAFT 光流和人体掩码筛查主体及时间异常，给 RGB、文字、语音、音乐和动作片段对齐时间戳。单人用 GVHMR，多人用 PromptHMR，统一到 SMPL-X。Kimodo 以可信关键帧为条件局部修复脚滑、抖动等伪影，拼回原序列后复检。（§3.1，图 2）",
+          "2. 人体动作到 G1 监督｜用 GMR 初始化，整段优化根部和关节，使动作兼顾保真、限位、速度与接触。仿真跟踪评分达到 \\(q \\ge 0.20\\) 才保留，完整策略库验证时最多试四个跟踪策略，其中一个过门槛即可。合成支路另为长尾、长序列和高动态动作生成候选，并同时检查跟踪和可见全身动作的语义一致性。（§3.1–3.2，图 2–3）",
+          "3. 条件编码与动作训练｜冻结 Qwen2.5-Omni-3B 并缓存 2048 维条件 token。动作专家联合读取这些 token、一个最新机器人状态 token 和动作进度，生成 40 维参考帧。每帧含 29 个关节角、2 维根部平面位移、6 维根部朝向、根部高度和 2 个足接触通道。七任务按样本量混合，视频两种任务合计约 55.4%，音乐两种合计约 5.7%。每个 30 帧块随机保留 0–10 帧干净前缀，后缀加噪且仅后缀计入 flow-matching 损失。（§5，表 13–14）",
+          "4. 真机闭环｜参考轨迹按 50 Hz 表示，每轮预测 30 帧（0.6 秒）并提交前 20 帧（0.4 秒）。下一轮以最新指令和实测机器人状态为条件，把上轮剩余 10 帧在当前坐标系中重编码并固定，再生成 20 帧后缀。高频全身控制器跟踪解码后的关节和根部参考，并回传新状态。继承的前缀使参考轨迹连续，新生成的内容从该前缀之后接入。（§5.1–5.2，图 7，表 14）"
+        ]
+      },
+      "en": {
+        "title": "Movens-Zero: Scaling Humanoid Motion Foundation Models with Large-Scale Human Videos",
+        "authors": "Wendong Bu, Tinghong Ye, Qizhou Wang, Jiacheng Li, Zhiqi Ge, Yuze Lin, Zhongqi Yue, Yi Su, Jingyu Wang, Kai Shen, Jingdong Liu, Chengyuan Deng, Xiaoxuan Chen, Xin Tan, Jiaming Ji, Wenqiao Zhang, Chenghong Jiang, Tuoyu Li, Siliang Tang, Jun Xiao, Tat-Seng Chua, Yueting Zhuang, Xingxing Wang, Juncheng Li",
+        "institutions": "Zhejiang University, Unitree Robotics, Joint Laboratory of Embodied Intelligence (ZJU & Unitree Robotics), Bit Oasis, HiThink Research, Microsoft Research, East China Normal University, Peking University, National University of Singapore",
+        "status": "Main paper and method appendices reviewed (arXiv v1)",
+        "takeaway": "Use simulation tracking to curate executable G1 supervision, then generate overlapping references with a shared flow-matching model and feed measured robot state back from the whole-body controller.",
+        "tags": [
+          "Movens-5M",
+          "Movens-Intent",
+          "Unitree G1",
+          "Motion Retargeting",
+          "Multimodal Motion Generation",
+          "Flow Matching",
+          "MM-RTC"
+        ],
+        "mainContent": "Web video provides diverse human behavior, while monocular recovery errors and embodiment differences make the resulting trajectories difficult for G1 to track. Movens-5M builds multimodal supervision through motion repair, retargeting, and simulation tracking checks. Movens-Zero trains one action expert to generate G1 references from text, speech, music, or video and uses MM-RTC for rolling execution. Text and speech R@3 reach 62.57% and 74.30% on the source-disjoint Movens-Intent benchmark, and metrics improve across all four modalities as data coverage and action-expert capacity increase.",
+        "innovations": [
+          "Movens-5M aligns web media, segment-level conditions, recovered human motion, G1 references, and simulation rollouts, yielding about 15 million human-motion and 5 million verified G1 sequences. (§3, Fig. 2)",
+          "Seven conditioning tasks share one G1 action expert. Random clean prefixes during training teach the expert to extend an existing motion under a supplied condition. (§5.3, Table 13)",
+          "MM-RTC re-encodes the previous tail using the latest robot state and locks it as a prefix while updating the remaining reference for the tracking controller. (§5.1–5.2, Fig. 7)"
+        ],
+        "implementation": [
+          "1. Web video to human motion | Split by source before AutoShot segmentation and deduplicate across splits. Use Qwen3-VL, RAFT optical flow, and person masks to screen subjects and temporal artifacts. Align RGB, text, speech, music, and motion timestamps. Use GVHMR for single-person and PromptHMR for multi-person recovery, canonicalize to SMPL-X, and use Kimodo to repair local artifacts from trusted keyframes before rechecking the stitched motion. (§3.1, Fig. 2)",
+          "2. Human motion to G1 supervision | Initialize with GMR and refine the root and joints over the full sequence for fidelity, limits, velocity, and contact. Retain rollouts meeting the simulation tracking threshold \\(q \\ge 0.20\\). Full-bank verification may try up to four tracking policies and accepts one passing rollout. A separate synthesis branch proposes rare, long, and highly dynamic motions and checks both tracking and visible whole-body semantic consistency. (§3.1–3.2, Figs. 2–3)",
+          "3. Condition encoding and action training | Freeze Qwen2.5-Omni-3B and cache 2048-dimensional condition tokens. The action expert combines them with a current-state token and a progress encoding. Each 40-dimensional reference frame has 29 joint angles, 2 planar root displacements, 6 root-orientation channels, root height, and 2 foot-contact channels. Data-proportional sampling assigns about 55.4% to the two video tasks and 5.7% to the two music tasks. Keep a random clean prefix of 0–10 frames in each 30-frame chunk, noise the suffix, and apply the flow-matching loss to the suffix. (§5, Tables 13–14)",
+          "4. Hardware feedback loop | Represent references at 50 Hz. Predict 30 frames (0.6 s) per round and commit the first 20 (0.4 s). At the next round, read the latest command and measured robot state, re-encode the remaining 10 frames in the current anchor, lock them as the prefix, and generate a new 20-frame suffix. A high-frequency whole-body controller tracks the decoded joint and root references and returns the next measured state. New content begins after the inherited prefix. (§5.1–5.2, Fig. 7, Table 14)"
+        ]
+      }
     }
   ]
 }
