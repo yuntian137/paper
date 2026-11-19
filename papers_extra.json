@@ -8566,6 +8566,73 @@
           "4. Hardware feedback loop | Represent references at 50 Hz. Predict 30 frames (0.6 s) per round and commit the first 20 (0.4 s). At the next round, read the latest command and measured robot state, re-encode the remaining 10 frames in the current anchor, lock them as the prefix, and generate a new 20-frame suffix. A high-frequency whole-body controller tracks the decoded joint and root references and returns the next measured state. New content begins after the inherited prefix. (§5.1–5.2, Fig. 7, Table 14)"
         ]
       }
+    },
+    {
+      "id": "deeponet",
+      "aliases": [
+        "DeepONet",
+        "Deep Operator Network"
+      ],
+      "categories": [
+        "support-numerics"
+      ],
+      "pdf": "https://arxiv.org/pdf/1910.03193v2",
+      "project": "https://github.com/lululxvi/deeponet",
+      "arxiv": "https://arxiv.org/abs/1910.03193v2",
+      "year": "2019",
+      "venue": "Nature Machine Intelligence (2021)",
+      "zh": {
+        "title": "Learning nonlinear operators via DeepONet based on the universal approximation theorem of operators",
+        "authors": "Lu Lu, Pengzhan Jin, Guofei Pang, Zhongqiang Zhang, George Em Karniadakis",
+        "institutions": "Massachusetts Institute of Technology, Brown University, Chinese Academy of Sciences, Worcester Polytechnic Institute",
+        "status": "部分已读：已核对架构、定理 1 和代表性实验（arXiv v2）",
+        "takeaway": "Branch 从输入函数的固定采样值生成组合系数，trunk 在查询坐标上计算共享基函数的值，内积给出解在该点的预测。",
+        "tags": [
+          "Neural Operator",
+          "Operator Learning",
+          "Universal Approximation",
+          "ODE",
+          "PDE"
+        ],
+        "mainContent": "DeepONet 用一个模型近似输入函数到输出函数的映射，以便对未见过的输入直接查询输出。它沿用 Chen 和 Chen 定理中的乘积求和结构，将输入函数采样和输出坐标交给两个深层子网络。作者在积分实验中观察到比拼接全连接网络和 ResNet 更低的测试误差，并用受迫非线性摆和 PDE 展示了对解算子的学习。",
+        "innovations": [
+          "用 branch 对输入函数条件化，用 trunk 表示所有输出共享的一组坐标函数。系数随输入非线性变化，因此内积形式也可近似非线性算子。（图 1，第 5–6 页）",
+          "Stacked 版为每个系数分配独立的 branch，所有 branch 读取同一采样向量。Unstacked 版用一个共享隐藏层的 branch 同时生成全部系数，两版都只用一个 trunk。（图 1C–D，第 5 页）"
+        ],
+        "implementation": [
+          "1. 输入与输出｜每条输入函数在同一组固定传感器上取值，作为 branch 输入。Trunk 读输出查询坐标 \\(y\\)。训练记录包含输入采样、查询坐标和对应真值 \\(G(u)(y)\\)，输出标签的位置可随输入曲线而变。（图 1A–B，表 S2）",
+          "2. 联合训练与推理｜预测为 \\(\\hat G(u)(y)=\\sum_{k=1}^{p}b_k(u)t_k(y)+b_0\\)。点值均方误差通过内积反传，同时更新两路。给定一条新输入，branch 的系数可复用于多个查询位置。（第 5 页；梯度路径由预测式直接推出）",
+          "3. 定理范围｜定理 1 引用 Chen 和 Chen（1995）。对于紧致输入函数族上的连续算子和紧致输出域，可按目标精度选择有限采样点及浅层网络，使误差在所有输入和查询位置上一致小于给定阈值。实际训练和未见输入上的误差由实验检验。（第 2–3 页，定理 1、式 1）",
+          "4. 采样与坐标边界｜固定传感器决定模型能区分哪些输入曲线。若所有训练曲线只在同几个输出坐标有标签，中间形状需要额外的数据或结构约束才能确定。单个学习基函数的物理解释也需要独立验证，因为换基并同步变换系数可以保持同一预测。（图 1、第 5–7 页；后两点为阅读推导）",
+          "5. 实验证据｜积分任务用 100 个输入传感器与 10,000 条训练三元组。图 2A 报告 10 次不同数据与初始化的运行，有偏置的 unstacked 版在该设置下测试误差最低。图中比较的是整套架构，若要量化可训练基函数本身的贡献，需加入固定基函数的对照。（图 2A，第 7–8 页，表 S2–S3）"
+        ]
+      },
+      "en": {
+        "title": "Learning nonlinear operators via DeepONet based on the universal approximation theorem of operators",
+        "authors": "Lu Lu, Pengzhan Jin, Guofei Pang, Zhongqiang Zhang, George Em Karniadakis",
+        "institutions": "Massachusetts Institute of Technology, Brown University, Chinese Academy of Sciences, Worcester Polytechnic Institute",
+        "status": "Partially read: architecture, Theorem 1, and representative experiments checked (arXiv v2)",
+        "takeaway": "The branch turns fixed samples of the input function into coefficients, the trunk evaluates shared basis functions at a query coordinate, and their dot product predicts the solution there.",
+        "tags": [
+          "Neural Operator",
+          "Operator Learning",
+          "Universal Approximation",
+          "ODE",
+          "PDE"
+        ],
+        "mainContent": "DeepONet approximates a function-to-function map with one model so that outputs can be queried for unseen input functions. It builds on the sum-of-products structure in Chen and Chen's theorem, with separate deep subnetworks for input samples and output coordinates. The authors report lower test error than a concatenated fully connected network and ResNet on antiderivatives, and demonstrate solution-operator learning on a forced nonlinear pendulum and PDEs.",
+        "innovations": [
+          "The branch conditions the coefficients on the input function, and the trunk represents coordinate functions shared across outputs. A nonlinear dependence of the coefficients on the input lets the dot-product architecture approximate nonlinear operators. (Fig. 1, pp. 5–6)",
+          "The stacked version assigns a separate branch to each coefficient, with every branch reading the same sample vector. The unstacked version shares hidden layers and emits all coefficients from one branch. Both use a single trunk. (Fig. 1C–D, p. 5)"
+        ],
+        "implementation": [
+          "1. Inputs and targets | The branch reads values of each input function at the same fixed sensors, and the trunk reads an output coordinate \\(y\\). Each training record contains input samples, a query, and its target \\(G(u)(y)\\). Labeled output coordinates can vary across input functions. (Fig. 1A–B, Table S2)",
+          "2. Joint training and inference | Predict \\(\\hat G(u)(y)=\\sum_{k=1}^{p}b_k(u)t_k(y)+b_0\\). Backpropagate pointwise mean squared error through the dot product to update both subnetworks. For a new input, reuse its branch coefficients across queries. (p. 5; the gradient path follows directly from the prediction formula)",
+          "3. Theorem scope | Theorem 1 cites Chen and Chen (1995). For a continuous operator on a compact input family with a compact output domain, finite sensors and a shallow network can be chosen to meet a uniform error tolerance over all inputs and query points. Experiments assess trained performance on unseen inputs. (pp. 2–3, Theorem 1, Eq. 1)",
+          "4. Sensor and query limits | Fixed sensors determine which input curves the model can distinguish. If all training curves carry labels only at the same few output coordinates, identifying intermediate behavior requires further data or structural assumptions. Physical interpretations of individual learned basis functions also need independent evidence, since a change of basis and its accompanying coefficient transformation preserve predictions. (Fig. 1, pp. 5–7; the latter two points are deductions)",
+          "5. Experimental evidence | The antiderivative task uses 100 input sensors and 10,000 training triplets. Figure 2A reports 10 runs with different data and initializations. The biased unstacked model yields the lowest test error in this setting. The figure compares complete architectures; isolating the gain from trainable basis functions requires a fixed-basis control. (Fig. 2A, pp. 7–8, Tables S2–S3)"
+        ]
+      }
     }
   ]
 }
