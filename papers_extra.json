@@ -8633,6 +8633,69 @@
           "5. Experimental evidence | The antiderivative task uses 100 input sensors and 10,000 training triplets. Figure 2A reports 10 runs with different data and initializations. The biased unstacked model yields the lowest test error in this setting. The figure compares complete architectures; isolating the gain from trainable basis functions requires a fixed-basis control. (Fig. 2A, pp. 7–8, Tables S2–S3)"
         ]
       }
+    },
+    {
+      "id": "neuralode-homotopy",
+      "aliases": [
+        "NeuralODE Homotopy",
+        "Homotopy Neural ODE"
+      ],
+      "categories": [
+        "k4-identification"
+      ],
+      "pdf": "https://arxiv.org/pdf/2210.01407v5",
+      "project": "https://github.com/Jhko725/NeuralODEHomotopy",
+      "arxiv": "https://arxiv.org/abs/2210.01407v5",
+      "year": "2022",
+      "venue": "NeurIPS 2023",
+      "zh": {
+        "title": "Homotopy-based training of NeuralODEs for accurate dynamics discovery",
+        "authors": "Joon-Hyuk Ko, Hankyul Koh, Nojun Park, Wonho Jhe",
+        "institutions": "Seoul National University, Massachusetts Institute of Technology",
+        "status": "部分已读：已读训练机制、主要实验与局限（arXiv v5）",
+        "takeaway": "训练初期用状态反馈把 Neural ODE 的预测轨迹拉向观测，随后逐步撤掉反馈，最后由学到的动力学独立滚动预测。",
+        "tags": [
+          "Neural ODE",
+          "System Identification",
+          "Homotopy",
+          "Synchronization"
+        ],
+        "mainContent": "从初值积分整段轨迹时，模型偏差可能随时间放大，使长序列的轨迹损失更难优化。作者在训练用的 ODE 中加入观测反馈，并分阶段把反馈强度降至零。Lotka–Volterra、实测双摆和 Lorenz 基准中，同伦法比普通训练更早达到各自的最低训练窗口 MSE，五个设置的外推 MSE 均低于多重射击。",
+        "innovations": [
+          "用模型轨迹与观测轨迹之间的状态差构造同步反馈，在 ODE 积分过程中连续纠偏。反馈进入训练动力学，网络架构与轨迹 MSE 的形式沿用原设定。（§2.3、§5.1）",
+          "以强反馈下的损失为起点，逐阶段减弱反馈并接续优化。Lotka–Volterra 的损失切面和 Hessian 谱显示适度耦合能压低陡峭方向的曲率，过强耦合则会让损失对模型参数变得不敏感。（图 2、§5.2）"
+        ],
+        "implementation": [
+          "1. 观测与耦合｜用三次平滑样条从离散观测得到连续参考轨迹 \\(\\hat u(t)\\)，求解 \\(\\dot u=U(t,u;\\theta)-\\lambda K(u-\\hat u(t))\\)，其中 \\(K\\) 为对角耦合矩阵。用采样时刻的轨迹 MSE 更新模型。（式 4、7，§5.1，算法 1）",
+          "2. 训练与预测｜从 \\(\\lambda=1\\) 开始，每阶段沿用前一阶段的参数，按调度减小 \\(\\lambda\\) 直至 0。模型选择使用无耦合的滚动误差，预测也直接积分 \\(U\\)。（§5.2、算法 1）",
+          "3. 实验证据｜相对普通训练，达到各自最低训练窗口 MSE 的 epoch 数少约 40%–90%。二阶双摆外推 MSE 为 4.29，普通训练为 16.19，多重射击为 23.65。黑箱双摆的外推误差略高于普通训练。（§7.2，图 4，表 5）",
+          "4. 适用范围｜外推沿同一条轨迹继续预测一个与训练窗口等长的时间段。实验覆盖低维全状态观测，高维和部分可观测系统仍待验证。（§6、§8、附录 E）"
+        ]
+      },
+      "en": {
+        "title": "Homotopy-based training of NeuralODEs for accurate dynamics discovery",
+        "authors": "Joon-Hyuk Ko, Hankyul Koh, Nojun Park, Wonho Jhe",
+        "institutions": "Seoul National University, Massachusetts Institute of Technology",
+        "status": "Partially read: training method, main experiments, and limitations reviewed (arXiv v5)",
+        "takeaway": "Use state feedback to pull Neural ODE rollouts toward observations early in training, then remove that feedback gradually so the learned dynamics can roll out on their own.",
+        "tags": [
+          "Neural ODE",
+          "System Identification",
+          "Homotopy",
+          "Synchronization"
+        ],
+        "mainContent": "Integrating a trajectory from its initial state can amplify model errors over time, making long-window trajectory losses harder to optimize. The authors add observation feedback to the training ODE and reduce its strength to zero in stages. On Lotka–Volterra, real double-pendulum, and Lorenz benchmarks, homotopy reaches its best training-window MSE in fewer epochs than standard training and yields lower extrapolation MSE than multiple shooting in all five settings.",
+        "innovations": [
+          "Use the difference between model and observed states as continuous synchronization feedback during ODE integration. The feedback enters the training dynamics while the network architecture and the form of the trajectory MSE are retained. (§2.3 and §5.1)",
+          "Start from the loss with strong feedback and progressively lower the coupling while carrying the parameters forward. Lotka–Volterra loss slices and Hessian spectra show reduced curvature in steep directions under moderate coupling. Excessive coupling makes the loss insensitive to model parameters. (Fig. 2 and §5.2)"
+        ],
+        "implementation": [
+          "1. Observations and coupling | Fit a cubic smoothing spline \\(\\hat u(t)\\) to discrete observations and solve \\(\\dot u=U(t,u;\\theta)-\\lambda K(u-\\hat u(t))\\), with a diagonal coupling matrix \\(K\\). Update the model using trajectory MSE at the observation times. (Eqs. 4 and 7, §5.1, Algorithm 1)",
+          "2. Training and prediction | Start at \\(\\lambda=1\\), reuse the parameters from the preceding stage, and follow a schedule down to \\(\\lambda=0\\). Select parameters by uncoupled rollout error and integrate \\(U\\) directly for prediction. (§5.2 and Algorithm 1)",
+          "3. Experimental evidence | Homotopy takes about 40–90% fewer epochs than standard training to reach each method's best training-window MSE. On the second-order double pendulum, extrapolation MSE is 4.29, versus 16.19 for standard training and 23.65 for multiple shooting. The black-box double pendulum has slightly higher extrapolation error than standard training. (§7.2, Fig. 4, Table 5)",
+          "4. Scope | Extrapolation continues the same trajectory for another window of equal duration. Experiments cover low-dimensional, fully observed states. High-dimensional and partially observed systems remain open. (§6, §8, Appendix E)"
+        ]
+      }
     }
   ]
 }
