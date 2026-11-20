@@ -8762,6 +8762,62 @@
           "The experiments use state observations in simulation. With the same frozen policy, success on FurnitureBench one-leg was 95.18% versus 70.30% for the best fixed horizon. On bimanual needle–syringe insertion the rates were 29.00% and 10.20%, respectively. (§4.2, Fig. 4, and §5)"
         ]
       }
+    },
+    {
+      "id": "dmve-dynamic-horizon-value-estimation",
+      "aliases": [
+        "DMVE"
+      ],
+      "categories": [
+        "k5-horizon",
+        "k5-fidelity"
+      ],
+      "contexts": [
+        "vla-world-model"
+      ],
+      "pdf": "",
+      "project": "https://ieeexplore.ieee.org/abstract/document/9932637",
+      "arxiv": "",
+      "year": "2022 / issue 2024",
+      "venue": "IEEE Transactions on Neural Networks and Learning Systems, 35(7), 8812–8825",
+      "zh": {
+        "title": "Dynamic-Horizon Model-Based Value Estimation With Latent Imagination",
+        "authors": "Junjie Wang, Qichao Zhang, Dongbin Zhao",
+        "institutions": "中国科学院自动化研究所复杂系统管理与控制国家重点实验室；中国科学院大学人工智能学院；鹏城实验室",
+        "status": "部分已读（方法、定理 1 与关键消融）",
+        "takeaway": "用原图与重建图的多步价值差筛选潜空间展开步长，再平均原图分支的入选估计来训练 critic。",
+        "tags": ["Model-Based Reinforcement Learning", "Model-Based Value Expansion", "Latent Imagination", "Adaptive Rollout Horizon", "Visual Control"],
+        "mainContent": "用潜空间模型估计回报时，展开越长越容易累积模型误差，越短则越依赖末端 critic。DMVE 用原图和重建图各做一次想象展开，根据两路价值的一致性为每个观测选步长。DeepMind Control Suite 实验中，动态筛选在多个任务上改善了固定时域骨干的表现。Walker Run 在最大想象时域为 30 步时仍能学到有效策略。（图 5–6）",
+        "innovations": [
+          "用重建作为观测扰动，在价值空间衡量其影响。固定 K 决定采用几个候选步长，原图与重建图的价值差决定当前观测对应的入选步长。（图 2，式 10–13）"
+        ],
+        "implementation": [
+          "1. 世界模型｜用回放中的图像重建、奖励预测和 KL 正则联合训练编码器、解码器、奖励模型及 RSSM。原图和重建图分别编码，两路都展开到上限 \\(H\\)。（式 3–4，图 2，算法 1）",
+          "2. 价值目标｜每个候选步长 \\(h\\) 复用本分支轨迹的前缀，将前 \\(h\\) 步折扣奖励加上同一个 critic 的折扣末端估计，得到 \\(V_h\\)。按 \\(D_h=|V_h(s_t)-V_h(\\hat s_t)|\\) 选出差值最小的 \\(K\\) 个步长，再平均入选的原图分支估计。DeepMind Control Suite 实验默认 \\(H=15\\)、\\(K=3\\)。（式 10–13，§V-A）",
+          "3. 更新与执行｜公开实现对 critic 的入选目标停止梯度。actor 取原图分支所有候选时域的最大回报，梯度经想象转移、奖励和末端价值回到 actor，世界模型参数在策略更新中固定。实际交互中，actor 根据历史和当前观测推断出的潜状态输出动作。（式 7–8，算法 1，公开实现 dmve.py）",
+          "4. 理论范围｜定理 1 以分支回报为参照，给出当前策略期望折扣回报的下界。按原式，旧策略差异项随 \\(\\gamma^h\\) 衰减，模型误差项随 \\(h\\) 线性增长。逐观测选到更准确的估计，还需要 \\(D_h\\) 的排序能反映真实价值误差。（§IV-B，附录）",
+          "5. 证据与成本｜图 5 的 FMVE 消融保留相同学习目标并使用固定时域，图 7 记录平均入选步长。两路可能共享价值偏差，检验评分机制可比较预算相当的固定短时域，并核对 \\(D_h\\) 与真实价值误差的排序。训练增加重建和第二路潜空间展开。"
+        ]
+      },
+      "en": {
+        "title": "Dynamic-Horizon Model-Based Value Estimation With Latent Imagination",
+        "authors": "Junjie Wang, Qichao Zhang, Dongbin Zhao",
+        "institutions": "State Key Laboratory of Management and Control for Complex Systems, Institute of Automation, Chinese Academy of Sciences / School of Artificial Intelligence, University of Chinese Academy of Sciences / Peng Cheng Laboratory",
+        "status": "Partially read (method, Theorem 1, and key ablations)",
+        "takeaway": "Rank latent rollout horizons by the value disagreement between original and reconstructed images, then average the selected original-branch estimates to train the critic.",
+        "tags": ["Model-Based Reinforcement Learning", "Model-Based Value Expansion", "Latent Imagination", "Adaptive Rollout Horizon", "Visual Control"],
+        "mainContent": "Longer latent rollouts can compound model error, while shorter rollouts rely more heavily on the terminal critic. DMVE imagines from the original and reconstructed images and uses value agreement to select horizons for each observation. Dynamic selection improved on the fixed-horizon backbone on several DeepMind Control Suite tasks. On Walker Run, DMVE still learned an effective policy with a maximum imagination horizon of 30 steps. (Figs. 5–6)",
+        "innovations": [
+          "Use reconstruction as an observation perturbation and measure its effect in value space. A fixed K sets the number of selected horizons, and the agreement between the original and reconstructed branches determines which horizons are selected for the current observation. (Fig. 2, Eqs. 10–13)"
+        ],
+        "implementation": [
+          "1. World model | Train the encoder, decoder, reward model, and RSSM jointly using image reconstruction, reward prediction, and KL regularization on replay data. Encode the original and reconstructed images separately and imagine both branches up to \\(H\\). (Eqs. 3–4, Fig. 2, Algorithm 1)",
+          "2. Value targets | For each \\(h\\), reuse the first \\(h\\) steps of the branch's trajectory and add the discounted terminal value from the same critic to the discounted predicted rewards to obtain \\(V_h\\). Select the \\(K\\) horizons with the smallest \\(D_h=|V_h(s_t)-V_h(\\hat s_t)|\\) and average the selected original-branch estimates. The DeepMind Control Suite experiments default to \\(H=15\\) and \\(K=3\\). (Eqs. 10–13, §V-A)",
+          "3. Updates and execution | The released implementation detaches the selected critic targets. The actor maximizes the largest return across all original-branch horizons, with gradients flowing through imagined transitions, rewards, and terminal values. World-model weights are fixed during the policy update. During environment interaction, the actor outputs actions from a latent state inferred using history and the current observation. (Eqs. 7–8, Algorithm 1, released dmve.py)",
+          "4. Scope of the theory | Theorem 1 lower-bounds the current policy's expected discounted return using the branched return. In the stated bound, the old-policy mismatch term decays with \\(\\gamma^h\\), and the model-error term grows linearly in \\(h\\). Per-observation selection additionally depends on whether \\(D_h\\) ranks actual value errors. (§IV-B, Appendix)",
+          "5. Evidence and cost | The FMVE ablation in Fig. 5 uses the same learning objectives with a fixed horizon, and Fig. 7 reports average selected horizons. Both branches can share a value bias. A compute-matched short fixed horizon and a comparison between the rankings of \\(D_h\\) and actual value error would test the scoring mechanism. Training adds reconstruction and a second latent rollout."
+        ]
+      }
     }
   ]
 }
