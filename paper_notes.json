@@ -274,6 +274,14 @@
       "note": "Applications and transfer limits: in autoregressive decoding for long-text reasoning, LessIsMore selects shared historical token indices across attention heads and reuses them in later layers while retaining the full KV cache. Transfer to VLA or video-action models requires checking attention structure, causal masks, visual/action token organization, and caching, then measuring both end-to-end latency and task success. The current long-text results support its inference-efficiency branch; robot-control benefits remain to be tested. Paper: https://arxiv.org/abs/2508.07101 ; official code: https://github.com/DerrickYLJ/LessIsMore ."
     }
   },
+  "dehp-dynamic-execution-horizon": {
+    "zh": {
+      "note": "可用 DEHP 作为「什么时候切」的基线。执行 \\(K\\) 步后，DEHP 用新观测重新生成整块动作。参数曲线方案可以在同一时刻从新观测出发，把旧后缀作为初值，用世界模型（WM）评估后局部更新曲线参数。\n\n可以交叉比较两项选择：执行长度用调优后的固定 \\(K\\) 或 DEHP，切换后用整块重生成或旧后缀修补。固定重生成方式可估计自适应切分的收益。固定切分规则可比较两种更新方式。同时记录任务成功率和每回合的重规划次数，便于判断收益与反馈频率的关系。"
+    },
+    "en": {
+      "note": "Use DEHP as a baseline for when to replan. After executing \\(K\\) steps, DEHP generates a fresh chunk from the new observation. At the same boundary, a parametric-curve approach could start from the old suffix, evaluate it with a world model rolled out from that observation, and locally update the curve parameters.\n\nCross two choices: a tuned fixed \\(K\\) or a DEHP-selected length, and full regeneration or local suffix repair. Hold regeneration constant to estimate the gain from adaptive timing. Hold the timing rule constant to compare the two update methods. Record task success and replans per episode to relate the gains to feedback frequency."
+    }
+  },
   "movens-zero": {
     "zh": {
       "note": "数据、训练和执行的衔接（arXiv v1）。先用视频切片、时间对齐标注和 SMPL-X 修复得到可信人体动作，再经 GMR、整段优化及仿真跟踪验证得到 G1 参考轨迹。冻结多模态骨干，七任务共享流匹配动作专家，以随机干净前缀训练续接。真机 50 Hz 参考每轮预测 30 帧、提交前 20 帧，剩余 10 帧按新状态重编码并固定，全身控制器跟踪并回传状态。（§3、§5，图 2、7）\n\n消融与规模。表 9 匹配样本数和训练预算，从原始恢复动作依次加入视觉与运动过滤、物理修复、跟踪验证、分布均衡，仿真 Tracking Score 为 0.41 → 0.48 → 0.58 → 0.67 → 0.72，文字 R@3 为 48.72% → 62.57%。累积设计衡量每步在此前处理基础上的增量。去掉文字或音频与动作的对齐，视频 MPJPE 分别从 40.90 mm 升至 56.84 和 66.07 mm，支持跨模态收益，具体来源仍需拆分验证。固定 XL 将数据由 1% 扩至 100%，文字 R@3 从 12.72% 升至 62.57%。固定全量数据将动作专家由 64.2M 扩至 910.5M 参数，文字 R@3 从 10.30% 升至 62.57%。（表 7–9）\n\n实验边界。入库可执行性按 G1 仿真跟踪验收。Movens-Intent 的 8,192 对样本与训练源隔离，语音测试用 16 种英语合成音色，模型执行分来自 HoloMotion 仿真。论文的 30 段真机案例用于展示动作范围，端到端延迟和真机成功率仍待量化。MM-RTC 的独立收益需要固定生成器、切换重叠前缀与状态反馈的对照。高动态动作和大幅镜头运动都可能在参考生成阶段引入误差。合成支路的语义检查覆盖可见身体动作，物体交互结果需要单独评估。（§3.2、§4.2、§6.1、§6.4，PDF 附录 E.2–E.3）"

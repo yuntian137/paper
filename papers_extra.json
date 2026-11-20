@@ -8696,6 +8696,72 @@
           "4. Scope | Extrapolation continues the same trajectory for another window of equal duration. Experiments cover low-dimensional, fully observed states. High-dimensional and partially observed systems remain open. (§6, §8, Appendix E)"
         ]
       }
+    },
+    {
+      "id": "dehp-dynamic-execution-horizon",
+      "aliases": [
+        "DEHP"
+      ],
+      "categories": [
+        "k5-time",
+        "k5-decision"
+      ],
+      "contexts": [
+        "manipulation"
+      ],
+      "pdf": "https://arxiv.org/pdf/2606.11408",
+      "project": "https://dehp-chunking.github.io/",
+      "arxiv": "https://arxiv.org/abs/2606.11408",
+      "year": "2026",
+      "venue": "arXiv:2606.11408",
+      "zh": {
+        "title": "Dynamic Execution Horizon Prediction for Chunk-based Robot Policies",
+        "authors": "Yuchi Zhao, Miroslav Bogdanovic, Arjun Sohal, Liyu Tao, Kourosh Darvish, Alán Aspuru-Guzik, Florian Shkurti, Animesh Garg",
+        "institutions": "University of Toronto, Vector Institute, Acceleration Consortium, CIFAR, Georgia Institute of Technology, NVIDIA",
+        "status": "部分已读：已读方法与主要实验结果（arXiv v2）",
+        "takeaway": "冻结动作块生成器，用当前观测和完整候选动作块选择先执行多少步，再根据新观测重新规划。",
+        "tags": [
+          "Action Chunking",
+          "Adaptive Replanning",
+          "Diffusion Policy",
+          "PPO",
+          "SMDP"
+        ],
+        "mainContent": "固定执行长度让自由空间移动和精细对准使用相同的反馈频率。DEHP 保持基础策略预测长度固定，用在线 PPO 训练一个长度分支，根据观测和候选动作块选择执行步数。使用同一个冻结策略时，三阶段插入在五档动作噪声下的平均成功率比固定长度基线高 23.03 个百分点。轨迹可视化显示，DEHP 在自由空间往往执行较长前缀，在对准和插入时更频繁重规划。",
+        "innovations": [
+          "长度分支对当前观测和整段候选动作联合建模，因此同一观测下的不同动作方案可以得到不同的执行长度分布。（§3，式 1）",
+          "把动作前缀视为持续若干环境步的半马尔可夫决策。块内逐步折扣，块间按持续步数折扣，得到与原逐步任务相同的折扣回报。（§3，式 2–4）"
+        ],
+        "implementation": [
+          "执行时，冻结的 Diffusion Policy 根据 \\(s_t\\) 生成长度为 \\(H\\) 的动作块 \\(A\\)。长度分支读取 \\(s_t\\) 和展平的 \\(A\\)，从类别分布 \\(\\pi_{\\mathrm{len}}(\\cdot\\mid s_t,A)\\) 采样 \\(K\\in\\{1,\\dots,H\\}\\)。开环执行前 \\(K\\) 步，丢弃旧后缀，再从 \\(s_{t+K}\\) 生成新块。（§3，图 2）",
+          "训练时，PPO 的动作是整数 \\(K\\)。仿真器执行所选前缀并给出稀疏任务奖励，状态价值网络在动作块边界估计后续回报。对未终止的转移，TD 目标为 \\(\\sum_{j=0}^{K-1}\\gamma^j r_{t+j}+\\gamma^K V(s_{t+K})\\)。GAE 同样按经过的环境步数衰减。基础策略冻结，PPO 概率比只需计算长度分支对所选 \\(K\\) 的新旧概率比。（§3，式 5–8；§4）",
+          "论文用状态观测在仿真中验证。采用同一冻结策略时，FurnitureBench one-leg 的成功率为 95.18%，最佳固定长度基线为 70.30%。双臂针筒插接分别为 29.00% 和 10.20%。（§4.2，图 4；§5）"
+        ]
+      },
+      "en": {
+        "title": "Dynamic Execution Horizon Prediction for Chunk-based Robot Policies",
+        "authors": "Yuchi Zhao, Miroslav Bogdanovic, Arjun Sohal, Liyu Tao, Kourosh Darvish, Alán Aspuru-Guzik, Florian Shkurti, Animesh Garg",
+        "institutions": "University of Toronto, Vector Institute, Acceleration Consortium, CIFAR, Georgia Institute of Technology, NVIDIA",
+        "status": "Partially read: method and main experimental results reviewed (arXiv v2)",
+        "takeaway": "Freeze the chunk generator and use the current observation and full proposed chunk to choose how many steps to execute before replanning from a fresh observation.",
+        "tags": [
+          "Action Chunking",
+          "Adaptive Replanning",
+          "Diffusion Policy",
+          "PPO",
+          "SMDP"
+        ],
+        "mainContent": "A fixed execution horizon imposes the same feedback frequency on free-space motion and precise alignment. DEHP keeps the base policy's prediction horizon fixed and trains a head with online PPO to choose an execution length from the observation and proposed chunk. With the same frozen policy, mean success across five action-noise levels in three-stage insertion was 23.03 percentage points higher than the fixed-horizon baseline. Visualized rollouts show longer prefixes in free space and more frequent replanning during alignment and insertion.",
+        "innovations": [
+          "The horizon head conditions on both the observation and the full chunk, so different proposals at the same observation can produce different distributions over execution lengths. (§3, Eq. 1)",
+          "Treat each executed prefix as a semi-Markov decision lasting several environment steps. Discount individual rewards within prefixes and use the elapsed step count between prefixes to recover the original step-wise discounted return. (§3, Eqs. 2–4)"
+        ],
+        "implementation": [
+          "At execution time, a frozen Diffusion Policy generates a length-\\(H\\) chunk \\(A\\) from \\(s_t\\). The head reads \\(s_t\\) and the flattened \\(A\\), then samples \\(K\\in\\{1,\\dots,H\\}\\) from the categorical distribution \\(\\pi_{\\mathrm{len}}(\\cdot\\mid s_t,A)\\). Execute the first \\(K\\) steps open-loop, discard the suffix, and generate a new chunk from \\(s_{t+K}\\). (§3, Fig. 2)",
+          "During training, the PPO action is the integer \\(K\\). The simulator executes the selected prefix and supplies sparse task rewards. A state-value critic estimates future returns at chunk boundaries. For a nonterminal transition, the TD target is \\(\\sum_{j=0}^{K-1}\\gamma^j r_{t+j}+\\gamma^K V(s_{t+K})\\). GAE also decays with elapsed environment steps. With the generator frozen, the PPO ratio uses only the new and old horizon-head probabilities of the selected \\(K\\). (§3, Eqs. 5–8, and §4)",
+          "The experiments use state observations in simulation. With the same frozen policy, success on FurnitureBench one-leg was 95.18% versus 70.30% for the best fixed horizon. On bimanual needle–syringe insertion the rates were 29.00% and 10.20%, respectively. (§4.2, Fig. 4, and §5)"
+        ]
+      }
     }
   ]
 }
