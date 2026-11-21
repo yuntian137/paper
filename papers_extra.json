@@ -8818,6 +8818,75 @@
           "5. Evidence and cost | The FMVE ablation in Fig. 5 uses the same learning objectives with a fixed horizon, and Fig. 7 reports average selected horizons. Both branches can share a value bias. A compute-matched short fixed horizon and a comparison between the rankings of \\(D_h\\) and actual value error would test the scoring mechanism. Training adds reconstruction and a second latent rollout."
         ]
       }
+    },
+    {
+      "id": "ahac-adaptive-horizon-actor-critic",
+      "aliases": [
+        "AHAC",
+        "AHAC-1"
+      ],
+      "categories": [
+        "k5-horizon",
+        "k2-contact"
+      ],
+      "contexts": [
+        "locomotion"
+      ],
+      "pdf": "https://raw.githubusercontent.com/mlresearch/v235/main/assets/georgiev24a/georgiev24a.pdf",
+      "project": "https://adaptive-horizon-actor-critic.github.io/",
+      "arxiv": "https://arxiv.org/abs/2405.17784",
+      "year": "2024",
+      "venue": "ICML 2024",
+      "zh": {
+        "title": "Adaptive Horizon Actor-Critic for Policy Learning in Contact-Rich Differentiable Simulation",
+        "authors": "Ignat Georgiev, Krishnan Srinivasan, Jie Xu, Eric Heiden, Animesh Garg",
+        "institutions": "Georgia Institute of Technology；Stanford University；NVIDIA；University of Toronto",
+        "status": "部分已读（梯度分析、方法、主要实验与公开实现）",
+        "takeaway": "用接触信息决定 actor 沿可微动力学反传的窗口长度，由末端 critic 估计窗口之后的回报。",
+        "tags": [
+          "Differentiable Simulation",
+          "Model-Based Reinforcement Learning",
+          "Adaptive Horizon",
+          "Contact Dynamics",
+          "Locomotion"
+        ],
+        "mainContent": "刚性接触附近的大动力学导数会放大有限样本的一阶策略梯度误差。AHAC 从固定短窗口的 SHAC 出发，用接触信息调整仿真反传窗口，并保留末端价值估计。在五个 dFlex 仿真运动任务中，汇总最终回报比 PPO 高约 40%（图 9）。",
+        "innovations": [
+          "有限样本梯度分析｜比较一阶反传与零阶概率梯度估计。软阶跃分析和碰撞实验说明，少数采到陡峭接触区的样本可能贡献很大的梯度。引理 3.2 给出两种估计之差的上界，含动力学导数连乘项 \\(B_f^{H-1}\\)。（§3，图 2–3）",
+          "接触相关时域｜单环境 AHAC-1 依据本段的接触结束展开。并行 AHAC 维持一个各环境共用的窗口，用本轮接触统计调整下一轮的长度。（§4，算法 1–2）"
+        ],
+        "implementation": [
+          "1. Actor 与 critic｜Actor 最大化 \\(J_H=\\sum_{j=0}^{H-1}\\gamma^j r_{t+j}+\\gamma^H V_\\psi(s_{t+H})\\)。策略更新固定 critic 参数，并保留末端价值对状态输入的导数。Critic 用 TD(\\(\\lambda\\)) 目标单独拟合，部署时策略每个控制步根据状态输出动作。（式 7–9）",
+          "2. 单环境分段｜达到最短段长后，用接触阈值结束当前段。公开实现把触发步的回报和接触后状态的估值纳入前段 actor 目标，前段 critic 项仍可经触发转移反传。下一段以同一个物理状态的数值为起点，断开回到前段的计算图。（图 4，附录 D，公开实现 ahac1.py）",
+          "3. 并行窗口更新｜公开代码把每个刚体的接触力和力矩按空间偏置加速度逐分量缩放后取范数，再跨环境平均为 \\(\\bar c_j\\)。先更新 \\(\\phi_j\\leftarrow\\phi_j+\\alpha_\\phi(\\bar c_j-C)\\)，再以 \\(H\\leftarrow H+\\alpha_\\phi\\sum_j\\phi_j\\) 更新窗口并裁剪、取整。式 (10) 用动力学导数写约束，公开 actor 损失由回报和末端价值组成，接触代理量用于窗口更新。论文和公开代码的 \\(H\\) 更新用加号，ICML 幻灯片用减号。（§4.2，算法 1，公开实现 ahac.py，ICML 幻灯片第 9 页）",
+          "4. 实验范围｜论文报告 Ant 的并行 AHAC 收敛到 \\(H=29\\)。把 SHAC 的固定窗口从 32 改为 29 已提高回报，加入自适应窗口后进一步提高，完整方法也改变了 critic 训练。论文采用共享阈值 \\(C=500\\)，阈值敏感性仍缺少对照数据。（表 3、7–8，附录 I）"
+        ]
+      },
+      "en": {
+        "title": "Adaptive Horizon Actor-Critic for Policy Learning in Contact-Rich Differentiable Simulation",
+        "authors": "Ignat Georgiev, Krishnan Srinivasan, Jie Xu, Eric Heiden, Animesh Garg",
+        "institutions": "Georgia Institute of Technology; Stanford University; NVIDIA; University of Toronto",
+        "status": "Partially read (gradient analysis, method, main experiments, and released implementation)",
+        "takeaway": "Use contact information to choose how far the actor backpropagates through differentiable dynamics, and use the terminal critic to estimate returns beyond that window.",
+        "tags": [
+          "Differentiable Simulation",
+          "Model-Based Reinforcement Learning",
+          "Adaptive Horizon",
+          "Contact Dynamics",
+          "Locomotion"
+        ],
+        "mainContent": "Large dynamics derivatives near stiff contact can amplify finite-sample errors in first-order policy gradients. AHAC builds on the fixed short horizon in SHAC, adapting the simulation backpropagation window using contact information and retaining a terminal value estimate. Across five simulated dFlex locomotion tasks, aggregate asymptotic return was about 40% higher than PPO (Fig. 9).",
+        "innovations": [
+          "Finite-sample gradient analysis | Compare first-order pathwise gradients with zeroth-order score-function estimates. The soft Heaviside analysis and collision experiment show how rare samples in a steep contact region can contribute large gradients. Lemma 3.2 bounds the gap between estimators and includes a dynamics derivative product term \\(B_f^{H-1}\\). (§3, Figs. 2–3)",
+          "Contact-dependent horizons | Single-environment AHAC-1 uses contact during a rollout to end the current segment. Parallel AHAC shares a window across environments and updates the next window using contact statistics from the current batch. (§4, Algorithms 1–2)"
+        ],
+        "implementation": [
+          "1. Actor and critic | The actor maximizes \\(J_H=\\sum_{j=0}^{H-1}\\gamma^j r_{t+j}+\\gamma^H V_\\psi(s_{t+H})\\). Its update holds critic weights fixed and retains the derivative of terminal value with respect to the state input. The critic separately fits TD(\\(\\lambda\\)) targets. At execution time the policy maps the current state to an action at each control step. (Eqs. 7–9)",
+          "2. Single-environment segmentation | After the minimum segment length, a contact threshold can end the current segment. The released implementation includes the triggering step's reward and the post-contact state's terminal value in the prefix actor objective, so that terminal value can still backpropagate through the triggering transition. The next segment begins at the same numerical state with the graph to the prefix detached. (Fig. 4, Appendix D, released ahac1.py)",
+          "3. Parallel horizon update | The released code scales each rigid body's contact force and torque components by spatial bias acceleration before taking a norm, then averages across environments to get \\(\\bar c_j\\). It updates \\(\\phi_j\\leftarrow\\phi_j+\\alpha_\\phi(\\bar c_j-C)\\), then \\(H\\leftarrow H+\\alpha_\\phi\\sum_j\\phi_j\\), and clips and rounds the window. Eq. 10 expresses the constraint in terms of dynamics derivatives. The released actor loss uses rewards and terminal value, while the contact proxy feeds the horizon update. The paper and code use a plus sign in the \\(H\\) update. The ICML slides use a minus sign. (§4.2, Algorithm 1, released ahac.py, ICML slides p. 9)",
+          "4. Experimental scope | The paper reports that parallel AHAC converged to \\(H=29\\) on Ant. Changing fixed-horizon SHAC from 32 to 29 improves return, the adaptive horizon improves it further, and the full method also changes critic training. The shared threshold was \\(C=500\\). The reported experiments leave threshold sensitivity unresolved. (Tables 3 and 7–8, Appendix I)"
+        ]
+      }
     }
   ]
 }
