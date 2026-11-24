@@ -52,18 +52,19 @@ site_meta.json            站点元信息，例如最近更新时间
 
 阅读状态筛选按已有卡片说明归为“已精读”“部分已读”和“已整理”，详细阅读范围保留在详情中。年份含修订说明的记录按首个年份参与筛选和排序；“最近收录”按数据中的条目顺序展示，不代表论文或笔记的更新时间。
 
-知识图谱包含分类层级、体系之间的连接，以及附有依据说明的论文关系。网站默认打开全库总览，以研究问题组织 **6 个主体系、22 个子体系**。同一论文可以跨体系归类；父体系汇总子体系并按论文 ID 去重。归类不改变阅读状态，也不代表用户已掌握该专题。
+知识图谱包含分类层级、体系之间的连接，以及附有依据说明的论文关系。网站默认打开全库总览，以研究问题组织 **7 个主体系、24 个子体系**。同一论文可以跨体系归类；父体系汇总子体系并按论文 ID 去重。归类不改变阅读状态，也不代表用户已掌握该专题。
 
 | 主体系 | 子体系 |
 |---|---|
-| `k1` 行为目标与运动能力 | `k1-tracking` 跟踪与蒸馏、`k1-style` 风格奖励、`k1-skills` 技能空间、`k1-goals` 目标接口、`k1-reward` 奖励条件化、`k1-action` 动作参数化 |
-| `k2` 几何、接触与物理可行性 | `k2-retarget` 重定向、`k2-contact` 交互与接触、`k2-constraints` 约束与柔顺 |
-| `k3` 观测、历史与状态推断 | `k3-estimation` 状态与历史、`k3-perception` 感知反馈、`k3-distillation` 特权信息与蒸馏 |
-| `k4` 动力学差异与真实部署 | `k4-identification` 辨识与校准、`k4-robustness` 鲁棒性与形态、`k4-adaptation` 适应与残差 |
-| `k5` 世界模型与决策计算 | `k5-fidelity` 准确性标准、`k5-decision` 决策计算、`k5-horizon` 长时域结构、`k5-time` 时间与模式 |
-| `k6` 经验、语义与任务泛化 | `k6-data` 数据覆盖、`k6-learning` 示范与微调、`k6-semantics` 语义与动作模型 |
+| `k1` 行为目标与全身控制接口 | `k1-tracking` 参考跟踪与蒸馏、`k1-style` 风格奖励、`k1-goals` 稀疏目标与条件接口、`k1-skills` 技能隐空间、`k1-reward` 奖励条件化与 FB、`k1-action` 低层动作参数化、`k1-generative` 生成式运动先验 |
+| `k2` 几何、接触与物理可行性 | `k2-retarget` 几何与动力学重定向、`k2-contact` 接触结构与交互几何、`k2-constraints` 动力学约束与柔顺调节 |
+| `k3` 部分可观、感知融合与特权蒸馏 | `k3-estimation` 状态估计与历史表征、`k3-perception` 视觉触觉与地形感知、`k3-distillation` 特权教师—学生蒸馏 |
+| `k4` 动力学鸿沟、鲁棒控制与在线适应 | `k4-identification` 系统辨识与执行器建模、`k4-robustness` 域随机化与跨形态鲁棒、`k4-adaptation` 在线适应与残差修正 |
+| `k5` 世界模型、可微物理与决策计算 | `k5-fidelity` 模型准确性标准、`k5-decision` 模型如何转化为决策、`k5-horizon` 长时域与分层结构、`k5-time` 时间尺度与事件模态 |
+| `k6` 经验采集、示范扩展与策略自改进 | `k6-data` 遥操采集与经验规模化、`k6-learning` 示范引导探索与策略后训练 |
+| `k7` 多模态具身基座、VLA 与生成式世界动作模型 | `k7-vla` 视觉—语言—动作策略与语义操作、`k7-wam` 视频世界—动作联合生成与多模态运动基座 |
 
-`support-numerics`（数值求解）和 `support-inference`（推理效率）保留为旁支。NPC 根据已有的点云配准与多视图三角化实验，同时归入感知分支；NPO 接入机器人轨迹优化、LessIsMore 接入动作模型仍属待验证迁移，具体应用边界保存在笔记中。未映射的新条目进入“待归类”，不会从全库消失。Intensity-Free TPP 在时间与事件子体系中作为概率建模的连接阅读，机器人控制用途仍属迁移设想。
+`support-numerics`（数值算子、同伦延拓与求解预条件，含 DeepONet、NeuralODE-Homotopy、NPC、NPO）和 `support-inference`（注意力与生成推理效率，含 LessIsMore）保留为旁支。NPC 根据已有的点云配准与多视图三角化实验，同时归入感知分支；NPO 接入机器人轨迹优化、LessIsMore 接入动作模型仍属待验证迁移，具体应用边界保存在笔记中。未映射的新条目进入“待归类”，不会从全库消失。Intensity-Free TPP 在时间与事件子体系中作为概率建模的连接阅读，机器人控制用途仍属迁移设想。
 
 每个分类提供问题简介、阅读抓手与代表论文入口；主体系页展开子体系，总览和体系页可展开带说明的跨体系连接。卡片显示所属子体系和一个相关论文入口。详情提供可返回的跨论文跳转，并区分：
 
@@ -76,7 +77,7 @@ site_meta.json            站点元信息，例如最近更新时间
 
 `knowledge_map.json` 集中维护：
 
-- `categories`：`id`、双语 `label` / `description` / `focus`、代表论文 `entries`。主体系用 `code: "K1"` 至 `"K6"`，子体系用 `parent`。
+- `categories`：`id`、双语 `label` / `description` / `focus`、代表论文 `entries`。主体系用 `code: "K1"` 至 `"K7"`，子体系用 `parent`。
 - `assignments`：已有论文 ID 到子体系 ID 数组的明确映射，是已有条目分类的来源。保留原卡片内容，不批量重写历史分类。
 - `connections`：主体系之间的 `source`、`target` 与双语 `reason`。
 - `relations`：论文之间的 `source`、`target`、`type`、双语 `reason` / `basis`。依据现有材料做综合时须如此标明；只有原文支持才写方法继承或直接组件使用。详细原文定位继续保存在论文实现方法与笔记中。

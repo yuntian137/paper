@@ -7,7 +7,7 @@ const uiText = {
     playBackground: "播放黑洞探索循环视频",
     failedBackground: "视频暂不可用，显示静态画面",
     reducedBackground: "已跟随系统的减少动态效果设置",
-    overviewDescription: "从六个研究问题进入全库。同一篇论文可连接多个体系，计数按论文去重；这是可随阅读修订的分析框架。",
+    overviewDescription: "从七个研究问题进入全库。同一篇论文可连接多个体系，计数按论文去重；这是可随阅读修订的分析框架。",
     supportTopics: "旁支与待连接",
     allContexts: "全部横向标签",
     contexts: "任务 / 应用标签",
@@ -20,12 +20,18 @@ const uiText = {
     sameQuestionHint: "按共同子体系推荐；归类相同不代表方法继承或可直接组合。",
     relationScope: "关系根据库内材料综合整理；点击论文查看已有方法记录与原文链接。",
     component: "组件使用",
+    componentUpstream: "← 上游组件",
+    componentDownstream: "→ 下游采用",
     extension: "方法扩展",
+    extensionUpstream: "← 前序基线",
+    extensionDownstream: "→ 后续扩展",
     alternative: "替代路线",
     contrast: "机制对照",
     complement: "互补问题",
     analogy: "结构类比",
     concept: "前置概念",
+    conceptUpstream: "← 源头概念",
+    conceptDownstream: "→ 下游迁移",
     backPaper: "返回上一篇",
     expandGroup: "展开子体系",
     collapseGroup: "收起子体系",
@@ -104,7 +110,7 @@ const uiText = {
     playBackground: "Play the black hole exploration loop",
     failedBackground: "Video unavailable; showing the still image",
     reducedBackground: "Motion disabled by your system preference",
-    overviewDescription: "Explore six research questions across the library. Papers may connect several systems; counts use unique papers. This analytical framework evolves with reading.",
+    overviewDescription: "Explore seven research questions across the library. Papers may connect several systems; counts use unique papers. This analytical framework evolves with reading.",
     supportTopics: "Side branches & open connections",
     allContexts: "All cross-cutting tags",
     contexts: "Task / application tags",
@@ -117,12 +123,18 @@ const uiText = {
     sameQuestionHint: "Suggested by shared subsystems; co-membership does not imply inheritance or direct compatibility.",
     relationScope: "Relationships synthesize library material. Open a paper for existing method notes and original sources.",
     component: "Component use",
+    componentUpstream: "← Upstream component",
+    componentDownstream: "→ Used downstream",
     extension: "Method extension",
+    extensionUpstream: "← Builds on",
+    extensionDownstream: "→ Extended by",
     alternative: "Alternative approach",
     contrast: "Mechanism comparison",
     complement: "Complementary questions",
     analogy: "Structural analogy",
     concept: "Prerequisite concept",
+    conceptUpstream: "← Source concept",
+    conceptDownstream: "→ Applied in",
     backPaper: "Back to previous paper",
     expandGroup: "Expand subsystems",
     collapseGroup: "Collapse subsystems",
@@ -195,7 +207,8 @@ const uiText = {
   },
 };
 
-const siteMetaPath = "site_meta.json";
+const siteMetaPath = "site_meta.json?v=20261124-k7";
+const knowledgeMapPath = "knowledge_map.json?v=20261124-k7";
 const siteMeta = {
   lastUpdated: null,
 };
@@ -4348,7 +4361,7 @@ const state = {
   ambientMotion: localStorage.getItem("paper-ambient-motion") !== "0",
   layout: {
     sidebarCollapsed: localStorage.getItem("paper-layout-sidebar-collapsed") === "1",
-    sidebarWidth: Number(localStorage.getItem("paper-layout-sidebar-width")) || 220,
+    sidebarWidth: Number(localStorage.getItem("paper-layout-sidebar-width-v2")) || 252,
   },
 };
 
@@ -4402,7 +4415,7 @@ function setButtonLabel(button, label) {
 }
 
 function applyLayout() {
-  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth, 200, 300);
+  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth, 210, 340);
   nodes.html.style.setProperty("--sidebar-width", `${state.layout.sidebarWidth}px`);
   nodes.body.classList.toggle("is-sidebar-collapsed", state.layout.sidebarCollapsed);
   setButtonLabel(nodes.sidebarToggle, text("hideSidebar"));
@@ -4413,7 +4426,7 @@ function applyLayout() {
 
 function saveLayout() {
   localStorage.setItem("paper-layout-sidebar-collapsed", state.layout.sidebarCollapsed ? "1" : "0");
-  localStorage.setItem("paper-layout-sidebar-width", String(state.layout.sidebarWidth));
+  localStorage.setItem("paper-layout-sidebar-width-v2", String(state.layout.sidebarWidth));
 }
 
 const reducedMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -4734,7 +4747,9 @@ function localInstitutions(paper) {
 
 function categoryLabel(categoryId) {
   const category = categories.find((item) => item.id === categoryId);
-  return category ? category.label[state.lang] : categoryId;
+  if (!category) return categoryId;
+  const label = category.label[state.lang];
+  return category.code ? `${category.code} · ${label}` : label;
 }
 
 function categoryCount(categoryId) {
@@ -4760,7 +4775,7 @@ function matchesCategory(paper, categoryId) {
 
 async function loadKnowledgeMap() {
   try {
-    const response = await fetch("knowledge_map.json");
+    const response = await fetch(knowledgeMapPath);
     if (!response.ok) throw new Error("Knowledge map request failed");
     const data = await response.json();
     if (!Array.isArray(data.categories) || !data.assignments || !Array.isArray(data.relations) ||
@@ -4774,7 +4789,15 @@ async function loadKnowledgeMap() {
 
 function categorySearchLabels(categoryId) {
   const category = categories.find((item) => item.id === categoryId);
-  return [categoryLabel(categoryId), category?.parent && categoryLabel(category.parent)].filter(Boolean);
+  const parent = category?.parent ? categories.find((item) => item.id === category.parent) : null;
+  return [
+    categoryId,
+    category?.code,
+    categoryLabel(categoryId),
+    parent?.id,
+    parent?.code,
+    parent && categoryLabel(parent.id),
+  ].filter(Boolean);
 }
 
 function isLocalReadLink(link) {
@@ -4965,6 +4988,7 @@ function clearFilters() {
   state.notesOnly = false;
   nodes.search.value = "";
   render();
+  syncUrlHash();
 }
 
 function renderUpdateBadge() {
@@ -5015,11 +5039,12 @@ function renderCategories() {
     <p class="category-section-label">${text("researchDirections")}</p>
     ${systems.map((category) => {
       const expanded = state.expandedCategories.has(category.id);
+      const label = categoryLabel(category.id);
       return `<div class="category-group"><div class="category-group-header">
-        ${categoryButton(category.id, category.label[state.lang], categoryCount(category.id))}
+        ${categoryButton(category.id, label, categoryCount(category.id))}
         <button class="category-group-toggle" type="button" data-category-toggle="${category.id}"
           aria-expanded="${expanded}" aria-controls="${category.id}-children"
-          aria-label="${text(expanded ? "collapseGroup" : "expandGroup")} · ${escapeHtml(category.label[state.lang])}">${expanded ? "−" : "+"}</button>
+          aria-label="${text(expanded ? "collapseGroup" : "expandGroup")} · ${escapeHtml(label)}">${expanded ? "−" : "+"}</button>
         </div><div class="category-children" id="${category.id}-children" ${expanded ? "" : "hidden"}>
         ${categories.filter((c) => c.parent === category.id).map((c) => categoryButton(c.id, c.label[state.lang], categoryCount(c.id))).join("")}
         </div></div>`;
@@ -5035,8 +5060,9 @@ function paperLinkButton(id, className = "topic-link") {
 }
 
 function topicTile(category) {
+  const codeBadge = category.code ? `<span class="topic-code">${escapeHtml(category.code)}</span>` : "";
   return `<button type="button" class="topic-tile" data-category="${category.id}">
-    <span class="topic-tile-heading"><strong>${escapeHtml(category.label[state.lang])}</strong><span class="topic-tile-meta">${categoryCount(category.id)} ${text("papers")}</span></span>
+    <span class="topic-tile-heading"><span class="topic-tile-title">${codeBadge}<strong>${escapeHtml(category.label[state.lang])}</strong></span><span class="topic-tile-meta">${categoryCount(category.id)} ${text("papers")}</span></span>
     <p>${escapeHtml(category.description[state.lang])}</p>
     </button>`;
 }
@@ -5046,6 +5072,7 @@ function renderKnowledgeGuide() {
   const selected = categories.find((c) => c.id === state.category);
   const parentId = selected?.parent || selected?.id;
   const systems = categories.filter((c) => c.code);
+  const subsystems = selected ? categories.filter((c) => c.parent === selected.id) : [];
   const links = knowledgeMap.connections.filter((c) => !selected || c.source === parentId || c.target === parentId);
   const connections = links.length ? `<details class="system-connections"><summary>${text("systemConnections")}</summary>
     <div class="system-link-list">${links.map((c) => `<div class="system-link">
@@ -5057,8 +5084,8 @@ function renderKnowledgeGuide() {
       ${selected.parent ? `<button class="topic-link topic-parent" type="button" data-category="${selected.parent}">← ${escapeHtml(categoryLabel(selected.parent))}</button>` : ""}
       ${selected.focus ? `<div class="reading-focus"><strong>${text("readingFocus")}</strong><p>${escapeHtml(selected.focus[state.lang])}</p></div>` : ""}
       ${selected.entries?.length ? `<div class="entry-papers"><span>${text("entryPapers")}</span><div>${selected.entries.map((id) => paperLinkButton(id)).join("")}</div></div>` : ""}
-      <div class="topic-grid subsystem-grid">${categories.filter((c) => c.parent === selected.id).map(topicTile).join("")}</div>`
-      : `<div class="topic-grid">${systems.map(topicTile).join("")}</div>`}
+      <div class="topic-grid subsystem-grid" data-count="${subsystems.length}">${subsystems.map(topicTile).join("")}</div>`
+      : `<div class="topic-grid overview-grid" data-count="${systems.length}">${systems.map(topicTile).join("")}</div>`}
     ${connections}`;
 }
 
@@ -5083,18 +5110,61 @@ function categoryChips(paper, limit = Infinity) {
   return ids.slice(0, limit).map((id) => `<button type="button" class="tag category-tag" data-category="${escapeHtml(id)}">${escapeHtml(categoryLabel(id))}</button>`).join("") + (ids.length > limit ? `<button type="button" class="tag category-tag" data-paper-id="${escapeHtml(paper.id)}" aria-label="${text("researchDirections")}">+${ids.length - limit}</button>` : "");
 }
 
+function relationDirectionHtml(relation, currentPaperId) {
+  const base = escapeHtml(text(relation.type));
+  if (!["component", "extension", "concept"].includes(relation.type)) return base;
+  const key = `${relation.type}${relation.source === currentPaperId ? "Downstream" : "Upstream"}`;
+  const dir = text(key);
+  return dir ? `${base}<span class="relation-dir" aria-hidden="true">·</span><span class="relation-dir">${escapeHtml(dir)}</span>` : base;
+}
+
 function renderPaperConnections(paper) {
   const related = relatedPapers(paper);
   const suggestions = sameTopicPapers(paper);
   return `<section class="detail-section paper-connections" id="detail-connections"><h3>${text("paperConnections")}</h3>
     <p class="connection-hint">${text(related.length ? "relationScope" : "noRelations")}</p>
     <div class="relation-list">${related.map(({ relation: r, paper: target }) => `<article class="relation-card">
-      <span class="relation-type">${text(r.type)}</span>
+      <span class="relation-type">${relationDirectionHtml(r, paper.id)}</span>
       ${paperLinkButton(target.id)}<p>${escapeHtml(r.reason[state.lang])}</p>
       <small>${escapeHtml(r.basis[state.lang])}</small></article>`).join("")}</div>
     ${suggestions.length ? `<h4>${text("sameQuestion")}</h4><p class="connection-hint">${text("sameQuestionHint")}</p><div class="same-topic-list">
       ${suggestions.map(({ paper: p, shared }) => `<div>${paperLinkButton(p.id)}<small>${shared.map((id) => escapeHtml(categoryLabel(id))).join(" · ")}</small></div>`).join("")}</div>` : ""}
     </section>`;
+}
+
+function syncUrlHash() {
+  const params = new URLSearchParams();
+  if (state.notesOnly) params.set("notes", "1");
+  else if (state.category && state.category !== "all") params.set("cat", state.category);
+  if (nodes.paperDialog.open && state.selectedId) params.set("paper", state.selectedId);
+  const next = params.toString();
+  const targetUrl = next ? `${location.pathname}${location.search}#${next}` : `${location.pathname}${location.search}`;
+  if (`${location.pathname}${location.search}${location.hash}` !== targetUrl) {
+    history.replaceState(null, "", targetUrl);
+  }
+}
+
+function applyUrlHash() {
+  const raw = location.hash.startsWith("#") ? location.hash.slice(1) : "";
+  const params = new URLSearchParams(raw);
+  const notes = params.get("notes") === "1";
+  const cat = params.get("cat");
+  const paperId = params.get("paper");
+
+  if (notes) {
+    state.notesOnly = true;
+    state.category = "all";
+  } else if (cat && (cat === "all" || categories.some((c) => c.id === cat))) {
+    state.notesOnly = false;
+    state.category = cat;
+    const category = categories.find((c) => c.id === cat);
+    if (category?.code || category?.parent) state.expandedCategories.add(category.parent || category.id);
+  } else if (!raw) {
+    state.notesOnly = false;
+    state.category = "all";
+  }
+
+  return paperId && papers.some((p) => p.id === paperId) ? paperId : null;
 }
 
 function selectCategory(categoryId) {
@@ -5109,6 +5179,7 @@ function selectCategory(categoryId) {
   const category = categories.find((c) => c.id === categoryId);
   if (category?.code || category?.parent) state.expandedCategories.add(category.parent || category.id);
   render();
+  syncUrlHash();
   nodes.viewTitle.focus({ preventScroll: true });
   nodes.viewTitle.scrollIntoView({ block: "start" });
 }
@@ -5163,6 +5234,7 @@ function openPaper(paperId, fromHistory = false) {
   state.selectedId = paperId;
   renderDetail(paper);
   if (!alreadyOpen) nodes.paperDialog.showModal();
+  syncUrlHash();
   nodes.paperDetail.scrollTop = 0;
   if (alreadyOpen) nodes.paperDetail.querySelector("#paper-dialog-title").focus({ preventScroll: true });
   typesetMath();
@@ -5294,6 +5366,7 @@ nodes.sidebarRestore.addEventListener("click", () => {
 });
 
 nodes.detailClose.addEventListener("click", () => nodes.paperDialog.close());
+nodes.paperDialog.addEventListener("close", syncUrlHash);
 nodes.detailBack.addEventListener("click", () => {
   const previous = state.readerHistory.pop();
   if (!previous) return;
@@ -5313,7 +5386,7 @@ function startResize(event) {
   const startWidth = state.layout.sidebarWidth;
   nodes.body.classList.add("is-resizing");
   const handleMove = (moveEvent) => {
-    state.layout.sidebarWidth = clamp(startWidth + moveEvent.clientX - startX, 200, 300);
+    state.layout.sidebarWidth = clamp(startWidth + moveEvent.clientX - startX, 210, 340);
     applyLayout();
   };
   const handleUp = () => {
@@ -5333,7 +5406,7 @@ nodes.sidebarResizer.addEventListener("keydown", (event) => {
   if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
   event.preventDefault();
   const step = event.shiftKey ? 32 : 16;
-  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth + (event.key === "ArrowRight" ? step : -step), 200, 300);
+  state.layout.sidebarWidth = clamp(state.layout.sidebarWidth + (event.key === "ArrowRight" ? step : -step), 210, 340);
   saveLayout();
   applyLayout();
 });
@@ -5367,10 +5440,12 @@ nodes.search.addEventListener("input", (event) => {
 
 nodes.categoryNav.addEventListener("click", (event) => {
   if (event.target.closest("[data-notes-only]")) {
+    if (nodes.paperDialog.open) nodes.paperDialog.close();
     state.notesOnly = true;
     state.category = "all";
     renderCategories();
     renderList();
+    syncUrlHash();
     return;
   }
   const toggle = event.target.closest("[data-category-toggle]");
@@ -5503,8 +5578,19 @@ async function initialize() {
     loadKnowledgeMap(),
     papersReady,
   ]);
+  const initialPaperId = applyUrlHash();
   render();
+  if (initialPaperId) openPaper(initialPaperId);
   rendered = true;
+  window.addEventListener("hashchange", () => {
+    const targetPaperId = applyUrlHash();
+    render();
+    if (targetPaperId) {
+      if (!nodes.paperDialog.open || state.selectedId !== targetPaperId) openPaper(targetPaperId);
+    } else if (nodes.paperDialog.open) {
+      nodes.paperDialog.close();
+    }
+  });
 }
 
 initialize();
